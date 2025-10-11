@@ -30,6 +30,18 @@ class MonarchTUI(App):
         Binding("m", "view_merchants", "Merchants", show=True),
         Binding("c", "view_categories", "Categories", show=True),
         Binding("g", "view_groups", "Groups", show=True),
+        Binding("y", "this_year", "This Year", show=True),
+        Binding("a", "all_time", "All Time", show=True),
+        Binding("t", "this_month", "This Month", show=True),
+        Binding("1", "select_month_1", "Jan", show=False),
+        Binding("2", "select_month_2", "Feb", show=False),
+        Binding("3", "select_month_3", "Mar", show=False),
+        Binding("4", "select_month_4", "Apr", show=False),
+        Binding("5", "select_month_5", "May", show=False),
+        Binding("6", "select_month_6", "Jun", show=False),
+        Binding("7", "select_month_7", "Jul", show=False),
+        Binding("8", "select_month_8", "Aug", show=False),
+        Binding("9", "select_month_9", "Sep", show=False),
         Binding("question_mark", "help", "Help", show=True, key_display="?"),
         Binding("slash", "search", "Search", show=True, key_display="/"),
         Binding("h,left", "toggle_sort", "Sort", show=True),
@@ -413,6 +425,76 @@ class MonarchTUI(App):
         self.state.selected_category = None
         self.state.selected_group = None
         self.refresh_view()
+
+    # Time navigation actions
+    def action_this_year(self) -> None:
+        """Switch to current year view."""
+        self.state.set_timeframe(TimeFrame.THIS_YEAR)
+        self.refresh_view()
+        self.notify("Viewing: This Year", timeout=1)
+
+    def action_all_time(self) -> None:
+        """Switch to all time view."""
+        self.state.set_timeframe(TimeFrame.ALL_TIME)
+        self.refresh_view()
+        self.notify("Viewing: All Time", timeout=1)
+
+    def action_this_month(self) -> None:
+        """Switch to current month view."""
+        self.state.set_timeframe(TimeFrame.THIS_MONTH)
+        self.refresh_view()
+        self.notify("Viewing: This Month", timeout=1)
+
+    def action_select_month_1(self) -> None:
+        """View January of current year."""
+        self._select_month(1, "January")
+
+    def action_select_month_2(self) -> None:
+        """View February of current year."""
+        self._select_month(2, "February")
+
+    def action_select_month_3(self) -> None:
+        """View March of current year."""
+        self._select_month(3, "March")
+
+    def action_select_month_4(self) -> None:
+        """View April of current year."""
+        self._select_month(4, "April")
+
+    def action_select_month_5(self) -> None:
+        """View May of current year."""
+        self._select_month(5, "May")
+
+    def action_select_month_6(self) -> None:
+        """View June of current year."""
+        self._select_month(6, "June")
+
+    def action_select_month_7(self) -> None:
+        """View July of current year."""
+        self._select_month(7, "July")
+
+    def action_select_month_8(self) -> None:
+        """View August of current year."""
+        self._select_month(8, "August")
+
+    def action_select_month_9(self) -> None:
+        """View September of current year."""
+        self._select_month(9, "September")
+
+    def _select_month(self, month: int, month_name: str) -> None:
+        """Helper to select a specific month of the current year."""
+        from datetime import date as date_type
+        import calendar
+
+        today = date_type.today()
+        year = today.year
+        first_day = date_type(year, month, 1)
+        last_day_num = calendar.monthrange(year, month)[1]
+        last_day = date_type(year, month, last_day_num)
+
+        self.state.set_timeframe(TimeFrame.CUSTOM, start_date=first_day, end_date=last_day)
+        self.refresh_view()
+        self.notify(f"Viewing: {month_name} {year}", timeout=1)
 
     def action_toggle_sort(self) -> None:
         """Toggle sort order."""

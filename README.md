@@ -116,6 +116,30 @@ Your credentials are encrypted with AES-128 and stored in `~/.monarch_tui/creden
 
 **To reset credentials**: Click "Reset Credentials" on the unlock screen.
 
+## Time Navigation (Key Feature!)
+
+Monarch TUI downloads **all your transactions once**, then lets you instantly switch between different time periods:
+
+**Switch between views:**
+- Press `y` - View current year (2025)
+- Press `a` - View all time
+- Press `t` - View current month (October 2025)
+- Press `1` - View January 2025
+- Press `2` - View February 2025
+- ... press `9` for September, `0` for October
+
+**Example workflow:**
+```
+1. Launch TUI (downloads all transactions once - may take 1-2 min for large accounts)
+2. Default view: Current year (2025)
+3. Press '10' (1 then 0) to see October 2025
+4. Press 'y' to go back to full year
+5. Press 'a' to see all time
+6. All switching is INSTANT (data already downloaded!)
+```
+
+This is much faster than re-querying the Monarch API each time!
+
 ## Usage Examples
 
 ### Example 1: View and Edit a Merchant Name
