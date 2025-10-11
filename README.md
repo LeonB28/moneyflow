@@ -68,6 +68,32 @@ uv run python -m monarch_tui
 
 The first time you run it, you'll go through a one-time credential setup.
 
+## CLI Options
+
+By default, Monarch TUI fetches **all transactions** from your account. For very large accounts, you can limit the data range:
+
+**Fetch only recent years:**
+```bash
+# Only load transactions from 2025 onwards
+uv run python -m monarch_tui --year 2025
+
+# Only load transactions from 2024 onwards
+uv run python -m monarch_tui --year 2024
+```
+
+**Fetch from a specific date:**
+```bash
+# Load transactions from June 1, 2024 onwards
+uv run python -m monarch_tui --since 2024-06-01
+```
+
+**View all options:**
+```bash
+uv run python -m monarch_tui --help
+```
+
+**Note**: Limiting the date range makes initial load faster but you won't see older transactions in your analysis.
+
 ### First Run Setup
 
 On first run, the TUI will walk you through credential setup:

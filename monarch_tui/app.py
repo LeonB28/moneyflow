@@ -4,6 +4,7 @@ Main Monarch Money TUI Application.
 A fast, keyboard-driven terminal interface for transaction management.
 """
 
+import argparse
 import asyncio
 from datetime import datetime, timedelta
 from typing import Optional
@@ -42,12 +43,14 @@ class MonarchTUI(App):
     status_message = reactive("Ready")
     pending_changes_count = reactive(0)
 
-    def __init__(self):
+    def __init__(self, start_year: Optional[int] = None, custom_start_date: Optional[str] = None):
         super().__init__()
         self.mm = MonarchMoney()
         self.data_manager: Optional[DataManager] = None
         self.state = AppState()
         self.loading = False
+        self.start_year = start_year  # Optional year cutoff for data loading
+        self.custom_start_date = custom_start_date  # Optional custom start date
 
     def compose(self) -> ComposeResult:
         """Compose the main UI."""
@@ -146,13 +149,21 @@ class MonarchTUI(App):
             # Initialize data manager
             self.data_manager = DataManager(self.mm)
 
-            # Fetch ALL transactions (no date filter for offline-first approach)
-            # This downloads everything once, then all operations are local
-            self.state.start_date = None
-            self.state.end_date = None
+            # Determine date range based on CLI arguments
+            if self.custom_start_date:
+                start_date = self.custom_start_date
+                end_date = datetime.now().strftime('%Y-%m-%d')
+                loading_status.update(f"📊 Fetching transactions from {self.custom_start_date} onwards...")
+            elif self.start_year:
+                start_date = f"{self.start_year}-01-01"
+                end_date = datetime.now().strftime('%Y-%m-%d')
+                loading_status.update(f"📊 Fetching transactions from {self.start_year} onwards...")
+            else:
+                # Fetch ALL transactions (no date filter for offline-first approach)
+                start_date = None
+                end_date = None
+                loading_status.update("📊 Fetching ALL transaction data from Monarch Money...")
 
-            # Fetch data from API with progress updates
-            loading_status.update("📊 Fetching ALL transaction data from Monarch Money...")
             loading_status.update("⏳ This may take a minute for large accounts (10k+ transactions)...")
             loading_status.update("💡 TIP: This is a one-time download. Future operations will be instant!")
 
@@ -161,8 +172,8 @@ class MonarchTUI(App):
                 loading_status.update(f"📊 {msg}")
 
             df, categories, category_groups = await self.data_manager.fetch_all_data(
-                start_date=None,  # No date filter - fetch ALL transactions
-                end_date=None,
+                start_date=start_date,
+                end_date=end_date,
                 progress_callback=update_progress
             )
 
@@ -171,6 +182,13 @@ class MonarchTUI(App):
             self.data_manager.categories = categories
             self.data_manager.category_groups = category_groups
             self.state.transactions_df = df
+
+            # Initialize time frame to THIS_YEAR (default view filter)
+            # This filters the display to current year even though we loaded all data
+            from datetime import date as date_type
+            today = date_type.today()
+            self.state.start_date = date_type(today.year, 1, 1)
+            self.state.end_date = date_type(today.year, 12, 31)
 
             loading_status.update(f"✅ Loaded {len(df):,} transactions! Preparing view...")
 
@@ -223,8 +241,13 @@ class MonarchTUI(App):
         table.add_column("Count", key="count", width=10)
         table.add_column("Total", key="total", width=15)
 
+        # Get filtered data based on time_frame
+        filtered_df = self.state.get_filtered_df()
+        if filtered_df is None:
+            return
+
         # Get aggregated data
-        agg = self.data_manager.aggregate_by_merchant(self.data_manager.df)
+        agg = self.data_manager.aggregate_by_merchant(filtered_df)
         # Sort based on mode
         if self.state.sort_mode != SortMode.COUNT_DESC:
             sort_col = "total" if "AMOUNT" in self.state.sort_mode.value else "count"
@@ -246,7 +269,12 @@ class MonarchTUI(App):
         table.add_column("Count", key="count", width=10)
         table.add_column("Total", key="total", width=15)
 
-        agg = self.data_manager.aggregate_by_category(self.data_manager.df)
+        # Get filtered data based on time_frame
+        filtered_df = self.state.get_filtered_df()
+        if filtered_df is None:
+            return
+
+        agg = self.data_manager.aggregate_by_category(filtered_df)
         # Sort based on mode
         if self.state.sort_mode != SortMode.COUNT_DESC:
             sort_col = "total" if "AMOUNT" in self.state.sort_mode.value else "count"
@@ -267,7 +295,12 @@ class MonarchTUI(App):
         table.add_column("Count", key="count", width=10)
         table.add_column("Total", key="total", width=15)
 
-        agg = self.data_manager.aggregate_by_group(self.data_manager.df)
+        # Get filtered data based on time_frame
+        filtered_df = self.state.get_filtered_df()
+        if filtered_df is None:
+            return
+
+        agg = self.data_manager.aggregate_by_group(filtered_df)
         # Sort based on mode
         if self.state.sort_mode != SortMode.COUNT_DESC:
             sort_col = "total" if "AMOUNT" in self.state.sort_mode.value else "count"
@@ -290,15 +323,20 @@ class MonarchTUI(App):
         table.add_column("Amount", key="amount", width=12)
         table.add_column("", key="flags", width=3)
 
-        # Filter transactions based on drill-down
+        # Start with filtered data based on time_frame
+        filtered_df = self.state.get_filtered_df()
+        if filtered_df is None:
+            return
+
+        # Apply drill-down filters if any
         if self.state.selected_merchant:
-            txns = self.data_manager.filter_by_merchant(self.data_manager.df, self.state.selected_merchant)
+            txns = self.data_manager.filter_by_merchant(filtered_df, self.state.selected_merchant)
         elif self.state.selected_category:
-            txns = self.data_manager.filter_by_category(self.data_manager.df, self.state.selected_category)
+            txns = self.data_manager.filter_by_category(filtered_df, self.state.selected_category)
         elif self.state.selected_group:
-            txns = self.data_manager.filter_by_group(self.data_manager.df, self.state.selected_group)
+            txns = self.data_manager.filter_by_group(filtered_df, self.state.selected_group)
         else:
-            txns = self.data_manager.df
+            txns = filtered_df
 
         self.state.current_data = txns
 
@@ -380,7 +418,7 @@ class MonarchTUI(App):
         """Toggle sort order."""
         self.state.toggle_sort()
         self.refresh_view()
-        sort_name = "Count" if self.state.sort_mode == SortMode.COUNT else "Amount"
+        sort_name = "Count" if self.state.sort_mode == SortMode.COUNT_DESC else "Amount"
         self.notify(f"Sorted by {sort_name}", timeout=1)
 
     def action_help(self) -> None:
@@ -462,7 +500,34 @@ class MonarchTUI(App):
 
 def main():
     """Entry point for the TUI."""
-    app = MonarchTUI()
+    parser = argparse.ArgumentParser(
+        description="Monarch Money Terminal UI - Fast transaction management"
+    )
+    parser.add_argument(
+        "--year",
+        type=int,
+        metavar="YYYY",
+        help="Only load transactions from this year onwards (e.g., --year 2025 loads from 2025-01-01 to now). Default: load all transactions."
+    )
+    parser.add_argument(
+        "--since",
+        type=str,
+        metavar="YYYY-MM-DD",
+        help="Only load transactions from this date onwards (e.g., --since 2024-06-01). Overrides --year if both provided."
+    )
+
+    args = parser.parse_args()
+
+    # Determine start year
+    start_year = None
+    custom_start_date = None
+
+    if args.since:
+        custom_start_date = args.since
+    elif args.year:
+        start_year = args.year
+
+    app = MonarchTUI(start_year=start_year, custom_start_date=custom_start_date)
     app.run()
 
 
