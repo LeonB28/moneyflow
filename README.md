@@ -21,42 +21,11 @@ uv run python -m monarch_tui                       # Run!
 - **Undo/Redo**: Full change tracking with undo (u) before committing - never lose work
 - **Secure credentials**: AES-128 encrypted credential storage with PBKDF2 key derivation
 
-## System Requirements
-
-- **Python**: 3.11 or higher
-- **Operating Systems**: macOS, Linux, or Windows
-- **Terminal**: Any modern terminal emulator (Terminal.app, iTerm2, Alacritty, Windows Terminal, etc.)
-- **Internet**: Required for initial setup and syncing with Monarch Money
-
 ## Installation
 
-### Step 1: Install Python (if needed)
+### 1. Install uv
 
-**Check if you have Python 3.11+:**
-```bash
-python3 --version
-```
-
-If you see `Python 3.11.x` or higher, you're good! If not:
-
-**macOS:**
-```bash
-# Using Homebrew (install from https://brew.sh if needed)
-brew install python@3.11
-```
-
-**Linux (Ubuntu/Debian):**
-```bash
-sudo apt update
-sudo apt install python3.11 python3.11-venv
-```
-
-**Windows:**
-Download from [python.org](https://www.python.org/downloads/) and install Python 3.11+
-
-### Step 2: Install uv (Python Package Manager)
-
-`uv` is a fast Python package manager. We use it to manage dependencies.
+`uv` is a fast Python package manager that handles everything (including Python itself).
 
 **macOS and Linux:**
 ```bash
@@ -68,47 +37,36 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-**Verify installation:**
+After installation, **restart your terminal** or run:
 ```bash
-uv --version
+source ~/.bashrc  # or ~/.zshrc on macOS
 ```
 
-You should see something like `uv 0.x.x`
+### 2. Download Monarch TUI
 
-### Step 3: Download Monarch TUI
-
-**Option A: Clone with Git**
+**Clone the repository:**
 ```bash
 git clone https://github.com/yourusername/monarch-tui.git
 cd monarch-tui
 ```
 
-**Option B: Download ZIP**
-1. Download the ZIP from GitHub
-2. Extract it
-3. Open terminal and navigate to the folder:
-   ```bash
-   cd path/to/monarch-tui
-   ```
+**Or download ZIP** from GitHub, extract, and navigate to the folder.
 
-### Step 4: Install Dependencies
-
-From the `monarch-tui` directory:
+### 3. Install Dependencies
 
 ```bash
-# Install all dependencies (this may take a minute)
 uv sync
 ```
 
-This creates a virtual environment and installs everything needed.
+This installs Python 3.11+ (if needed) and all dependencies automatically.
 
-### Step 5: Run the TUI
+### 4. Run the TUI
 
 ```bash
 uv run python -m monarch_tui
 ```
 
-The first time you run it, you'll go through credential setup (see below).
+The first time you run it, you'll go through a one-time credential setup.
 
 ### First Run Setup
 
@@ -236,21 +194,12 @@ uv sync
 
 **Problem**: After installing uv, the terminal says it can't find the command
 
-**Solution**: Restart your terminal, or add uv to your PATH:
+**Solution**: Restart your terminal, or manually add uv to your PATH:
 ```bash
 # macOS/Linux - add to ~/.bashrc or ~/.zshrc
 export PATH="$HOME/.cargo/bin:$PATH"
 source ~/.bashrc  # or ~/.zshrc
 ```
-
-### "python3: command not found"
-
-**Problem**: Python isn't installed or not in your PATH
-
-**Solution**:
-- **macOS**: Install via Homebrew: `brew install python@3.11`
-- **Linux**: `sudo apt install python3.11`
-- **Windows**: Download from [python.org](https://www.python.org/downloads/)
 
 ### Login fails with "Incorrect password"
 
