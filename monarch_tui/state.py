@@ -301,12 +301,19 @@ class AppState:
             else:
                 parts.append("Transactions")
 
-        # Add time frame if not all time
-        if self.time_frame == TimeFrame.THIS_YEAR:
-            parts.append("This Year")
-        elif self.time_frame == TimeFrame.THIS_MONTH:
-            parts.append("This Month")
+        # Add time frame with actual dates
+        if self.time_frame == TimeFrame.THIS_YEAR and self.start_date:
+            parts.append(f"Year {self.start_date.year}")
+        elif self.time_frame == TimeFrame.THIS_MONTH and self.start_date:
+            month_name = self.start_date.strftime("%B")  # Full month name
+            year = self.start_date.year
+            parts.append(f"{month_name} {year}")
         elif self.time_frame == TimeFrame.CUSTOM and self.start_date and self.end_date:
-            parts.append(f"{self.start_date} to {self.end_date}")
+            # Check if it's a single month
+            if self.start_date.year == self.end_date.year and self.start_date.month == self.end_date.month:
+                month_name = self.start_date.strftime("%B")
+                parts.append(f"{month_name} {self.start_date.year}")
+            else:
+                parts.append(f"{self.start_date} to {self.end_date}")
 
         return " > ".join(parts) if parts else "Home"

@@ -26,6 +26,7 @@ dependencies = [
     "polars>=0.19.0",
     "textual>=0.47.0",
     "cryptography>=41.0.0",
+    "python-dateutil>=2.8.0",
 ]
 
 [project.scripts]

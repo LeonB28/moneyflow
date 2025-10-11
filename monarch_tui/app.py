@@ -48,8 +48,10 @@ class MonarchTUI(App):
         Binding("9", "select_month_9", "Sep", show=False),
         # Sorting
         Binding("s", "toggle_sort_field", "Count/Amount", show=True),
-        Binding("h,left", "reverse_sort", "Reverse", show=True),
-        Binding("l,right", "reverse_sort", "Reverse", show=True),
+        Binding("h", "reverse_sort", "Reverse", show=True),
+        # Time navigation with arrows
+        Binding("left", "prev_period", "← Prev", show=True),
+        Binding("right", "next_period", "→ Next", show=True),
         # Editing
         Binding("e", "edit_merchant", "Edit Merchant", show=False),
         Binding("r", "recategorize", "Recategorize", show=False),
@@ -572,6 +574,78 @@ class MonarchTUI(App):
         self.state.set_timeframe(TimeFrame.CUSTOM, start_date=first_day, end_date=last_day)
         self.refresh_view()
         self.notify(f"Viewing: {month_name} {year}", timeout=1)
+
+    def action_prev_period(self) -> None:
+        """Navigate to previous time period."""
+        from datetime import date as date_type
+        from dateutil.relativedelta import relativedelta
+        import calendar
+
+        if self.state.start_date is None:
+            # In all-time view, go to current year
+            self.action_this_year()
+            return
+
+        # If in year view, go to previous year
+        if self.state.time_frame == TimeFrame.THIS_YEAR:
+            new_year = self.state.start_date.year - 1
+            self.state.set_timeframe(
+                TimeFrame.CUSTOM,
+                start_date=date_type(new_year, 1, 1),
+                end_date=date_type(new_year, 12, 31)
+            )
+            self.notify(f"Viewing: Year {new_year}", timeout=1)
+        # If in month view, go to previous month
+        elif self.state.time_frame in [TimeFrame.THIS_MONTH, TimeFrame.CUSTOM]:
+            prev_month_start = self.state.start_date.replace(day=1) - relativedelta(months=1)
+            last_day = calendar.monthrange(prev_month_start.year, prev_month_start.month)[1]
+            prev_month_end = prev_month_start.replace(day=last_day)
+
+            self.state.set_timeframe(
+                TimeFrame.CUSTOM,
+                start_date=prev_month_start,
+                end_date=prev_month_end
+            )
+            month_name = prev_month_start.strftime("%B")
+            self.notify(f"Viewing: {month_name} {prev_month_start.year}", timeout=1)
+
+        self.refresh_view()
+
+    def action_next_period(self) -> None:
+        """Navigate to next time period."""
+        from datetime import date as date_type
+        from dateutil.relativedelta import relativedelta
+        import calendar
+
+        if self.state.start_date is None:
+            # In all-time view, go to current year
+            self.action_this_year()
+            return
+
+        # If in year view, go to next year
+        if self.state.time_frame == TimeFrame.THIS_YEAR:
+            new_year = self.state.start_date.year + 1
+            self.state.set_timeframe(
+                TimeFrame.CUSTOM,
+                start_date=date_type(new_year, 1, 1),
+                end_date=date_type(new_year, 12, 31)
+            )
+            self.notify(f"Viewing: Year {new_year}", timeout=1)
+        # If in month view, go to next month
+        elif self.state.time_frame in [TimeFrame.THIS_MONTH, TimeFrame.CUSTOM]:
+            next_month_start = self.state.start_date.replace(day=1) + relativedelta(months=1)
+            last_day = calendar.monthrange(next_month_start.year, next_month_start.month)[1]
+            next_month_end = next_month_start.replace(day=last_day)
+
+            self.state.set_timeframe(
+                TimeFrame.CUSTOM,
+                start_date=next_month_start,
+                end_date=next_month_end
+            )
+            month_name = next_month_start.strftime("%B")
+            self.notify(f"Viewing: {month_name} {next_month_start.year}", timeout=1)
+
+        self.refresh_view()
 
     def action_reverse_sort(self) -> None:
         """Reverse the current sort direction."""
