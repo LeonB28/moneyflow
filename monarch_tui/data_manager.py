@@ -147,22 +147,21 @@ class DataManager:
         batch_size = 1000
         offset = 0
         batch_num = 1
+        total_count = None
 
         while True:
-            if progress_callback:
-                if all_transactions:
-                    progress_callback(
-                        f"Fetching batch {batch_num}... ({len(all_transactions):,} transactions loaded so far)"
-                    )
-                else:
-                    progress_callback(f"Fetching first batch...")
-
             batch = await self.mm.get_transactions(
                 start_date=start_date,
                 end_date=end_date,
                 limit=batch_size,
                 offset=offset
             )
+
+            # Get total count on first batch
+            if total_count is None and 'allTransactions' in batch:
+                total_count = batch['allTransactions'].get('totalCount', 0)
+                if progress_callback and total_count:
+                    progress_callback(f"Found {total_count:,} total transactions. Starting download...")
 
             # Get results from batch
             batch_results = []
@@ -175,6 +174,19 @@ class DataManager:
                 break
 
             all_transactions.extend(batch_results)
+
+            # Show progress
+            if progress_callback:
+                if total_count:
+                    pct = int((len(all_transactions) / total_count) * 100)
+                    progress_callback(
+                        f"Downloaded {len(all_transactions):,} / {total_count:,} transactions ({pct}%)"
+                    )
+                else:
+                    progress_callback(
+                        f"Downloaded {len(all_transactions):,} transactions..."
+                    )
+
             offset += batch_size
             batch_num += 1
 
@@ -183,7 +195,7 @@ class DataManager:
                 break
 
         if progress_callback:
-            progress_callback(f"Finished loading {len(all_transactions):,} transactions")
+            progress_callback(f"✓ Downloaded {len(all_transactions):,} transactions")
 
         return all_transactions
 
