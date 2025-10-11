@@ -62,7 +62,7 @@ class MonarchTUI(App):
         Binding("question_mark", "help", "Help", show=True, key_display="?"),
         Binding("slash", "search", "Search", show=True, key_display="/"),
         Binding("escape", "go_back", "Back", show=False),
-        Binding("ctrl+s", "save", "Save", show=True),
+        Binding("w", "review_and_commit", "Commit", show=True),
         Binding("q", "quit_app", "Quit", show=True),
     ]
 
@@ -935,34 +935,55 @@ class MonarchTUI(App):
         if self.state.go_back():
             self.refresh_view()
 
-    async def action_save(self) -> None:
-        """Save pending changes."""
+    def action_review_and_commit(self) -> None:
+        """Review pending changes and commit if confirmed."""
         if self.data_manager is None:
             return
 
         count = self.data_manager.get_stats()["pending_changes"]
         if count == 0:
-            self.notify("No pending changes to save", timeout=2)
+            self.notify("No pending changes to commit", timeout=2)
             return
 
-        self.notify(f"Saving {count} change(s)...", timeout=3)
+        # Show review screen
+        self.run_worker(self._review_and_commit(), exclusive=False)
 
-        try:
-            success_count, failure_count = await self.data_manager.commit_pending_edits(
-                self.data_manager.pending_edits
-            )
-            if failure_count > 0:
-                self.notify(
-                    f"Saved {success_count}, {failure_count} failed", severity="warning", timeout=5
+    async def _review_and_commit(self) -> None:
+        """Show review screen and commit if confirmed."""
+        from .screens.review_screen import ReviewChangesScreen
+
+        # Show review screen
+        should_commit = await self.push_screen(
+            ReviewChangesScreen(self.data_manager.pending_edits),
+            wait_for_dismiss=True
+        )
+
+        if should_commit:
+            count = len(self.data_manager.pending_edits)
+            self.notify(f"Committing {count} change(s) to Monarch Money...", timeout=2)
+
+            try:
+                success_count, failure_count = await self.data_manager.commit_pending_edits(
+                    self.data_manager.pending_edits
                 )
-            else:
-                self.notify(f"Saved {success_count} change(s)!", severity="information", timeout=3)
+                if failure_count > 0:
+                    self.notify(
+                        f"✅ Saved {success_count}, ❌ {failure_count} failed",
+                        severity="warning",
+                        timeout=5
+                    )
+                else:
+                    self.notify(
+                        f"✅ Committed {success_count} change(s) successfully!",
+                        severity="information",
+                        timeout=3
+                    )
 
-            # Clear pending edits on success
-            self.data_manager.pending_edits.clear()
-            self.update_action_hints()
-        except Exception as e:
-            self.notify(f"Error saving: {e}", severity="error", timeout=5)
+                # Clear pending edits on success
+                self.data_manager.pending_edits.clear()
+                self.update_action_hints()
+            except Exception as e:
+                self.notify(f"❌ Error committing: {e}", severity="error", timeout=5)
 
     def action_quit_app(self) -> None:
         """Quit the application - show confirmation first."""
