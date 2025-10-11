@@ -31,6 +31,7 @@ class MonarchTUI(App):
         Binding("m", "view_merchants", "Merchants", show=True),
         Binding("c", "view_categories", "Categories", show=True),
         Binding("g", "view_groups", "Groups", show=True),
+        Binding("D", "find_duplicates", "Duplicates", show=True, key_display="D"),
         # Time navigation
         Binding("y", "this_year", "Year", show=True),
         Binding("t", "this_month", "Month", show=True),
@@ -51,6 +52,7 @@ class MonarchTUI(App):
         # Editing
         Binding("e", "edit_merchant", "Edit Merchant", show=False),
         Binding("r", "recategorize", "Recategorize", show=False),
+        Binding("d", "delete_transaction", "Delete", show=False),
         Binding("space", "toggle_select", "Select", show=False),
         # Other actions
         Binding("f", "show_filters", "Filters", show=True),
@@ -474,6 +476,35 @@ class MonarchTUI(App):
         self.state.selected_group = None
         self.refresh_view()
 
+    def action_find_duplicates(self) -> None:
+        """Find and display duplicate transactions."""
+        if self.data_manager is None or self.data_manager.df is None:
+            return
+
+        from .duplicate_detector import DuplicateDetector
+
+        # Find duplicates in current filtered view
+        filtered_df = self.state.get_filtered_df()
+        if filtered_df is None or filtered_df.is_empty():
+            self.notify("No transactions to check", timeout=2)
+            return
+
+        duplicates = DuplicateDetector.find_duplicates(filtered_df)
+
+        if duplicates.is_empty():
+            self.notify("No duplicates found!", severity="information", timeout=3)
+        else:
+            groups = DuplicateDetector.get_duplicate_groups(filtered_df, duplicates)
+            count = len(duplicates)
+            group_count = len(groups)
+            self.notify(
+                f"Found {count} potential duplicates in {group_count} groups. "
+                "Check the Help screen for details.",
+                severity="warning",
+                timeout=5
+            )
+            # TODO: Show duplicates in a dedicated view or modal
+
     # Time navigation actions
     def action_this_year(self) -> None:
         """Switch to current year view."""
@@ -716,6 +747,47 @@ class MonarchTUI(App):
                 self.refresh_view()
             else:
                 self.notify("Recategorize only works in transaction detail view", timeout=2)
+
+    def action_delete_transaction(self) -> None:
+        """Delete current transaction with confirmation."""
+        if self.data_manager is None or self.state.view_mode != ViewMode.DETAIL:
+            self.notify("Delete only works in transaction detail view", timeout=2)
+            return
+
+        self.run_worker(self._delete_transaction(), exclusive=False)
+
+    async def _delete_transaction(self) -> None:
+        """Show delete confirmation and delete if confirmed."""
+        from .screens.edit_screens import DeleteConfirmationScreen
+
+        if self.state.current_data is None:
+            return
+
+        table = self.query_one("#data-table", DataTable)
+        if table.cursor_row < 0:
+            return
+
+        # Get current transaction
+        row_data = self.state.current_data.row(table.cursor_row, named=True)
+        txn_id = row_data["id"]
+
+        # Show confirmation
+        confirmed = await self.push_screen(
+            DeleteConfirmationScreen(transaction_count=1),
+            wait_for_dismiss=True
+        )
+
+        if confirmed:
+            try:
+                # Delete via API
+                await self.mm.delete_transaction(txn_id)
+                self.notify("Transaction deleted", severity="information", timeout=2)
+
+                # Refresh data - need to re-fetch
+                # For now, just notify user to refresh
+                self.notify("Press Ctrl+L to refresh data from Monarch", timeout=3)
+            except Exception as e:
+                self.notify(f"Error deleting: {e}", severity="error", timeout=5)
 
     def action_go_back(self) -> None:
         """Go back to previous view."""

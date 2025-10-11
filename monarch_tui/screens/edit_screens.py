@@ -189,3 +189,81 @@ class SelectCategoryScreen(ModalScreen):
         """Handle keyboard shortcuts."""
         if event.key == "escape":
             self.dismiss(None)
+
+
+class DeleteConfirmationScreen(ModalScreen):
+    """Confirmation dialog for deleting transactions."""
+
+    CSS = """
+    DeleteConfirmationScreen {
+        align: center middle;
+    }
+
+    #delete-dialog {
+        width: 50;
+        height: auto;
+        border: thick $error;
+        background: $surface;
+        padding: 2 4;
+    }
+
+    #delete-title {
+        width: 100%;
+        text-align: center;
+        text-style: bold;
+        color: $error;
+        margin-bottom: 1;
+    }
+
+    #delete-message {
+        text-align: center;
+        color: $text;
+        margin-bottom: 2;
+    }
+
+    #button-container {
+        layout: horizontal;
+        width: 100%;
+        align: center middle;
+    }
+
+    #button-container Button {
+        margin: 0 1;
+    }
+    """
+
+    def __init__(self, transaction_count: int = 1):
+        super().__init__()
+        self.transaction_count = transaction_count
+
+    def compose(self) -> ComposeResult:
+        with Container(id="delete-dialog"):
+            yield Label("⚠️  Delete Transaction?", id="delete-title")
+
+            if self.transaction_count > 1:
+                yield Static(
+                    f"Are you sure you want to delete {self.transaction_count} transactions?\n"
+                    "This action CANNOT be undone!",
+                    id="delete-message"
+                )
+            else:
+                yield Static(
+                    "Are you sure you want to delete this transaction?\n"
+                    "This action CANNOT be undone!",
+                    id="delete-message"
+                )
+
+            with Container(id="button-container"):
+                yield Button("Cancel", variant="primary", id="cancel-button")
+                yield Button("Delete", variant="error", id="delete-button")
+
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "cancel-button":
+            self.dismiss(False)
+        elif event.button.id == "delete-button":
+            self.dismiss(True)
+
+    def on_key(self, event: Key) -> None:
+        """Handle keyboard shortcuts."""
+        if event.key == "escape":
+            self.dismiss(False)
