@@ -39,6 +39,14 @@ Screen {
     align: center middle;
 }
 
+#loading-status {
+    height: auto;
+    text-align: center;
+    color: $accent;
+    margin: 1 0;
+    text-style: bold;
+}
+
 #data-table {
     height: 1fr;
     border: solid $primary;

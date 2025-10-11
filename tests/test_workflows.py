@@ -113,7 +113,7 @@ class TestHideFromReportsWorkflow:
 
         # Get a transaction
         txn = df.row(0, named=True)
-        old_hide_value = txn['hide_from_reports']
+        old_hide_value = txn['hideFromReports']
         new_hide_value = not old_hide_value
 
         # 1. User toggles hide
@@ -185,7 +185,7 @@ class TestBulkEditWorkflow:
         # Toggle hide for all
         for txn_id in app_state.selected_ids:
             txn_row = df.filter(pl.col('id') == txn_id).row(0, named=True)
-            old_value = txn_row['hide_from_reports']
+            old_value = txn_row['hideFromReports']
             app_state.add_edit(
                 transaction_id=txn_id,
                 field="hide_from_reports",

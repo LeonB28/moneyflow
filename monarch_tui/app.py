@@ -62,6 +62,7 @@ class MonarchTUI(App):
             # Main content area
             with Vertical(id="content-area"):
                 yield LoadingIndicator(id="loading")
+                yield Static("", id="loading-status")
                 yield DataTable(id="data-table", cursor_type="row")
 
             # Bottom action hints
@@ -80,6 +81,7 @@ class MonarchTUI(App):
 
         # Hide loading initially
         self.query_one("#loading", LoadingIndicator).display = False
+        self.query_one("#loading-status", Static).display = False
 
         # Attempt to use saved session or show login prompt
         # Must run in a worker to use push_screen with wait_for_dismiss
@@ -89,7 +91,9 @@ class MonarchTUI(App):
         """Load data from Monarch API."""
         self.loading = True
         self.query_one("#loading", LoadingIndicator).display = True
-        self.status_message = "Connecting to Monarch Money..."
+        loading_status = self.query_one("#loading-status", Static)
+        loading_status.display = True
+        loading_status.update("🔄 Connecting to Monarch Money...")
 
         try:
             # Try to use encrypted credentials first
@@ -120,7 +124,7 @@ class MonarchTUI(App):
                     return
 
             # Login with credentials
-            self.status_message = "Logging in with stored credentials..."
+            loading_status.update("🔐 Logging in to Monarch Money...")
 
             try:
                 await self.mm.login(
@@ -130,9 +134,10 @@ class MonarchTUI(App):
                     save_session=True,
                     mfa_secret_key=creds['mfa_secret']
                 )
-                self.status_message = "Logged in successfully!"
+                loading_status.update("✅ Logged in successfully!")
             except (RequireMFAException, LoginFailedException) as e:
                 # Login failed - credentials may be invalid
+                loading_status.update(f"❌ Login failed: {e}")
                 self.notify(f"Login failed: {e}", severity="error", timeout=10)
                 self.notify("Your credentials may be incorrect. Exiting...", timeout=10)
                 self.exit()
@@ -148,12 +153,18 @@ class MonarchTUI(App):
             self.state.start_date = start_date
             self.state.end_date = end_date
 
-            # Fetch data from API
-            self.status_message = "Fetching transactions..."
+            # Fetch data from API with progress updates
+            loading_status.update("📊 Fetching transaction data from Monarch Money...")
+            loading_status.update("⏳ This may take a minute for large accounts (10k+ transactions)...")
+
+            def update_progress(msg: str) -> None:
+                """Update the loading status display."""
+                loading_status.update(f"📊 {msg}")
+
             df, categories, category_groups = await self.data_manager.fetch_all_data(
                 start_date=start_date,
                 end_date=end_date,
-                progress_callback=lambda msg: setattr(self, 'status_message', msg)
+                progress_callback=update_progress
             )
 
             # Store in data manager
@@ -162,16 +173,20 @@ class MonarchTUI(App):
             self.data_manager.category_groups = category_groups
             self.state.transactions_df = df
 
+            loading_status.update(f"✅ Loaded {len(df):,} transactions! Preparing view...")
+
             # Show initial view (merchants)
             self.refresh_view()
 
         except Exception as e:
-            self.status_message = f"Error: {e}"
+            loading_status = self.query_one("#loading-status", Static)
+            loading_status.update(f"❌ Error: {e}")
             self.notify(f"Failed to load data: {e}", severity="error", timeout=10)
 
         finally:
             self.loading = False
             self.query_one("#loading", LoadingIndicator).display = False
+            self.query_one("#loading-status", Static).display = False
 
     def update_loading_progress(self, current: int, total: int, message: str) -> None:
         """Update loading progress message."""
@@ -290,11 +305,11 @@ class MonarchTUI(App):
 
         # Add rows
         for row in txns.iter_rows(named=True):
-            date = row['date']
+            date = str(row['date'])
             merchant = row['merchant'] or 'Unknown'
             category = row['category'] or 'Uncategorized'
             amount = row['amount']
-            flags = "H" if row['hideFromReports'] else ""
+            flags = "H" if row.get('hideFromReports', False) else ""
 
             table.add_row(date, merchant, category, f"${amount:,.2f}", flags)
 

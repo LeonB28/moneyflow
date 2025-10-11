@@ -146,10 +146,16 @@ class DataManager:
         all_transactions = []
         batch_size = 1000
         offset = 0
+        batch_num = 1
 
         while True:
             if progress_callback:
-                progress_callback(f"Fetching transactions (batch {offset // batch_size + 1})...")
+                if all_transactions:
+                    progress_callback(
+                        f"Fetching batch {batch_num}... ({len(all_transactions):,} transactions loaded so far)"
+                    )
+                else:
+                    progress_callback(f"Fetching first batch...")
 
             batch = await self.mm.get_transactions(
                 start_date=start_date,
@@ -170,10 +176,14 @@ class DataManager:
 
             all_transactions.extend(batch_results)
             offset += batch_size
+            batch_num += 1
 
             # Break if we got fewer results than batch size
             if len(batch_results) < batch_size:
                 break
+
+        if progress_callback:
+            progress_callback(f"Finished loading {len(all_transactions):,} transactions")
 
         return all_transactions
 
@@ -202,20 +212,20 @@ class DataManager:
             group = self.category_to_group.get(category_name, 'Uncategorized')
 
             row = {
-                'id': txn.get('id', ''),
-                'date': txn.get('date', ''),
+                'id': str(txn.get('id', '')),
+                'date': str(txn.get('date', '')),
                 'amount': float(txn.get('amount', 0)),
-                'merchant': merchant_obj.get('name', 'Unknown'),
-                'merchant_id': merchant_obj.get('id', ''),
-                'category': category_name,
-                'category_id': category_id,
-                'group': group,
-                'account': account_obj.get('displayName', ''),
-                'account_id': account_obj.get('id', ''),
-                'notes': txn.get('notes', ''),
-                'hide_from_reports': txn.get('hideFromReports', False),
-                'pending': txn.get('pending', False),
-                'is_recurring': txn.get('isRecurring', False),
+                'merchant': str(merchant_obj.get('name', '') if merchant_obj.get('name') else 'Unknown'),
+                'merchant_id': str(merchant_obj.get('id', '')),
+                'category': str(category_name if category_name else 'Uncategorized'),
+                'category_id': str(category_id),
+                'group': str(group),
+                'account': str(account_obj.get('displayName', '') if account_obj.get('displayName') else ''),
+                'account_id': str(account_obj.get('id', '')),
+                'notes': str(txn.get('notes', '') if txn.get('notes') else ''),
+                'hideFromReports': bool(txn.get('hideFromReports', False)),
+                'pending': bool(txn.get('pending', False)),
+                'isRecurring': bool(txn.get('isRecurring', False)),
             }
             rows.append(row)
 
