@@ -3,7 +3,7 @@ Tests for state management, undo/redo, and change tracking.
 """
 import pytest
 from datetime import date, datetime
-from state import AppState, ViewMode, SortMode, TimeFrame, TransactionEdit
+from monarch_tui.state import AppState, ViewMode, SortMode, TimeFrame, TransactionEdit
 
 
 class TestAppState:

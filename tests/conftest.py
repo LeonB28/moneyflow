@@ -6,8 +6,8 @@ from datetime import date, datetime
 import polars as pl
 
 from tests.mock_backend import MockMonarchMoney
-from data_manager import DataManager
-from state import AppState
+from monarch_tui.data_manager import DataManager
+from monarch_tui.state import AppState
 
 
 @pytest.fixture

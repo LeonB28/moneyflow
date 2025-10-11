@@ -3,7 +3,7 @@ Tests for DataManager operations including aggregation, filtering, and API integ
 """
 import pytest
 import polars as pl
-from data_manager import DataManager
+from monarch_tui.data_manager import DataManager
 
 
 class TestDataFetching:
@@ -150,7 +150,7 @@ class TestCommitEdits:
 
     async def test_commit_single_edit(self, data_manager, mock_mm):
         """Test committing a single edit."""
-        from state import TransactionEdit
+        from monarch_tui.state import TransactionEdit
         from datetime import datetime
 
         edits = [
@@ -176,7 +176,7 @@ class TestCommitEdits:
 
     async def test_commit_multiple_edits(self, data_manager, mock_mm):
         """Test committing multiple edits."""
-        from state import TransactionEdit
+        from monarch_tui.state import TransactionEdit
         from datetime import datetime
 
         edits = [
@@ -201,7 +201,7 @@ class TestCommitEdits:
 
     async def test_commit_merchant_rename(self, data_manager, mock_mm):
         """Test committing a merchant rename."""
-        from state import TransactionEdit
+        from monarch_tui.state import TransactionEdit
         from datetime import datetime
 
         edits = [
@@ -217,7 +217,7 @@ class TestCommitEdits:
 
     async def test_commit_category_change(self, data_manager, mock_mm):
         """Test committing a category change."""
-        from state import TransactionEdit
+        from monarch_tui.state import TransactionEdit
         from datetime import datetime
 
         edits = [
@@ -233,7 +233,7 @@ class TestCommitEdits:
 
     async def test_commit_hide_toggle(self, data_manager, mock_mm):
         """Test committing hide from reports toggle."""
-        from state import TransactionEdit
+        from monarch_tui.state import TransactionEdit
         from datetime import datetime
 
         edits = [

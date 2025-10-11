@@ -16,9 +16,9 @@ from textual.widgets import (
 )
 from textual.reactive import reactive
 
-from monarchmoney import MonarchMoney
-from data_manager import DataManager
-from state import AppState, ViewMode, SortMode, TimeFrame
+from monarch_tui import MonarchMoney
+from monarch_tui.data_manager import DataManager
+from monarch_tui.state import AppState, ViewMode, SortMode, TimeFrame
 
 
 class LoginScreen(Screen):

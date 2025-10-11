@@ -6,9 +6,9 @@ Monarch CLI is a terminal-based UI for power users to manage Monarch Money trans
 
 ## Development Setup
 
-### Using uv (Required)
+### Using uv (REQUIRED)
 
-This project uses **uv** for package management and development. Do not use pip or other package managers.
+**IMPORTANT**: This project uses **uv** exclusively for all development workflows. Always use `uv run` for executing scripts and `uv pip` for package management. Never use pip, pipenv, poetry, or other package managers.
 
 ```bash
 # Install uv if not already installed
@@ -18,28 +18,55 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv pip install -e ".[dev]"
 
 # Run the TUI
-uv run monarch-tui
-# or
 uv run python monarch_tui.py
 
-# Run tests
+# Run tests (ALWAYS before committing)
 uv run pytest
 
 # Run tests with coverage
-uv run pytest --cov=monarch_tui --cov-report=html
+uv run pytest --cov --cov-report=html
+
+# View coverage report
+open htmlcov/index.html
 ```
+
+### Test-Driven Development (CRITICAL)
+
+**This project handles financial data. We cannot afford slip-ups.**
+
+**MANDATORY WORKFLOW**:
+1. **Write tests first** for any new feature or bug fix
+2. **Run tests** - verify they fail as expected
+3. **Implement** the feature/fix
+4. **Run tests again** - verify all tests pass
+5. **Check coverage** - ensure new code is tested
+6. **Only commit when tests are green**
+
+**Before EVERY commit**:
+```bash
+# Run full test suite
+uv run pytest -v
+
+# Check coverage
+uv run pytest --cov --cov-report=term-missing
+```
+
+**All tests must pass before committing.** No exceptions.
 
 ### Project Structure
 
+**IMPORTANT**: All Python source code must be in the `monarch_tui/` package. No Python files should live at the top level except `monarch_tui.py` (the main entry point).
+
 ```
 monarch-cli/
-├── monarch_tui/              # Main package
+├── monarch_tui/              # Main package (ALL code goes here)
 │   ├── monarchmoney.py       # GraphQL client (keep separate for upstream diffs)
 │   ├── app.py                # Main Textual application
 │   ├── data_manager.py       # Data layer with Polars
 │   ├── state.py              # App state with undo/redo
 │   ├── credentials.py        # Encrypted credential storage
 │   ├── keybindings.py        # Keyboard shortcuts
+│   ├── duplicate_detector.py # Duplicate detection
 │   ├── widgets/              # Custom UI widgets
 │   ├── views/                # View components
 │   └── styles/               # Textual CSS
@@ -49,11 +76,19 @@ monarch-cli/
 │   ├── test_state.py         # State management tests
 │   ├── test_data_manager.py  # Data operations tests
 │   └── test_workflows.py     # Edit workflow tests
-├── monarchmoney/             # Copy of upstream library
+├── monarch_tui.py            # Main entry point (imports from package)
 ├── pyproject.toml            # Project metadata and dependencies
+├── pytest.ini                # Pytest configuration
 ├── README.md                 # User documentation
 └── CLAUDE.md                 # This file - development guide
 ```
+
+**File Organization Rules**:
+- ✅ All business logic in `monarch_tui/` package
+- ✅ All tests in `tests/` directory
+- ✅ Only `monarch_tui.py` at top level as entry point
+- ❌ No other `.py` files at top level
+- ❌ No duplicate files between top-level and package
 
 ## Testing Strategy
 
@@ -81,21 +116,43 @@ monarch-cli/
 
 ### Running Tests
 
-```bash
-# Run all tests
-uv run pytest
+**ALWAYS use `uv run` for running tests:**
 
-# Run specific test file
-uv run pytest tests/test_state.py
+```bash
+# Run all tests (run before EVERY commit)
+uv run pytest -v
 
 # Run with coverage report
-uv run pytest --cov=monarch_tui --cov-report=html
+uv run pytest --cov --cov-report=html --cov-report=term-missing
+
+# Run specific test file
+uv run pytest tests/test_state.py -v
 
 # Run tests matching a pattern
-uv run pytest -k "test_undo"
+uv run pytest -k "test_undo" -v
 
-# Verbose output
-uv run pytest -v
+# Run and stop on first failure
+uv run pytest -x
+
+# Run and show local variables on failure
+uv run pytest -l
+```
+
+### Coverage Requirements
+
+**Business Logic Coverage Target: >90%**
+
+Core modules must maintain high coverage:
+- `state.py`: State management and undo/redo (target: 95%+)
+- `data_manager.py`: Data operations and API integration (target: 90%+)
+- `duplicate_detector.py`: Duplicate detection (target: 100%)
+
+UI layer coverage is less critical but still valuable.
+
+View coverage report:
+```bash
+uv run pytest --cov --cov-report=html
+open htmlcov/index.html
 ```
 
 ### Test-Driven Development Workflow
@@ -165,8 +222,13 @@ uv pip compile pyproject.toml -o requirements.txt
 
 ## Git Workflow
 
+**CRITICAL**: Never commit without running tests first!
+
 ```bash
-# Commit after each logical unit of work
+# MANDATORY: Run tests before committing
+uv run pytest -v
+
+# Only if all tests pass, then commit
 git add -A
 git commit -m "Descriptive commit message"
 
@@ -177,6 +239,13 @@ git commit -m "Descriptive commit message"
 # refactor: Code refactoring
 # docs: Documentation updates
 ```
+
+**Pre-commit Checklist**:
+- [ ] All tests pass (`uv run pytest -v`)
+- [ ] Coverage hasn't decreased
+- [ ] No debug print statements left in code
+- [ ] Updated tests for any changed behavior
+- [ ] Ran with real test data if changing API logic
 
 ## Performance Considerations
 

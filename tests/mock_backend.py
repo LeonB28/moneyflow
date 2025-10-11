@@ -8,6 +8,10 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime, date
 
 
+# Simulate the MonarchMoney API interface without importing the real one
+# This keeps tests isolated and prevents accidental API calls
+
+
 class MockMonarchMoney:
     """
     Mock implementation of MonarchMoney client for testing.

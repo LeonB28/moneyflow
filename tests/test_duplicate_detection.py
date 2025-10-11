@@ -6,7 +6,7 @@ Critical to test thoroughly since deletion is potentially destructive.
 import pytest
 from datetime import date
 import polars as pl
-from duplicate_detector import DuplicateDetector
+from monarch_tui.duplicate_detector import DuplicateDetector
 
 
 class TestDuplicateDetection:

@@ -9,8 +9,9 @@ These tests verify that the full chain of operations works correctly:
 """
 import pytest
 from datetime import datetime
-from state import AppState
-from data_manager import DataManager
+import polars as pl
+from monarch_tui.state import AppState
+from monarch_tui.data_manager import DataManager
 
 
 class TestMerchantEditWorkflow:
@@ -204,7 +205,7 @@ class TestErrorHandling:
 
     async def test_commit_with_invalid_transaction_id(self, data_manager, app_state):
         """Test that commits handle invalid transaction IDs gracefully."""
-        from state import TransactionEdit
+        from monarch_tui.state import TransactionEdit
 
         # Add edit with non-existent transaction ID
         edits = [
