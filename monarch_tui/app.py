@@ -27,12 +27,14 @@ class MonarchTUI(App):
     CSS_PATH = "styles/monarch.tcss"
 
     BINDINGS = [
+        # View mode
         Binding("m", "view_merchants", "Merchants", show=True),
         Binding("c", "view_categories", "Categories", show=True),
         Binding("g", "view_groups", "Groups", show=True),
-        Binding("y", "this_year", "This Year", show=True),
-        Binding("a", "all_time", "All Time", show=True),
-        Binding("t", "this_month", "This Month", show=True),
+        # Time navigation
+        Binding("y", "this_year", "Year", show=True),
+        Binding("t", "this_month", "Month", show=True),
+        Binding("a", "all_time", "All", show=True),
         Binding("1", "select_month_1", "Jan", show=False),
         Binding("2", "select_month_2", "Feb", show=False),
         Binding("3", "select_month_3", "Mar", show=False),
@@ -42,6 +44,7 @@ class MonarchTUI(App):
         Binding("7", "select_month_7", "Jul", show=False),
         Binding("8", "select_month_8", "Aug", show=False),
         Binding("9", "select_month_9", "Sep", show=False),
+        # Other actions
         Binding("question_mark", "help", "Help", show=True, key_display="?"),
         Binding("slash", "search", "Search", show=True, key_display="/"),
         Binding("h,left", "toggle_sort", "Sort", show=True),

@@ -194,11 +194,12 @@ This is much faster than re-querying the Monarch API each time!
 - `Enter`: Drill down / Edit selected
 - `Esc`: Go back / Cancel
 
-### Time Frames
-- `1-9`: Quick select months (1=Jan, 2=Feb, etc.)
-- `y`: This year
-- `a`: All time
-- `<` / `>`: Previous/Next period
+### Time Frames (Instant Switching!)
+- `y`: This year (e.g., all of 2025)
+- `t`: This month (e.g., October 2025)
+- `a`: All time (all downloaded transactions)
+- `1-9`: Quick select months (1=Jan, 2=Feb, ..., 9=Sep)
+- **Note**: All time switching is INSTANT since data is pre-loaded
 
 ### Actions
 - `Space`: Multi-select for bulk edit
