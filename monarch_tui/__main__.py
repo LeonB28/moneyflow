@@ -10,6 +10,7 @@ from typing import Optional, List
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
+from textual.message import Message
 from textual.screen import Screen, ModalScreen
 from textual.widgets import (
     DataTable, Header, Footer, Static, Input, Button, Label, Select
@@ -189,6 +190,12 @@ class BulkEditDialog(ModalScreen):
 class SearchBar(Static):
     """Search/filter bar at the top of the screen."""
 
+    class SearchChanged(Message):
+        """Message sent when search query changes."""
+        def __init__(self, query: str):
+            super().__init__()
+            self.query = query
+
     search_query = reactive("")
 
     def compose(self) -> ComposeResult:
@@ -202,22 +209,23 @@ class SearchBar(Static):
             # Notify parent to update filter
             self.post_message(self.SearchChanged(event.value))
 
-    class SearchChanged(Static.MessageSent):
-        def __init__(self, query: str):
-            super().__init__()
-            self.query = query
-
 
 class StatusBar(Static):
     """Status bar showing current state and pending changes."""
 
-    status = reactive("")
+    status = reactive("Ready")
 
     def compose(self) -> ComposeResult:
         yield Label(self.status, id="status-text")
 
     def watch_status(self, status: str) -> None:
-        self.query_one("#status-text", Label).update(status)
+        """Update the status label when reactive status changes."""
+        try:
+            label = self.query_one("#status-text", Label)
+            label.update(status)
+        except:
+            # Label not ready yet during composition
+            pass
 
 
 class MonarchTUI(App):
