@@ -14,10 +14,13 @@ Monarch CLI is a terminal-based UI for power users to manage Monarch Money trans
 # Install uv if not already installed
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install dependencies in development mode
+# FIRST TIME SETUP: Install dependencies in development mode
 uv pip install -e ".[dev]"
 
-# Run the TUI
+# This installs the package in editable mode so changes are immediately available
+# You MUST run this before running tests or the TUI for the first time
+
+# After installation, run the TUI
 uv run python -m monarch_tui
 
 # Run tests (ALWAYS before committing)
@@ -29,6 +32,8 @@ uv run pytest --cov --cov-report=html
 # View coverage report
 open htmlcov/index.html
 ```
+
+**If you get `ModuleNotFoundError`**: You need to run `uv pip install -e ".[dev]"` first!
 
 ### Test-Driven Development (CRITICAL)
 
