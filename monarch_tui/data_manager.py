@@ -65,6 +65,12 @@ class DataManager:
         self.category_to_group: Dict[str, str] = {}
         self._build_category_group_mapping()
 
+        # Data storage
+        self.df: Optional[pl.DataFrame] = None
+        self.categories: Dict[str, Any] = {}
+        self.category_groups: Dict[str, Any] = {}
+        self.pending_edits: List[Any] = []
+
     def _build_category_group_mapping(self):
         """Build reverse mapping from category to group."""
         for group, categories in CATEGORY_GROUPS.items():
@@ -322,3 +328,18 @@ class DataManager:
         failure_count = len(results) - success_count
 
         return success_count, failure_count
+
+    def get_stats(self) -> Dict[str, Any]:
+        """Get statistics about current data."""
+        if self.df is None or self.df.is_empty():
+            return {
+                'total_transactions': 0,
+                'total_amount': 0.0,
+                'pending_changes': len(self.pending_edits)
+            }
+
+        return {
+            'total_transactions': len(self.df),
+            'total_amount': float(self.df['amount'].sum()),
+            'pending_changes': len(self.pending_edits)
+        }

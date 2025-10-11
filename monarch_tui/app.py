@@ -148,11 +148,19 @@ class MonarchTUI(App):
             self.state.start_date = start_date
             self.state.end_date = end_date
 
-            await self.data_manager.load_data(
+            # Fetch data from API
+            self.status_message = "Fetching transactions..."
+            df, categories, category_groups = await self.data_manager.fetch_all_data(
                 start_date=start_date,
                 end_date=end_date,
-                progress_callback=self.update_loading_progress
+                progress_callback=lambda msg: setattr(self, 'status_message', msg)
             )
+
+            # Store in data manager
+            self.data_manager.df = df
+            self.data_manager.categories = categories
+            self.data_manager.category_groups = category_groups
+            self.state.transactions_df = df
 
             # Show initial view (merchants)
             self.refresh_view()
@@ -202,8 +210,11 @@ class MonarchTUI(App):
         table.add_column("Total", key="total", width=15)
 
         # Get aggregated data
-        sort_by = "count" if self.state.sort_mode == SortMode.COUNT else "total"
-        agg = self.data_manager.aggregate_by_merchant(sort_by=sort_by)
+        agg = self.data_manager.aggregate_by_merchant(self.data_manager.df)
+        # Sort based on mode
+        if self.state.sort_mode != SortMode.COUNT_DESC:
+            sort_col = "total" if "AMOUNT" in self.state.sort_mode.value else "count"
+            agg = agg.sort(sort_col, descending=True)
         self.state.current_data = agg
 
         # Add rows
@@ -221,8 +232,11 @@ class MonarchTUI(App):
         table.add_column("Count", key="count", width=10)
         table.add_column("Total", key="total", width=15)
 
-        sort_by = "count" if self.state.sort_mode == SortMode.COUNT else "total"
-        agg = self.data_manager.aggregate_by_category(sort_by=sort_by)
+        agg = self.data_manager.aggregate_by_category(self.data_manager.df)
+        # Sort based on mode
+        if self.state.sort_mode != SortMode.COUNT_DESC:
+            sort_col = "total" if "AMOUNT" in self.state.sort_mode.value else "count"
+            agg = agg.sort(sort_col, descending=True)
         self.state.current_data = agg
 
         for row in agg.iter_rows(named=True):
@@ -239,8 +253,11 @@ class MonarchTUI(App):
         table.add_column("Count", key="count", width=10)
         table.add_column("Total", key="total", width=15)
 
-        sort_by = "count" if self.state.sort_mode == SortMode.COUNT else "total"
-        agg = self.data_manager.aggregate_by_group(sort_by=sort_by)
+        agg = self.data_manager.aggregate_by_group(self.data_manager.df)
+        # Sort based on mode
+        if self.state.sort_mode != SortMode.COUNT_DESC:
+            sort_col = "total" if "AMOUNT" in self.state.sort_mode.value else "count"
+            agg = agg.sort(sort_col, descending=True)
         self.state.current_data = agg
 
         for row in agg.iter_rows(named=True):
@@ -261,11 +278,11 @@ class MonarchTUI(App):
 
         # Filter transactions based on drill-down
         if self.state.selected_merchant:
-            txns = self.data_manager.filter_by_merchant(self.state.selected_merchant)
+            txns = self.data_manager.filter_by_merchant(self.data_manager.df, self.state.selected_merchant)
         elif self.state.selected_category:
-            txns = self.data_manager.filter_by_category(self.state.selected_category)
+            txns = self.data_manager.filter_by_category(self.data_manager.df, self.state.selected_category)
         elif self.state.selected_group:
-            txns = self.data_manager.filter_by_group(self.state.selected_group)
+            txns = self.data_manager.filter_by_group(self.data_manager.df, self.state.selected_group)
         else:
             txns = self.data_manager.df
 
@@ -379,10 +396,16 @@ class MonarchTUI(App):
         self.notify(f"Saving {count} change(s)...", timeout=3)
 
         try:
-            saved = await self.data_manager.commit_changes(
-                progress_callback=self.update_loading_progress
+            success_count, failure_count = await self.data_manager.commit_pending_edits(
+                self.data_manager.pending_edits
             )
-            self.notify(f"Saved {saved} change(s)!", severity="information", timeout=3)
+            if failure_count > 0:
+                self.notify(f"Saved {success_count}, {failure_count} failed", severity="warning", timeout=5)
+            else:
+                self.notify(f"Saved {success_count} change(s)!", severity="information", timeout=3)
+
+            # Clear pending edits on success
+            self.data_manager.pending_edits.clear()
             self.update_action_hints()
         except Exception as e:
             self.notify(f"Error saving: {e}", severity="error", timeout=5)
