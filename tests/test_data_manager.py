@@ -47,9 +47,8 @@ class TestAggregation:
         assert "count" in agg.columns
         assert "total" in agg.columns
 
-        # Should be sorted by count (descending)
-        counts = agg["count"].to_list()
-        assert counts == sorted(counts, reverse=True)
+        # Note: Sorting is now handled by app.py, not by aggregate methods
+        # The aggregation just returns grouped data
 
     async def test_aggregate_by_category(self, loaded_data_manager):
         """Test category aggregation."""

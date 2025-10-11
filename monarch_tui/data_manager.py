@@ -246,16 +246,12 @@ class DataManager:
         if df.is_empty():
             return pl.DataFrame()
 
-        return (
-            df.group_by("merchant")
-            .agg(
-                [
-                    pl.count("id").alias("count"),
-                    pl.sum("amount").alias("total"),
-                    pl.first("merchant_id").alias("merchant_id"),
-                ]
-            )
-            .sort("count", descending=True)
+        return df.group_by("merchant").agg(
+            [
+                pl.count("id").alias("count"),
+                pl.sum("amount").alias("total"),
+                pl.first("merchant_id").alias("merchant_id"),
+            ]
         )
 
     def aggregate_by_category(self, df: pl.DataFrame) -> pl.DataFrame:
@@ -263,17 +259,13 @@ class DataManager:
         if df.is_empty():
             return pl.DataFrame()
 
-        return (
-            df.group_by("category")
-            .agg(
-                [
-                    pl.count("id").alias("count"),
-                    pl.sum("amount").alias("total"),
-                    pl.first("category_id").alias("category_id"),
-                    pl.first("group").alias("group"),
-                ]
-            )
-            .sort("count", descending=True)
+        return df.group_by("category").agg(
+            [
+                pl.count("id").alias("count"),
+                pl.sum("amount").alias("total"),
+                pl.first("category_id").alias("category_id"),
+                pl.first("group").alias("group"),
+            ]
         )
 
     def aggregate_by_group(self, df: pl.DataFrame) -> pl.DataFrame:
@@ -281,15 +273,11 @@ class DataManager:
         if df.is_empty():
             return pl.DataFrame()
 
-        return (
-            df.group_by("group")
-            .agg(
-                [
-                    pl.count("id").alias("count"),
-                    pl.sum("amount").alias("total"),
-                ]
-            )
-            .sort("count", descending=True)
+        return df.group_by("group").agg(
+            [
+                pl.count("id").alias("count"),
+                pl.sum("amount").alias("total"),
+            ]
         )
 
     def filter_by_merchant(self, df: pl.DataFrame, merchant: str) -> pl.DataFrame:
