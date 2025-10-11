@@ -15,11 +15,11 @@ A blazing-fast terminal UI for power users to manage Monarch Money transactions.
 ## Quick Start
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies (use uv)
+uv pip install -e .
 
 # Run the TUI (will prompt for login on first run)
-python monarch_tui.py
+uv run python -m monarch_tui
 ```
 
 ## Keyboard Shortcuts

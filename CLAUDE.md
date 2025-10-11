@@ -18,7 +18,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv pip install -e ".[dev]"
 
 # Run the TUI
-uv run python monarch_tui.py
+uv run python -m monarch_tui
 
 # Run tests (ALWAYS before committing)
 uv run pytest
