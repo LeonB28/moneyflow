@@ -2,6 +2,7 @@
 
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
+from textual.events import Key
 from textual.screen import ModalScreen
 from textual.widgets import Static, Button
 
@@ -64,7 +65,7 @@ class HelpScreen(ModalScreen):
         """Handle button press."""
         self.dismiss()
 
-    def on_key(self, event) -> None:
+    def on_key(self, event: Key) -> None:
         """Handle keyboard input."""
         if event.key == "escape" or event.key == "q" or event.key == "question_mark":
             self.dismiss()

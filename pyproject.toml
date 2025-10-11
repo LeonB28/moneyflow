@@ -28,15 +28,6 @@ dependencies = [
     "cryptography>=41.0.0",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "textual-dev>=1.0.0",
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.1.0",
-    "pytest-mock>=3.11.0",
-]
-
 [project.scripts]
 monarch-tui = "monarch_tui.app:main"
 monarch-setup = "monarch_tui.credentials:setup_credentials_interactive"
@@ -48,8 +39,12 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["monarch_tui"]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
     "textual-dev>=1.0.0",
 ]
 

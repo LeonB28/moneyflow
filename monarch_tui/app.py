@@ -82,7 +82,8 @@ class MonarchTUI(App):
         self.query_one("#loading", LoadingIndicator).display = False
 
         # Attempt to use saved session or show login prompt
-        await self.initialize_data()
+        # Must run in a worker to use push_screen with wait_for_dismiss
+        self.run_worker(self.initialize_data(), exclusive=True)
 
     async def initialize_data(self) -> None:
         """Load data from Monarch API."""
@@ -93,33 +94,49 @@ class MonarchTUI(App):
         try:
             # Try to use encrypted credentials first
             from .credentials import CredentialManager
+            from .monarchmoney import RequireMFAException, LoginFailedException
+            from .screens.credential_screens import CredentialSetupScreen, CredentialUnlockScreen
+
             cred_manager = CredentialManager()
+            creds = None
 
             if cred_manager.credentials_exist():
-                try:
-                    creds = cred_manager.load_credentials()
-                    # Use OTP secret for automatic 2FA
-                    import oathtool
-                    mfa_code = oathtool.generate_otp(creds['mfa_secret'])
+                # Show unlock screen
+                result = await self.push_screen(CredentialUnlockScreen(), wait_for_dismiss=True)
 
-                    await self.mm.login(
-                        email=creds['email'],
-                        password=creds['password'],
-                        use_saved_session=False,
-                        save_session=True,
-                        mfa_secret_key=creds['mfa_secret']
-                    )
-                    self.status_message = "Logged in successfully!"
-                except ValueError as e:
-                    # Wrong password
-                    self.notify(f"Failed to decrypt credentials: {e}", severity="error")
-                    # Fall back to session file
-                    session_file = ".mm/mm_session.pickle"
-                    await self.mm.login(use_saved_session=True, save_session=True)
+                if result is None:
+                    # User chose to reset - show setup screen
+                    creds = await self.push_screen(CredentialSetupScreen(), wait_for_dismiss=True)
+                    if not creds:
+                        self.exit()
+                        return
+                else:
+                    creds = result
             else:
-                # No credentials file, use session
-                session_file = ".mm/mm_session.pickle"
-                await self.mm.login(use_saved_session=True, save_session=True)
+                # No credentials - show setup screen
+                creds = await self.push_screen(CredentialSetupScreen(), wait_for_dismiss=True)
+                if not creds:
+                    self.exit()
+                    return
+
+            # Login with credentials
+            self.status_message = "Logging in with stored credentials..."
+
+            try:
+                await self.mm.login(
+                    email=creds['email'],
+                    password=creds['password'],
+                    use_saved_session=False,
+                    save_session=True,
+                    mfa_secret_key=creds['mfa_secret']
+                )
+                self.status_message = "Logged in successfully!"
+            except (RequireMFAException, LoginFailedException) as e:
+                # Login failed - credentials may be invalid
+                self.notify(f"Login failed: {e}", severity="error", timeout=10)
+                self.notify("Your credentials may be incorrect. Exiting...", timeout=10)
+                self.exit()
+                return
 
             # Initialize data manager
             self.data_manager = DataManager(self.mm)
@@ -161,13 +178,13 @@ class MonarchTUI(App):
         table.clear(columns=True)
 
         # Determine what data to show
-        if self.state.view_mode == ViewMode.MERCHANTS:
+        if self.state.view_mode == ViewMode.MERCHANT:
             self.show_merchant_aggregation()
-        elif self.state.view_mode == ViewMode.CATEGORIES:
+        elif self.state.view_mode == ViewMode.CATEGORY:
             self.show_category_aggregation()
-        elif self.state.view_mode == ViewMode.GROUPS:
+        elif self.state.view_mode == ViewMode.GROUP:
             self.show_group_aggregation()
-        elif self.state.view_mode == ViewMode.TRANSACTIONS:
+        elif self.state.view_mode == ViewMode.DETAIL:
             self.show_transactions()
 
         # Update UI elements
@@ -287,9 +304,9 @@ class MonarchTUI(App):
         """Update action hints based on current view."""
         hints_widget = self.query_one("#action-hints", Static)
 
-        if self.state.view_mode in [ViewMode.MERCHANTS, ViewMode.CATEGORIES, ViewMode.GROUPS]:
+        if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP]:
             hints = "[Enter] Drill down | [h/l] Toggle sort | [/] Search"
-        else:  # TRANSACTIONS
+        else:  # DETAIL
             hints = "[e] Edit merchant | [r] Change category | [H] Hide | [Esc] Back"
 
         hints_widget.update(hints)
@@ -306,7 +323,7 @@ class MonarchTUI(App):
     # Actions
     def action_view_merchants(self) -> None:
         """Switch to merchant view."""
-        self.state.view_mode = ViewMode.MERCHANTS
+        self.state.view_mode = ViewMode.MERCHANT
         self.state.selected_merchant = None
         self.state.selected_category = None
         self.state.selected_group = None
@@ -314,7 +331,7 @@ class MonarchTUI(App):
 
     def action_view_categories(self) -> None:
         """Switch to category view."""
-        self.state.view_mode = ViewMode.CATEGORIES
+        self.state.view_mode = ViewMode.CATEGORY
         self.state.selected_merchant = None
         self.state.selected_category = None
         self.state.selected_group = None
@@ -322,7 +339,7 @@ class MonarchTUI(App):
 
     def action_view_groups(self) -> None:
         """Switch to group view."""
-        self.state.view_mode = ViewMode.GROUPS
+        self.state.view_mode = ViewMode.GROUP
         self.state.selected_merchant = None
         self.state.selected_category = None
         self.state.selected_group = None
@@ -380,7 +397,7 @@ class MonarchTUI(App):
 
     async def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection (Enter key)."""
-        if self.state.view_mode in [ViewMode.MERCHANTS, ViewMode.CATEGORIES, ViewMode.GROUPS]:
+        if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP]:
             # Drill down
             table = self.query_one("#data-table", DataTable)
             row_key = event.row_key

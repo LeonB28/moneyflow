@@ -13,7 +13,7 @@ from getpass import getpass
 
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import base64
 
 
@@ -54,7 +54,7 @@ class CredentialManager:
         Returns:
             32-byte encryption key
         """
-        kdf = PBKDF2(
+        kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
             salt=salt,
@@ -199,12 +199,25 @@ def setup_credentials_interactive() -> None:
     This walks the user through entering their credentials
     and setting up encryption.
     """
-    print("=" * 60)
+    print("=" * 70)
     print("Monarch Money Credential Setup")
-    print("=" * 60)
+    print("=" * 70)
     print()
     print("This will securely store your Monarch Money credentials")
     print("encrypted with a password of your choice.")
+    print()
+    print("IMPORTANT: You'll need your 2FA/OTP secret key for automatic login.")
+    print("This is the BASE32 secret shown when you first set up 2FA")
+    print("(usually a long string like: JBSWY3DPEHPK3PXP)")
+    print()
+    print("How to find your OTP secret:")
+    print("  1. Log into Monarch Money on the web")
+    print("  2. Go to Settings -> Security")
+    print("  3. Disable 2FA, then re-enable it")
+    print("  4. When shown the QR code, click 'Can't scan?' or 'Manual entry'")
+    print("  5. Copy the secret key (base32 string)")
+    print()
+    print("=" * 70)
     print()
 
     # Get Monarch credentials
@@ -212,21 +225,29 @@ def setup_credentials_interactive() -> None:
     password = getpass("Monarch Money password: ")
 
     print()
-    print("For 2FA, you need your TOTP secret (the code you scan with")
-    print("your authenticator app). This is typically a long base32 string.")
-    print("If you don't have it, you may need to reset 2FA on Monarch Money.")
-    print()
-    mfa_secret = getpass("TOTP/OTP secret: ")
+    mfa_secret = getpass("2FA/TOTP Secret Key: ").strip().replace(" ", "").upper()
 
     # Save credentials
     manager = CredentialManager()
     manager.save_credentials(email, password, mfa_secret)
 
     print()
-    print("✓ Setup complete! Your credentials are encrypted and stored.")
-    print(f"  Location: {manager.credentials_file}")
+    print("=" * 70)
+    print("✓ Setup Complete!")
+    print("=" * 70)
     print()
-    print("You can now run monarch_tui without entering credentials each time.")
+    print(f"Your credentials are encrypted and stored at:")
+    print(f"  {manager.credentials_file}")
+    print()
+    print("Next steps:")
+    print("  1. Run the TUI: uv run python -m monarch_tui")
+    print("  2. You'll only need to enter your encryption password")
+    print()
+    print("To reset credentials:")
+    print(f"  rm {manager.credentials_file}")
+    print("  uv run monarch-setup")
+    print()
+    print("=" * 70)
 
 
 if __name__ == "__main__":

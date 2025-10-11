@@ -85,6 +85,12 @@ class AppState:
     error_message: Optional[str] = None
     status_message: Optional[str] = None
 
+    # Current view data (for display)
+    current_data: Optional[pl.DataFrame] = None
+
+    # Navigation history for breadcrumb and back navigation
+    navigation_history: List[tuple[ViewMode, Optional[str]]] = field(default_factory=list)
+
     def add_edit(self, transaction_id: str, field: str, old_value: Any, new_value: Any):
         """Add a pending edit to the change tracker."""
         edit = TransactionEdit(
@@ -210,3 +216,75 @@ class AppState:
                 df = df.filter(pl.col("group") == self.selected_group)
 
         return df
+
+    def drill_down(self, item_name: str) -> None:
+        """Drill down into a specific item based on current view mode."""
+        # Save current state to history
+        self.navigation_history.append((self.view_mode, None))
+
+        # Set the selected item based on current view
+        if self.view_mode == ViewMode.MERCHANT:
+            self.selected_merchant = item_name
+            self.view_mode = ViewMode.DETAIL
+        elif self.view_mode == ViewMode.CATEGORY:
+            self.selected_category = item_name
+            self.view_mode = ViewMode.DETAIL
+        elif self.view_mode == ViewMode.GROUP:
+            self.selected_group = item_name
+            self.view_mode = ViewMode.DETAIL
+
+    def go_back(self) -> bool:
+        """Go back to previous view. Returns True if successful, False if already at root."""
+        if self.view_mode == ViewMode.DETAIL:
+            # Clear drill-down selections
+            self.selected_merchant = None
+            self.selected_category = None
+            self.selected_group = None
+
+            # Pop from history if available
+            if self.navigation_history:
+                previous_view, _ = self.navigation_history.pop()
+                self.view_mode = previous_view
+            else:
+                # Default back to MERCHANT view
+                self.view_mode = ViewMode.MERCHANT
+
+            return True
+
+        # Already at a top-level view
+        return False
+
+    def get_breadcrumb(self) -> str:
+        """Get breadcrumb string showing current navigation path."""
+        parts = []
+
+        # Add view mode
+        if self.view_mode == ViewMode.MERCHANT:
+            parts.append("Merchants")
+        elif self.view_mode == ViewMode.CATEGORY:
+            parts.append("Categories")
+        elif self.view_mode == ViewMode.GROUP:
+            parts.append("Groups")
+        elif self.view_mode == ViewMode.DETAIL:
+            # Show what we drilled down from
+            if self.selected_merchant:
+                parts.append("Merchants")
+                parts.append(self.selected_merchant)
+            elif self.selected_category:
+                parts.append("Categories")
+                parts.append(self.selected_category)
+            elif self.selected_group:
+                parts.append("Groups")
+                parts.append(self.selected_group)
+            else:
+                parts.append("Transactions")
+
+        # Add time frame if not all time
+        if self.time_frame == TimeFrame.THIS_YEAR:
+            parts.append("This Year")
+        elif self.time_frame == TimeFrame.THIS_MONTH:
+            parts.append("This Month")
+        elif self.time_frame == TimeFrame.CUSTOM and self.start_date and self.end_date:
+            parts.append(f"{self.start_date} to {self.end_date}")
+
+        return " > ".join(parts) if parts else "Home"

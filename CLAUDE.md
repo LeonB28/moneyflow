@@ -1,8 +1,8 @@
-# Monarch CLI - Development Guide
+# Monarch TUI - Development Guide
 
 ## Project Overview
 
-Monarch CLI is a terminal-based UI for power users to manage Monarch Money transactions efficiently. Built with Python using Textual for the UI and Polars for data processing.
+Monarch TUI is a terminal-based UI for power users to manage Monarch Money transactions efficiently. Built with Python using Textual for the UI and Polars for data processing.
 
 ## Development Setup
 
@@ -14,7 +14,7 @@ Monarch CLI is a terminal-based UI for power users to manage Monarch Money trans
 # Install uv if not already installed
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# FIRST TIME SETUP: Sync dependencies
+# FIRST TIME SETUP: Sync dependencies (includes dev dependencies for testing)
 uv sync
 
 # This creates a virtual environment and installs all dependencies
@@ -63,7 +63,7 @@ uv run pytest --cov --cov-report=term-missing
 **IMPORTANT**: All Python source code must be in the `monarch_tui/` package. No Python files should live at the top level except `monarch_tui.py` (the main entry point).
 
 ```
-monarch-cli/
+monarch-tui/
 ├── monarch_tui/              # Main package (ALL code goes here)
 │   ├── monarchmoney.py       # GraphQL client (keep separate for upstream diffs)
 │   ├── app.py                # Main Textual application
@@ -91,8 +91,8 @@ monarch-cli/
 **File Organization Rules**:
 - ✅ All business logic in `monarch_tui/` package
 - ✅ All tests in `tests/` directory
-- ✅ Only `monarch_tui.py` at top level as entry point
-- ❌ No other `.py` files at top level
+- ✅ Entry point via `python -m monarch_tui`
+- ❌ No `.py` files at top level except main entry point if needed
 - ❌ No duplicate files between top-level and package
 
 ## Testing Strategy

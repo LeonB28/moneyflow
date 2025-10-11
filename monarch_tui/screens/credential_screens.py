@@ -1,0 +1,328 @@
+"""Credential setup and unlock screens."""
+
+from textual.app import ComposeResult
+from textual.screen import Screen
+from textual.containers import Container, Vertical
+from textual.widgets import Button, Input, Label, Static
+
+
+class CredentialSetupScreen(Screen):
+    """First-time credential setup screen."""
+
+    CSS = """
+    CredentialSetupScreen {
+        align: center middle;
+    }
+
+    #setup-container {
+        width: 70;
+        height: auto;
+        border: solid $accent;
+        background: $surface;
+        padding: 2 4;
+    }
+
+    #setup-title {
+        width: 100%;
+        text-align: center;
+        text-style: bold;
+        color: $accent;
+        margin-bottom: 1;
+    }
+
+    .setup-label {
+        margin-top: 1;
+        color: $text;
+    }
+
+    .setup-input {
+        margin-bottom: 1;
+    }
+
+    .setup-help {
+        color: $text-muted;
+        text-style: italic;
+        margin-bottom: 1;
+    }
+
+    #button-container {
+        layout: horizontal;
+        width: 100%;
+        height: auto;
+        align: center middle;
+        margin-top: 2;
+    }
+
+    #button-container Button {
+        margin: 0 1;
+    }
+
+    #error-label {
+        color: $error;
+        text-align: center;
+        margin-top: 1;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Container(id="setup-container"):
+            yield Label("🔐 Monarch Money Credential Setup", id="setup-title")
+
+            yield Static(
+                "This will securely store your Monarch Money credentials\n"
+                "encrypted with a password of your choice.",
+                classes="setup-help"
+            )
+
+            yield Label("Monarch Money Email:", classes="setup-label")
+            yield Input(
+                placeholder="your@email.com",
+                id="email-input",
+                classes="setup-input"
+            )
+
+            yield Label("Monarch Money Password:", classes="setup-label")
+            yield Input(
+                placeholder="password",
+                password=True,
+                id="password-input",
+                classes="setup-input"
+            )
+
+            yield Label("2FA/TOTP Secret Key:", classes="setup-label")
+            yield Static(
+                "Get this from: Settings → Security → Re-enable 2FA → 'Can't scan?'",
+                classes="setup-help"
+            )
+            yield Input(
+                placeholder="JBSWY3DPEHPK3PXP (base32 string)",
+                id="mfa-input",
+                classes="setup-input"
+            )
+
+            yield Label("Encryption Password (for monarch-tui):", classes="setup-label")
+            yield Static(
+                "Create a NEW password to encrypt your stored credentials",
+                classes="setup-help"
+            )
+            yield Input(
+                placeholder="encryption password",
+                password=True,
+                id="encrypt-pass-input",
+                classes="setup-input"
+            )
+
+            yield Label("Confirm Encryption Password:", classes="setup-label")
+            yield Input(
+                placeholder="confirm password",
+                password=True,
+                id="confirm-pass-input",
+                classes="setup-input"
+            )
+
+            with Container(id="button-container"):
+                yield Button("Save Credentials", variant="primary", id="save-button")
+                yield Button("Exit", variant="default", id="exit-button")
+
+            yield Label("", id="error-label")
+
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "exit-button":
+            self.app.exit()
+            return
+
+        if event.button.id == "save-button":
+            await self.save_credentials()
+
+    async def save_credentials(self) -> None:
+        """Validate and save credentials."""
+        error_label = self.query_one("#error-label", Label)
+
+        # Get all inputs
+        email = self.query_one("#email-input", Input).value.strip()
+        password = self.query_one("#password-input", Input).value
+        mfa_secret = self.query_one("#mfa-input", Input).value.strip().replace(" ", "").upper()
+        encrypt_pass = self.query_one("#encrypt-pass-input", Input).value
+        confirm_pass = self.query_one("#confirm-pass-input", Input).value
+
+        # Validation
+        if not email or not password or not mfa_secret or not encrypt_pass:
+            error_label.update("❌ Please fill in all fields")
+            return
+
+        if encrypt_pass != confirm_pass:
+            error_label.update("❌ Encryption passwords do not match!")
+            return
+
+        if "@" not in email:
+            error_label.update("❌ Invalid email address")
+            return
+
+        # Save credentials
+        try:
+            from ..credentials import CredentialManager
+
+            error_label.update("💾 Saving credentials...")
+            cred_manager = CredentialManager()
+            cred_manager.save_credentials(
+                email=email,
+                password=password,
+                mfa_secret=mfa_secret,
+                encryption_password=encrypt_pass
+            )
+
+            error_label.update("✅ Credentials saved! Loading app...")
+
+            # Dismiss this screen and pass credentials back
+            self.dismiss({
+                'email': email,
+                'password': password,
+                'mfa_secret': mfa_secret
+            })
+
+        except Exception as e:
+            error_label.update(f"❌ Error saving credentials: {e}")
+
+
+class CredentialUnlockScreen(Screen):
+    """Screen to unlock encrypted credentials."""
+
+    CSS = """
+    CredentialUnlockScreen {
+        align: center middle;
+    }
+
+    #unlock-container {
+        width: 60;
+        height: auto;
+        border: solid $accent;
+        background: $surface;
+        padding: 2 4;
+    }
+
+    #unlock-title {
+        width: 100%;
+        text-align: center;
+        text-style: bold;
+        color: $accent;
+        margin-bottom: 1;
+    }
+
+    .unlock-help {
+        color: $text-muted;
+        text-align: center;
+        margin-bottom: 2;
+    }
+
+    .unlock-label {
+        margin-top: 1;
+        color: $text;
+    }
+
+    .unlock-input {
+        margin-bottom: 1;
+    }
+
+    #button-container {
+        layout: horizontal;
+        width: 100%;
+        height: auto;
+        align: center middle;
+        margin-top: 2;
+    }
+
+    #button-container Button {
+        margin: 0 1;
+    }
+
+    #error-label {
+        color: $error;
+        text-align: center;
+        margin-top: 1;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Container(id="unlock-container"):
+            yield Label("🔓 Unlock Credentials", id="unlock-title")
+
+            yield Static(
+                "Enter your encryption password to unlock stored credentials",
+                classes="unlock-help"
+            )
+
+            yield Label("Encryption Password:", classes="unlock-label")
+            yield Input(
+                placeholder="encryption password",
+                password=True,
+                id="unlock-input",
+                classes="unlock-input"
+            )
+
+            with Container(id="button-container"):
+                yield Button("Unlock", variant="primary", id="unlock-button")
+                yield Button("Reset Credentials", variant="warning", id="reset-button")
+                yield Button("Exit", variant="default", id="exit-button")
+
+            yield Label("", id="error-label")
+
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "exit-button":
+            self.app.exit()
+            return
+
+        if event.button.id == "reset-button":
+            await self.reset_credentials()
+            return
+
+        if event.button.id == "unlock-button":
+            await self.unlock_credentials()
+
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Handle Enter key in password input."""
+        await self.unlock_credentials()
+
+    async def unlock_credentials(self) -> None:
+        """Try to unlock credentials with provided password."""
+        error_label = self.query_one("#error-label", Label)
+        unlock_input = self.query_one("#unlock-input", Input)
+
+        encryption_password = unlock_input.value
+
+        if not encryption_password:
+            error_label.update("❌ Please enter password")
+            return
+
+        try:
+            from ..credentials import CredentialManager
+
+            error_label.update("🔓 Unlocking...")
+            cred_manager = CredentialManager()
+            creds = cred_manager.load_credentials(encryption_password=encryption_password)
+
+            error_label.update("✅ Unlocked! Logging in...")
+
+            # Dismiss and return credentials
+            self.dismiss(creds)
+
+        except ValueError as e:
+            error_label.update("❌ Incorrect password!")
+            unlock_input.value = ""
+            unlock_input.focus()
+        except Exception as e:
+            error_label.update(f"❌ Error: {e}")
+
+    async def reset_credentials(self) -> None:
+        """Delete credentials and show setup screen."""
+        try:
+            from ..credentials import CredentialManager
+
+            cred_manager = CredentialManager()
+            cred_manager.delete_credentials()
+
+            # Switch to setup screen
+            self.dismiss(None)  # Signal to show setup screen
+
+        except Exception as e:
+            error_label = self.query_one("#error-label", Label)
+            error_label.update(f"❌ Error resetting: {e}")

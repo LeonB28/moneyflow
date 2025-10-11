@@ -1,0 +1,426 @@
+"""
+Tests for credential management module.
+
+Tests encryption, decryption, and secure storage of Monarch Money credentials.
+"""
+
+import json
+import os
+import pytest
+from pathlib import Path
+from cryptography.fernet import InvalidToken
+
+from monarch_tui.credentials import CredentialManager
+
+
+@pytest.fixture
+def temp_config_dir(tmp_path):
+    """Create a temporary config directory for testing."""
+    config_dir = tmp_path / "test_config"
+    config_dir.mkdir()
+    return config_dir
+
+
+@pytest.fixture
+def credential_manager(temp_config_dir):
+    """Create a CredentialManager instance with temporary config directory."""
+    return CredentialManager(config_dir=temp_config_dir)
+
+
+class TestCredentialManagerInit:
+    """Test CredentialManager initialization."""
+
+    def test_creates_config_directory(self, tmp_path):
+        """Test that config directory is created if it doesn't exist."""
+        config_dir = tmp_path / "new_config"
+        assert not config_dir.exists()
+
+        manager = CredentialManager(config_dir=config_dir)
+
+        assert config_dir.exists()
+        assert config_dir.is_dir()
+        # Verify proper permissions (owner only)
+        stat_info = config_dir.stat()
+        assert oct(stat_info.st_mode)[-3:] == "700"
+
+    def test_uses_default_config_dir(self):
+        """Test that default config directory is ~/.monarch_tui."""
+        manager = CredentialManager()
+        expected = Path.home() / ".monarch_tui"
+        assert manager.config_dir == expected
+
+    def test_sets_credentials_file_path(self, credential_manager, temp_config_dir):
+        """Test that credentials file path is set correctly."""
+        expected = temp_config_dir / "credentials.enc"
+        assert credential_manager.credentials_file == expected
+
+    def test_sets_salt_file_path(self, credential_manager, temp_config_dir):
+        """Test that salt file path is set correctly."""
+        expected = temp_config_dir / "salt"
+        assert credential_manager.salt_file == expected
+
+
+class TestSaltGeneration:
+    """Test salt generation and persistence."""
+
+    def test_generates_new_salt(self, credential_manager):
+        """Test that new salt is generated if none exists."""
+        salt = credential_manager._get_or_create_salt()
+
+        assert len(salt) == 16
+        assert isinstance(salt, bytes)
+
+    def test_saves_salt_to_disk(self, credential_manager):
+        """Test that salt is saved to disk."""
+        credential_manager._get_or_create_salt()
+
+        assert credential_manager.salt_file.exists()
+        # Verify proper permissions (owner only)
+        stat_info = credential_manager.salt_file.stat()
+        assert oct(stat_info.st_mode)[-3:] == "600"
+
+    def test_reuses_existing_salt(self, credential_manager):
+        """Test that existing salt is reused on subsequent calls."""
+        salt1 = credential_manager._get_or_create_salt()
+        salt2 = credential_manager._get_or_create_salt()
+
+        assert salt1 == salt2
+
+
+class TestKeyDerivation:
+    """Test PBKDF2 key derivation."""
+
+    def test_derives_32_byte_key(self, credential_manager):
+        """Test that derived key is 32 bytes (for AES-256)."""
+        password = "test_password_123"
+        salt = os.urandom(16)
+
+        key = credential_manager._derive_key(password, salt)
+
+        # Base64 encoded 32-byte key is 44 characters
+        assert len(key) == 44
+        assert isinstance(key, bytes)
+
+    def test_same_password_and_salt_produce_same_key(self, credential_manager):
+        """Test that key derivation is deterministic."""
+        password = "test_password_123"
+        salt = os.urandom(16)
+
+        key1 = credential_manager._derive_key(password, salt)
+        key2 = credential_manager._derive_key(password, salt)
+
+        assert key1 == key2
+
+    def test_different_passwords_produce_different_keys(self, credential_manager):
+        """Test that different passwords produce different keys."""
+        salt = os.urandom(16)
+
+        key1 = credential_manager._derive_key("password1", salt)
+        key2 = credential_manager._derive_key("password2", salt)
+
+        assert key1 != key2
+
+    def test_different_salts_produce_different_keys(self, credential_manager):
+        """Test that different salts produce different keys."""
+        password = "test_password_123"
+
+        key1 = credential_manager._derive_key(password, os.urandom(16))
+        key2 = credential_manager._derive_key(password, os.urandom(16))
+
+        assert key1 != key2
+
+
+class TestCredentialStorage:
+    """Test saving credentials to disk."""
+
+    def test_save_credentials(self, credential_manager):
+        """Test that credentials are saved successfully."""
+        email = "test@example.com"
+        password = "monarch_password"
+        mfa_secret = "JBSWY3DPEHPK3PXP"
+        encryption_password = "encryption_pass"
+
+        credential_manager.save_credentials(
+            email=email,
+            password=password,
+            mfa_secret=mfa_secret,
+            encryption_password=encryption_password
+        )
+
+        assert credential_manager.credentials_file.exists()
+
+    def test_credentials_file_has_secure_permissions(self, credential_manager):
+        """Test that credentials file has owner-only permissions."""
+        credential_manager.save_credentials(
+            email="test@example.com",
+            password="pass",
+            mfa_secret="SECRET",
+            encryption_password="enc_pass"
+        )
+
+        stat_info = credential_manager.credentials_file.stat()
+        assert oct(stat_info.st_mode)[-3:] == "600"
+
+    def test_credentials_are_encrypted(self, credential_manager):
+        """Test that credentials are not stored in plaintext."""
+        email = "test@example.com"
+        password = "monarch_password"
+        mfa_secret = "JBSWY3DPEHPK3PXP"
+
+        credential_manager.save_credentials(
+            email=email,
+            password=password,
+            mfa_secret=mfa_secret,
+            encryption_password="enc_pass"
+        )
+
+        # Read the file and verify it's not plaintext
+        with open(credential_manager.credentials_file, 'rb') as f:
+            content = f.read()
+
+        # Should not contain plaintext email or password
+        assert email.encode() not in content
+        assert password.encode() not in content
+        assert mfa_secret.encode() not in content
+
+    def test_overwrites_existing_credentials(self, credential_manager):
+        """Test that saving new credentials overwrites old ones."""
+        # Save first set of credentials
+        credential_manager.save_credentials(
+            email="old@example.com",
+            password="old_pass",
+            mfa_secret="OLD_SECRET",
+            encryption_password="enc_pass"
+        )
+
+        # Save new credentials
+        credential_manager.save_credentials(
+            email="new@example.com",
+            password="new_pass",
+            mfa_secret="NEW_SECRET",
+            encryption_password="enc_pass"
+        )
+
+        # Load and verify new credentials
+        creds = credential_manager.load_credentials(encryption_password="enc_pass")
+        assert creds["email"] == "new@example.com"
+        assert creds["password"] == "new_pass"
+        assert creds["mfa_secret"] == "NEW_SECRET"
+
+
+class TestCredentialLoading:
+    """Test loading credentials from disk."""
+
+    def test_load_credentials(self, credential_manager):
+        """Test that credentials can be loaded successfully."""
+        email = "test@example.com"
+        password = "monarch_password"
+        mfa_secret = "JBSWY3DPEHPK3PXP"
+        encryption_password = "enc_pass"
+
+        # Save credentials
+        credential_manager.save_credentials(
+            email=email,
+            password=password,
+            mfa_secret=mfa_secret,
+            encryption_password=encryption_password
+        )
+
+        # Load credentials
+        loaded = credential_manager.load_credentials(
+            encryption_password=encryption_password
+        )
+
+        assert loaded["email"] == email
+        assert loaded["password"] == password
+        assert loaded["mfa_secret"] == mfa_secret
+
+    def test_load_with_wrong_password_raises_error(self, credential_manager):
+        """Test that loading with wrong password raises ValueError."""
+        credential_manager.save_credentials(
+            email="test@example.com",
+            password="pass",
+            mfa_secret="SECRET",
+            encryption_password="correct_pass"
+        )
+
+        with pytest.raises(ValueError, match="Incorrect password"):
+            credential_manager.load_credentials(encryption_password="wrong_pass")
+
+    def test_load_nonexistent_file_raises_error(self, credential_manager):
+        """Test that loading from non-existent file raises FileNotFoundError."""
+        with pytest.raises(FileNotFoundError, match="Credentials file not found"):
+            credential_manager.load_credentials(encryption_password="any_pass")
+
+    def test_credentials_exist_returns_true(self, credential_manager):
+        """Test that credentials_exist returns True when file exists."""
+        credential_manager.save_credentials(
+            email="test@example.com",
+            password="pass",
+            mfa_secret="SECRET",
+            encryption_password="enc_pass"
+        )
+
+        assert credential_manager.credentials_exist() is True
+
+    def test_credentials_exist_returns_false(self, credential_manager):
+        """Test that credentials_exist returns False when file doesn't exist."""
+        assert credential_manager.credentials_exist() is False
+
+
+class TestCredentialDeletion:
+    """Test credential deletion."""
+
+    def test_delete_credentials(self, credential_manager):
+        """Test that credentials file is deleted."""
+        credential_manager.save_credentials(
+            email="test@example.com",
+            password="pass",
+            mfa_secret="SECRET",
+            encryption_password="enc_pass"
+        )
+
+        assert credential_manager.credentials_file.exists()
+
+        credential_manager.delete_credentials()
+
+        assert not credential_manager.credentials_file.exists()
+
+    def test_delete_also_removes_salt(self, credential_manager):
+        """Test that salt file is also deleted."""
+        credential_manager.save_credentials(
+            email="test@example.com",
+            password="pass",
+            mfa_secret="SECRET",
+            encryption_password="enc_pass"
+        )
+
+        assert credential_manager.salt_file.exists()
+
+        credential_manager.delete_credentials()
+
+        assert not credential_manager.salt_file.exists()
+
+    def test_delete_nonexistent_credentials_succeeds(self, credential_manager):
+        """Test that deleting non-existent credentials doesn't raise error."""
+        # Should not raise an error
+        credential_manager.delete_credentials()
+
+
+class TestEdgeCases:
+    """Test edge cases and special scenarios."""
+
+    def test_empty_password(self, credential_manager):
+        """Test that empty passwords are handled correctly."""
+        credential_manager.save_credentials(
+            email="test@example.com",
+            password="",  # Empty password
+            mfa_secret="SECRET",
+            encryption_password="enc_pass"
+        )
+
+        loaded = credential_manager.load_credentials(encryption_password="enc_pass")
+        assert loaded["password"] == ""
+
+    def test_special_characters_in_credentials(self, credential_manager):
+        """Test that special characters are handled correctly."""
+        email = "test+special@example.com"
+        password = "p@$$w0rd!#$%^&*()"
+        mfa_secret = "JBSWY3DPEHPK3PXP"
+
+        credential_manager.save_credentials(
+            email=email,
+            password=password,
+            mfa_secret=mfa_secret,
+            encryption_password="enc_pass"
+        )
+
+        loaded = credential_manager.load_credentials(encryption_password="enc_pass")
+        assert loaded["email"] == email
+        assert loaded["password"] == password
+        assert loaded["mfa_secret"] == mfa_secret
+
+    def test_unicode_in_credentials(self, credential_manager):
+        """Test that unicode characters are handled correctly."""
+        email = "tëst@example.com"
+        password = "pássword123"
+
+        credential_manager.save_credentials(
+            email=email,
+            password=password,
+            mfa_secret="SECRET",
+            encryption_password="enc_pass"
+        )
+
+        loaded = credential_manager.load_credentials(encryption_password="enc_pass")
+        assert loaded["email"] == email
+        assert loaded["password"] == password
+
+    def test_very_long_password(self, credential_manager):
+        """Test that very long passwords are handled correctly."""
+        long_password = "a" * 1000
+
+        credential_manager.save_credentials(
+            email="test@example.com",
+            password=long_password,
+            mfa_secret="SECRET",
+            encryption_password="enc_pass"
+        )
+
+        loaded = credential_manager.load_credentials(encryption_password="enc_pass")
+        assert loaded["password"] == long_password
+
+
+class TestSecurityProperties:
+    """Test security properties of the credential system."""
+
+    def test_salt_is_random(self, temp_config_dir):
+        """Test that different instances generate different salts."""
+        manager1 = CredentialManager(config_dir=temp_config_dir / "config1")
+        manager2 = CredentialManager(config_dir=temp_config_dir / "config2")
+
+        salt1 = manager1._get_or_create_salt()
+        salt2 = manager2._get_or_create_salt()
+
+        assert salt1 != salt2
+
+    def test_cannot_decrypt_with_different_salt(self, credential_manager, temp_config_dir):
+        """Test that credentials can't be decrypted if salt is changed."""
+        # Save credentials
+        credential_manager.save_credentials(
+            email="test@example.com",
+            password="pass",
+            mfa_secret="SECRET",
+            encryption_password="enc_pass"
+        )
+
+        # Replace salt file with a new salt
+        os.remove(credential_manager.salt_file)
+        credential_manager._get_or_create_salt()  # Generate new salt
+
+        # Try to load - should fail even with correct password
+        with pytest.raises(ValueError, match="Incorrect password"):
+            credential_manager.load_credentials(encryption_password="enc_pass")
+
+    def test_encrypted_data_is_different_each_time(self, temp_config_dir):
+        """Test that Fernet produces different ciphertext each time (due to IV)."""
+        manager1 = CredentialManager(config_dir=temp_config_dir / "config1")
+        manager2 = CredentialManager(config_dir=temp_config_dir / "config2")
+
+        # Save identical credentials
+        for manager in [manager1, manager2]:
+            manager.save_credentials(
+                email="test@example.com",
+                password="pass",
+                mfa_secret="SECRET",
+                encryption_password="enc_pass"
+            )
+
+        # Read encrypted files
+        with open(manager1.credentials_file, 'rb') as f:
+            encrypted1 = f.read()
+        with open(manager2.credentials_file, 'rb') as f:
+            encrypted2 = f.read()
+
+        # Encrypted data should be different (due to random IV in Fernet)
+        assert encrypted1 != encrypted2
