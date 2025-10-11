@@ -111,7 +111,7 @@ class EditMerchantScreen(ModalScreen):
 
 
 class SelectCategoryScreen(ModalScreen):
-    """Modal for selecting a category."""
+    """Modal for selecting a category with type-to-search."""
 
     CSS = """
     SelectCategoryScreen {
@@ -119,8 +119,9 @@ class SelectCategoryScreen(ModalScreen):
     }
 
     #category-dialog {
-        width: 60;
-        height: 30;
+        width: 70;
+        height: auto;
+        max-height: 40;
         border: thick $primary;
         background: $surface;
         padding: 2 4;
@@ -134,9 +135,18 @@ class SelectCategoryScreen(ModalScreen):
         margin-bottom: 1;
     }
 
-    #category-list {
-        height: 1fr;
+    #search-input {
+        margin: 1 0;
+    }
+
+    #category-results {
+        height: 20;
         border: solid $panel;
+        margin: 1 0;
+    }
+
+    #results-count {
+        color: $text-muted;
         margin: 1 0;
     }
 
@@ -155,35 +165,84 @@ class SelectCategoryScreen(ModalScreen):
         super().__init__()
         self.categories = categories
         self.current_category_id = current_category_id
-        self.selected_category_id = None
+        self.filtered_categories = list(categories.items())
 
     def compose(self) -> ComposeResult:
         with Container(id="category-dialog"):
-            yield Label("📋 Select Category", id="category-title")
+            yield Label("📋 Select Category (type to search)", id="category-title")
 
-            with VerticalScroll(id="category-list"):
-                for cat_id, cat_data in sorted(
-                    self.categories.items(),
-                    key=lambda x: x[1]["name"]
-                ):
+            yield Input(
+                placeholder="Type to filter categories...",
+                id="search-input"
+            )
+
+            yield Static(
+                f"{len(self.categories)} categories",
+                id="results-count"
+            )
+
+            with VerticalScroll(id="category-results"):
+                for cat_id, cat_data in sorted(self.categories.items(), key=lambda x: x[1]["name"]):
                     cat_name = cat_data["name"]
-                    is_current = " (current)" if cat_id == self.current_category_id else ""
-                    yield ListItem(Label(f"{cat_name}{is_current}"), id=f"cat-{cat_id}")
+                    is_current = " ← current" if cat_id == self.current_category_id else ""
+                    yield Button(
+                        f"{cat_name}{is_current}",
+                        variant="default" if cat_id != self.current_category_id else "primary",
+                        id=f"cat-{cat_id}",
+                        classes="category-button"
+                    )
 
             with Container(id="button-container"):
                 yield Button("Cancel", variant="default", id="cancel-button")
 
-    async def on_list_item_selected(self, event) -> None:
-        """Handle category selection."""
-        # Extract category ID from item id
-        item_id = str(event.item.id)
-        if item_id.startswith("cat-"):
-            category_id = item_id[4:]  # Remove "cat-" prefix
-            self.dismiss(category_id)
+    async def on_mount(self) -> None:
+        """Focus search input on load."""
+        self.query_one("#search-input", Input).focus()
+
+    async def on_input_changed(self, event: Input.Changed) -> None:
+        """Filter categories as user types."""
+        if event.input.id != "search-input":
+            return
+
+        query = event.value.lower().strip()
+        results_container = self.query_one("#category-results", VerticalScroll)
+        results_count = self.query_one("#results-count", Static)
+
+        # Clear current results
+        await results_container.remove_children()
+
+        # Filter and show matching categories
+        if query:
+            matches = [
+                (cat_id, cat_data)
+                for cat_id, cat_data in self.categories.items()
+                if query in cat_data["name"].lower()
+            ]
+        else:
+            matches = list(self.categories.items())
+
+        # Update count
+        results_count.update(f"{len(matches)} categories")
+
+        # Show filtered results
+        for cat_id, cat_data in sorted(matches, key=lambda x: x[1]["name"]):
+            cat_name = cat_data["name"]
+            is_current = " ← current" if cat_id == self.current_category_id else ""
+            await results_container.mount(
+                Button(
+                    f"{cat_name}{is_current}",
+                    variant="default" if cat_id != self.current_category_id else "primary",
+                    id=f"cat-{cat_id}",
+                    classes="category-button"
+                )
+            )
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "cancel-button":
             self.dismiss(None)
+        elif event.button.id and event.button.id.startswith("cat-"):
+            category_id = event.button.id[4:]  # Remove "cat-" prefix
+            self.dismiss(category_id)
 
     def on_key(self, event: Key) -> None:
         """Handle keyboard shortcuts."""
