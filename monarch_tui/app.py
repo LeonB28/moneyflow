@@ -273,13 +273,17 @@ class MonarchTUI(App):
         agg = self.data_manager.aggregate_by_merchant(filtered_df)
 
         # Apply sorting
-        sort_col = self.state.sort_by.value  # 'count' or 'amount' or 'date'
+        sort_col = self.state.sort_by.value
         if sort_col == "amount":
-            sort_col = "total"  # Aggregations use 'total' column
+            sort_col = "total"
 
-        # For expenses (negative totals), DESC means most negative first
-        # So -$1000 should come before -$10
-        descending = self.state.sort_direction == SortDirection.DESC
+        # Amount sorting: invert direction so largest expenses (-1000) come first
+        descending = (
+            self.state.sort_direction == SortDirection.ASC
+            if sort_col == "total"
+            else self.state.sort_direction == SortDirection.DESC
+        )
+
         agg = agg.sort(sort_col, descending=descending)
 
         self.state.current_data = agg
@@ -311,7 +315,13 @@ class MonarchTUI(App):
         if sort_col == "amount":
             sort_col = "total"
 
-        descending = self.state.sort_direction == SortDirection.DESC
+        # Amount sorting: invert direction so largest expenses (-1000) come first
+        descending = (
+            self.state.sort_direction == SortDirection.ASC
+            if sort_col == "total"
+            else self.state.sort_direction == SortDirection.DESC
+        )
+
         agg = agg.sort(sort_col, descending=descending)
 
         self.state.current_data = agg
@@ -342,7 +352,13 @@ class MonarchTUI(App):
         if sort_col == "amount":
             sort_col = "total"
 
-        descending = self.state.sort_direction == SortDirection.DESC
+        # Amount sorting: invert direction so largest expenses (-1000) come first
+        descending = (
+            self.state.sort_direction == SortDirection.ASC
+            if sort_col == "total"
+            else self.state.sort_direction == SortDirection.DESC
+        )
+
         agg = agg.sort(sort_col, descending=descending)
 
         self.state.current_data = agg
