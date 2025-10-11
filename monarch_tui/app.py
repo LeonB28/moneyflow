@@ -666,9 +666,12 @@ class MonarchTUI(App):
             merchant_name = row_data["merchant"]
             transaction_count = row_data["count"]
 
+            # Get list of all merchants for suggestions
+            all_merchants = self.data_manager.df["merchant"].unique().to_list()
+
             # Show edit modal
             new_merchant = await self.push_screen(
-                EditMerchantScreen(merchant_name, transaction_count),
+                EditMerchantScreen(merchant_name, transaction_count, all_merchants),
                 wait_for_dismiss=True
             )
 
@@ -709,11 +712,14 @@ class MonarchTUI(App):
         row_data = self.state.current_data.row(table.cursor_row, named=True)
         current_merchant = row_data["merchant"]
 
+        # Get list of all merchants for suggestions
+        all_merchants = self.data_manager.df["merchant"].unique().to_list()
+
         # Check if we have selected transactions for bulk edit
         if len(self.state.selected_ids) > 0:
             # Bulk edit selected transactions
             new_merchant = await self.push_screen(
-                EditMerchantScreen(current_merchant, len(self.state.selected_ids)),
+                EditMerchantScreen(current_merchant, len(self.state.selected_ids), all_merchants),
                 wait_for_dismiss=True
             )
 
@@ -743,7 +749,7 @@ class MonarchTUI(App):
         else:
             # Edit single transaction
             new_merchant = await self.push_screen(
-                EditMerchantScreen(current_merchant, 1),
+                EditMerchantScreen(current_merchant, 1, all_merchants),
                 wait_for_dismiss=True
             )
 

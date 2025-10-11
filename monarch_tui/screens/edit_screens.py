@@ -8,7 +8,7 @@ from textual.widgets import Button, Input, Label, Static, ListView, ListItem
 
 
 class EditMerchantScreen(ModalScreen):
-    """Modal for editing merchant name."""
+    """Modal for editing merchant name with suggestions."""
 
     CSS = """
     EditMerchantScreen {
@@ -16,8 +16,9 @@ class EditMerchantScreen(ModalScreen):
     }
 
     #edit-dialog {
-        width: 60;
+        width: 70;
         height: auto;
+        max-height: 40;
         border: thick $primary;
         background: $surface;
         padding: 2 4;
@@ -40,6 +41,17 @@ class EditMerchantScreen(ModalScreen):
         margin-bottom: 1;
     }
 
+    #suggestions {
+        height: 15;
+        border: solid $panel;
+        margin: 1 0;
+    }
+
+    #suggestions-count {
+        color: $text-muted;
+        margin: 1 0;
+    }
+
     #button-container {
         layout: horizontal;
         width: 100%;
@@ -50,12 +62,18 @@ class EditMerchantScreen(ModalScreen):
     #button-container Button {
         margin: 0 1;
     }
+
+    .merchant-button {
+        width: 100%;
+        text-align: left;
+    }
     """
 
-    def __init__(self, current_merchant: str, transaction_count: int = 1):
+    def __init__(self, current_merchant: str, transaction_count: int = 1, all_merchants: list = None):
         super().__init__()
         self.current_merchant = current_merchant
         self.transaction_count = transaction_count
+        self.all_merchants = all_merchants or []
 
     def compose(self) -> ComposeResult:
         with Container(id="edit-dialog"):
@@ -67,16 +85,30 @@ class EditMerchantScreen(ModalScreen):
             else:
                 yield Label("✏️  Edit Merchant", id="edit-title")
 
-            yield Label("Current merchant:", classes="edit-label")
-            yield Static(self.current_merchant, classes="edit-label")
+            yield Label("Current: " + self.current_merchant, classes="edit-label")
 
-            yield Label("New merchant name:", classes="edit-label")
+            yield Label("Type new merchant name (or select below):", classes="edit-label")
             yield Input(
-                placeholder="Enter new merchant name",
+                placeholder="Type merchant name...",
                 value=self.current_merchant,
                 id="merchant-input",
                 classes="edit-input"
             )
+
+            if self.all_merchants:
+                yield Static(
+                    f"{len(self.all_merchants)} existing merchants",
+                    id="suggestions-count"
+                )
+                with VerticalScroll(id="suggestions"):
+                    for merchant in sorted(set(self.all_merchants))[:20]:  # Show top 20
+                        if merchant and merchant != self.current_merchant:
+                            yield Button(
+                                merchant,
+                                variant="default",
+                                id=f"merch-{hash(merchant)}",
+                                classes="merchant-button"
+                            )
 
             with Container(id="button-container"):
                 yield Button("Save", variant="primary", id="save-button")
@@ -85,6 +117,41 @@ class EditMerchantScreen(ModalScreen):
     async def on_mount(self) -> None:
         """Focus the input when screen loads."""
         self.query_one("#merchant-input", Input).focus()
+
+    async def on_input_changed(self, event: Input.Changed) -> None:
+        """Filter merchant suggestions as user types."""
+        if event.input.id != "merchant-input" or not self.all_merchants:
+            return
+
+        query = event.value.lower().strip()
+        suggestions = self.query_one("#suggestions", VerticalScroll)
+        count_widget = self.query_one("#suggestions-count", Static)
+
+        # Clear current suggestions
+        await suggestions.remove_children()
+
+        # Filter merchants
+        if query and query != self.current_merchant.lower():
+            matches = [
+                m for m in self.all_merchants
+                if m and query in m.lower() and m != self.current_merchant
+            ]
+        else:
+            matches = [m for m in self.all_merchants if m and m != self.current_merchant]
+
+        # Update count
+        count_widget.update(f"{len(matches)} matching merchants")
+
+        # Show top 20 matches
+        for merchant in sorted(set(matches))[:20]:
+            await suggestions.mount(
+                Button(
+                    merchant,
+                    variant="default",
+                    id=f"merch-{hash(merchant)}",
+                    classes="merchant-button"
+                )
+            )
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "cancel-button":
@@ -95,6 +162,11 @@ class EditMerchantScreen(ModalScreen):
                 self.dismiss(new_merchant)
             else:
                 self.dismiss(None)
+        elif event.button.id and event.button.id.startswith("merch-"):
+            # User clicked a suggestion
+            new_merchant = event.control.label
+            self.query_one("#merchant-input", Input).value = new_merchant
+            self.dismiss(new_merchant)
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle Enter key in input."""
