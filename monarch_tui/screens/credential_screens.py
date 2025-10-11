@@ -346,6 +346,13 @@ class QuitConfirmationScreen(ModalScreen):
         margin-bottom: 2;
     }
 
+    #quit-instructions {
+        text-align: center;
+        color: $accent;
+        margin-bottom: 2;
+        text-style: bold;
+    }
+
     #button-container {
         layout: horizontal;
         width: 100%;
@@ -374,9 +381,14 @@ class QuitConfirmationScreen(ModalScreen):
             else:
                 yield Static("Are you sure you want to quit?", id="quit-message")
 
+            yield Static(
+                "Press Y to quit  |  N or Esc to cancel",
+                id="quit-instructions"
+            )
+
             with Container(id="button-container"):
-                yield Button("Cancel", variant="primary", id="cancel-button")
-                yield Button("Quit", variant="error", id="quit-button")
+                yield Button("Cancel (N)", variant="primary", id="cancel-button")
+                yield Button("Quit (Y)", variant="error", id="quit-button")
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "cancel-button":
@@ -385,10 +397,10 @@ class QuitConfirmationScreen(ModalScreen):
             self.dismiss(True)
 
     def on_key(self, event: Key) -> None:
-        """Handle keyboard shortcuts."""
-        if event.key == "escape":
+        """Handle keyboard shortcuts - Y to quit, N or Esc to cancel."""
+        if event.key in ("escape", "n"):
             self.dismiss(False)
-        elif event.key == "q":
+        elif event.key in ("y", "q"):
             self.dismiss(True)
 
 
