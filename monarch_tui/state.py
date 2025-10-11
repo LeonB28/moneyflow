@@ -86,6 +86,7 @@ class AppState:
 
     # Search/filter
     search_query: str = ""
+    show_transfers: bool = False  # Whether to show Transfer category transactions
 
     # Change tracking
     pending_edits: List[TransactionEdit] = field(default_factory=list)
@@ -222,6 +223,10 @@ class AppState:
                 pl.col("merchant").str.to_lowercase().str.contains(query)
                 | pl.col("category").str.to_lowercase().str.contains(query)
             )
+
+        # Apply group filter (hide Transfers unless enabled)
+        if not self.show_transfers:
+            df = df.filter(pl.col("group") != "Transfers")
 
         # Apply view-specific filters
         if self.view_mode == ViewMode.DETAIL:

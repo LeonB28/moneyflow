@@ -49,6 +49,7 @@ class MonarchTUI(App):
         Binding("h,left", "reverse_sort", "Reverse", show=True),
         Binding("l,right", "reverse_sort", "Reverse", show=True),
         # Other actions
+        Binding("f", "show_filters", "Filters", show=True),
         Binding("question_mark", "help", "Help", show=True, key_display="?"),
         Binding("slash", "search", "Search", show=True, key_display="/"),
         Binding("escape", "go_back", "Back", show=False),
@@ -536,6 +537,27 @@ class MonarchTUI(App):
         self.refresh_view()
         field = "Count" if self.state.sort_by == SortMode.COUNT else "Amount"
         self.notify(f"Sorting by: {field}", timeout=1)
+
+    def action_show_filters(self) -> None:
+        """Show filter options modal."""
+        self.run_worker(self._show_filter_modal(), exclusive=False)
+
+    async def _show_filter_modal(self) -> None:
+        """Show filter modal and apply selected filters."""
+        from .screens.credential_screens import FilterScreen
+
+        result = await self.push_screen(
+            FilterScreen(show_transfers=self.state.show_transfers),
+            wait_for_dismiss=True
+        )
+
+        if result is not None:
+            # Apply filters
+            self.state.show_transfers = result["show_transfers"]
+            self.refresh_view()
+
+            filter_status = "shown" if result["show_transfers"] else "hidden"
+            self.notify(f"Transfers {filter_status}", timeout=2)
 
     def action_help(self) -> None:
         """Show help screen."""

@@ -1,10 +1,10 @@
-"""Credential setup and unlock screens, and quit confirmation."""
+"""Credential setup and unlock screens, quit confirmation, and filter modal."""
 
 from textual.app import ComposeResult
 from textual.events import Key
 from textual.screen import ModalScreen, Screen
 from textual.containers import Container, Vertical
-from textual.widgets import Button, Input, Label, Static
+from textual.widgets import Button, Input, Label, Static, Checkbox
 
 
 class CredentialSetupScreen(Screen):
@@ -390,3 +390,82 @@ class QuitConfirmationScreen(ModalScreen):
             self.dismiss(False)
         elif event.key == "q":
             self.dismiss(True)
+
+
+class FilterScreen(ModalScreen):
+    """Filter options modal."""
+
+    CSS = """
+    FilterScreen {
+        align: center middle;
+    }
+
+    #filter-dialog {
+        width: 50;
+        height: auto;
+        border: thick $primary;
+        background: $surface;
+        padding: 2 4;
+    }
+
+    #filter-title {
+        width: 100%;
+        text-align: center;
+        text-style: bold;
+        color: $accent;
+        margin-bottom: 2;
+    }
+
+    .filter-option {
+        margin: 1 0;
+    }
+
+    #button-container {
+        layout: horizontal;
+        width: 100%;
+        height: auto;
+        align: center middle;
+        margin-top: 2;
+    }
+
+    #button-container Button {
+        margin: 0 1;
+    }
+    """
+
+    def __init__(self, show_transfers: bool = False):
+        super().__init__()
+        self.show_transfers = show_transfers
+
+    def compose(self) -> ComposeResult:
+        with Container(id="filter-dialog"):
+            yield Label("🔍 Filter Options", id="filter-title")
+
+            yield Checkbox(
+                "Show Transfer transactions",
+                value=self.show_transfers,
+                id="show-transfers-checkbox",
+                classes="filter-option"
+            )
+
+            yield Static(
+                "More filter options coming soon...",
+                classes="filter-option"
+            )
+
+            with Container(id="button-container"):
+                yield Button("Apply", variant="primary", id="apply-button")
+                yield Button("Cancel", variant="default", id="cancel-button")
+
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "cancel-button":
+            self.dismiss(None)
+        elif event.button.id == "apply-button":
+            # Get checkbox values
+            show_transfers = self.query_one("#show-transfers-checkbox", Checkbox).value
+            self.dismiss({"show_transfers": show_transfers})
+
+    def on_key(self, event: Key) -> None:
+        """Handle keyboard shortcuts."""
+        if event.key == "escape":
+            self.dismiss(None)
