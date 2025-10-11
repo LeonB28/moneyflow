@@ -71,11 +71,11 @@ class CredentialManager:
             16-byte salt
         """
         if self.salt_file.exists():
-            with open(self.salt_file, 'rb') as f:
+            with open(self.salt_file, "rb") as f:
                 return f.read()
         else:
             salt = os.urandom(16)
-            with open(self.salt_file, 'wb') as f:
+            with open(self.salt_file, "wb") as f:
                 f.write(salt)
             # Ensure only user can read
             os.chmod(self.salt_file, 0o600)
@@ -86,11 +86,7 @@ class CredentialManager:
         return self.credentials_file.exists()
 
     def save_credentials(
-        self,
-        email: str,
-        password: str,
-        mfa_secret: str,
-        encryption_password: Optional[str] = None
+        self, email: str, password: str, mfa_secret: str, encryption_password: Optional[str] = None
     ) -> None:
         """
         Save encrypted credentials to disk.
@@ -119,16 +115,12 @@ class CredentialManager:
         fernet = Fernet(key)
 
         # Prepare credentials
-        credentials = {
-            "email": email,
-            "password": password,
-            "mfa_secret": mfa_secret
-        }
+        credentials = {"email": email, "password": password, "mfa_secret": mfa_secret}
 
         # Encrypt and save
         encrypted = fernet.encrypt(json.dumps(credentials).encode())
 
-        with open(self.credentials_file, 'wb') as f:
+        with open(self.credentials_file, "wb") as f:
             f.write(encrypted)
 
         # Ensure only user can read
@@ -136,10 +128,7 @@ class CredentialManager:
 
         print(f"✓ Credentials saved to {self.credentials_file}")
 
-    def load_credentials(
-        self,
-        encryption_password: Optional[str] = None
-    ) -> Dict[str, str]:
+    def load_credentials(self, encryption_password: Optional[str] = None) -> Dict[str, str]:
         """
         Load and decrypt credentials from disk.
 
@@ -172,7 +161,7 @@ class CredentialManager:
         fernet = Fernet(key)
 
         # Load and decrypt
-        with open(self.credentials_file, 'rb') as f:
+        with open(self.credentials_file, "rb") as f:
             encrypted = f.read()
 
         try:

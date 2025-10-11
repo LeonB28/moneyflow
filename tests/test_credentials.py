@@ -144,7 +144,7 @@ class TestCredentialStorage:
             email=email,
             password=password,
             mfa_secret=mfa_secret,
-            encryption_password=encryption_password
+            encryption_password=encryption_password,
         )
 
         assert credential_manager.credentials_file.exists()
@@ -155,7 +155,7 @@ class TestCredentialStorage:
             email="test@example.com",
             password="pass",
             mfa_secret="SECRET",
-            encryption_password="enc_pass"
+            encryption_password="enc_pass",
         )
 
         stat_info = credential_manager.credentials_file.stat()
@@ -168,14 +168,11 @@ class TestCredentialStorage:
         mfa_secret = "JBSWY3DPEHPK3PXP"
 
         credential_manager.save_credentials(
-            email=email,
-            password=password,
-            mfa_secret=mfa_secret,
-            encryption_password="enc_pass"
+            email=email, password=password, mfa_secret=mfa_secret, encryption_password="enc_pass"
         )
 
         # Read the file and verify it's not plaintext
-        with open(credential_manager.credentials_file, 'rb') as f:
+        with open(credential_manager.credentials_file, "rb") as f:
             content = f.read()
 
         # Should not contain plaintext email or password
@@ -190,7 +187,7 @@ class TestCredentialStorage:
             email="old@example.com",
             password="old_pass",
             mfa_secret="OLD_SECRET",
-            encryption_password="enc_pass"
+            encryption_password="enc_pass",
         )
 
         # Save new credentials
@@ -198,7 +195,7 @@ class TestCredentialStorage:
             email="new@example.com",
             password="new_pass",
             mfa_secret="NEW_SECRET",
-            encryption_password="enc_pass"
+            encryption_password="enc_pass",
         )
 
         # Load and verify new credentials
@@ -223,13 +220,11 @@ class TestCredentialLoading:
             email=email,
             password=password,
             mfa_secret=mfa_secret,
-            encryption_password=encryption_password
+            encryption_password=encryption_password,
         )
 
         # Load credentials
-        loaded = credential_manager.load_credentials(
-            encryption_password=encryption_password
-        )
+        loaded = credential_manager.load_credentials(encryption_password=encryption_password)
 
         assert loaded["email"] == email
         assert loaded["password"] == password
@@ -241,7 +236,7 @@ class TestCredentialLoading:
             email="test@example.com",
             password="pass",
             mfa_secret="SECRET",
-            encryption_password="correct_pass"
+            encryption_password="correct_pass",
         )
 
         with pytest.raises(ValueError, match="Incorrect password"):
@@ -258,7 +253,7 @@ class TestCredentialLoading:
             email="test@example.com",
             password="pass",
             mfa_secret="SECRET",
-            encryption_password="enc_pass"
+            encryption_password="enc_pass",
         )
 
         assert credential_manager.credentials_exist() is True
@@ -277,7 +272,7 @@ class TestCredentialDeletion:
             email="test@example.com",
             password="pass",
             mfa_secret="SECRET",
-            encryption_password="enc_pass"
+            encryption_password="enc_pass",
         )
 
         assert credential_manager.credentials_file.exists()
@@ -292,7 +287,7 @@ class TestCredentialDeletion:
             email="test@example.com",
             password="pass",
             mfa_secret="SECRET",
-            encryption_password="enc_pass"
+            encryption_password="enc_pass",
         )
 
         assert credential_manager.salt_file.exists()
@@ -316,7 +311,7 @@ class TestEdgeCases:
             email="test@example.com",
             password="",  # Empty password
             mfa_secret="SECRET",
-            encryption_password="enc_pass"
+            encryption_password="enc_pass",
         )
 
         loaded = credential_manager.load_credentials(encryption_password="enc_pass")
@@ -329,10 +324,7 @@ class TestEdgeCases:
         mfa_secret = "JBSWY3DPEHPK3PXP"
 
         credential_manager.save_credentials(
-            email=email,
-            password=password,
-            mfa_secret=mfa_secret,
-            encryption_password="enc_pass"
+            email=email, password=password, mfa_secret=mfa_secret, encryption_password="enc_pass"
         )
 
         loaded = credential_manager.load_credentials(encryption_password="enc_pass")
@@ -346,10 +338,7 @@ class TestEdgeCases:
         password = "pássword123"
 
         credential_manager.save_credentials(
-            email=email,
-            password=password,
-            mfa_secret="SECRET",
-            encryption_password="enc_pass"
+            email=email, password=password, mfa_secret="SECRET", encryption_password="enc_pass"
         )
 
         loaded = credential_manager.load_credentials(encryption_password="enc_pass")
@@ -364,7 +353,7 @@ class TestEdgeCases:
             email="test@example.com",
             password=long_password,
             mfa_secret="SECRET",
-            encryption_password="enc_pass"
+            encryption_password="enc_pass",
         )
 
         loaded = credential_manager.load_credentials(encryption_password="enc_pass")
@@ -391,7 +380,7 @@ class TestSecurityProperties:
             email="test@example.com",
             password="pass",
             mfa_secret="SECRET",
-            encryption_password="enc_pass"
+            encryption_password="enc_pass",
         )
 
         # Replace salt file with a new salt
@@ -413,13 +402,13 @@ class TestSecurityProperties:
                 email="test@example.com",
                 password="pass",
                 mfa_secret="SECRET",
-                encryption_password="enc_pass"
+                encryption_password="enc_pass",
             )
 
         # Read encrypted files
-        with open(manager1.credentials_file, 'rb') as f:
+        with open(manager1.credentials_file, "rb") as f:
             encrypted1 = f.read()
-        with open(manager2.credentials_file, 'rb') as f:
+        with open(manager2.credentials_file, "rb") as f:
             encrypted2 = f.read()
 
         # Encrypted data should be different (due to random IV in Fernet)

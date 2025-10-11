@@ -17,6 +17,7 @@ from graphql import DocumentNode
 
 try:
     from gql.dsl import DSLExecutable
+
     GQL_V3_5_PLUS = True
 except ImportError:
     GQL_V3_5_PLUS = False
@@ -102,9 +103,7 @@ class MonarchMoney(object):
         try:
             await self.login(email, passwd, use_saved_session, save_session)
         except RequireMFAException:
-            await self.multi_factor_authenticate(
-                email, passwd, input("Two Factor Code: ")
-            )
+            await self.multi_factor_authenticate(email, passwd, input("Two Factor Code: "))
             if save_session:
                 self.save_session(self._session_file)
 
@@ -130,9 +129,7 @@ class MonarchMoney(object):
         if save_session:
             self.save_session(self._session_file)
 
-    async def multi_factor_authenticate(
-        self, email: str, password: str, code: str
-    ) -> None:
+    async def multi_factor_authenticate(self, email: str, password: str, code: str) -> None:
         """Performs multi-factor authentication to access a Monarch Money account."""
         await self._multi_factor_authenticate(email, password, code)
 
@@ -254,9 +251,7 @@ class MonarchMoney(object):
             graphql_query=query,
         )
 
-    async def get_recent_account_balances(
-        self, start_date: Optional[str] = None
-    ) -> Dict[str, Any]:
+    async def get_recent_account_balances(self, start_date: Optional[str] = None) -> Dict[str, Any]:
         """
         Retrieves the daily balance for all accounts starting from `start_date`.
         `start_date` is an ISO formatted datestring, e.g. YYYY-MM-DD.
@@ -346,9 +341,7 @@ class MonarchMoney(object):
             # The mobile app defaults to 150 years ago today
             # The mobile app might have a leap year bug, so instead default to setting day=1
             today = date.today()
-            start_date = date(
-                year=today.year - 150, month=today.month, day=1
-            ).isoformat()
+            start_date = date(year=today.year - 150, month=today.month, day=1).isoformat()
 
         return await self.gql_call(
             operation="GetAggregateSnapshots",
@@ -656,9 +649,7 @@ class MonarchMoney(object):
 
         return True
 
-    async def is_accounts_refresh_complete(
-        self, account_ids: Optional[List[str]] = None
-    ) -> bool:
+    async def is_accounts_refresh_complete(self, account_ids: Optional[List[str]] = None) -> bool:
         """
         Checks on the status of a prior request to refresh account balances.
 
@@ -694,11 +685,7 @@ class MonarchMoney(object):
 
         if account_ids:
             return all(
-                [
-                    not x["hasSyncInProgress"]
-                    for x in response["accounts"]
-                    if x["id"] in account_ids
-                ]
+                [not x["hasSyncInProgress"] for x in response["accounts"] if x["id"] in account_ids]
             )
         else:
             return all([not x["hasSyncInProgress"] for x in response["accounts"]])
@@ -1370,9 +1357,7 @@ class MonarchMoney(object):
             ).strftime("%Y-%m-%d")
 
         elif bool(start_date) != bool(end_date):
-            raise Exception(
-                "You must specify both a startDate and endDate, not just one of them."
-            )
+            raise Exception("You must specify both a startDate and endDate, not just one of them.")
 
         return await self.gql_call(
             operation="Common_GetJointPlanningData",
@@ -1584,9 +1569,7 @@ class MonarchMoney(object):
             variables["filters"]["startDate"] = start_date
             variables["filters"]["endDate"] = end_date
         elif bool(start_date) != bool(end_date):
-            raise Exception(
-                "You must specify both a startDate and endDate, not just one of them."
-            )
+            raise Exception("You must specify both a startDate and endDate, not just one of them.")
 
         return await self.gql_call(
             operation="GetTransactionsList", graphql_query=query, variables=variables
@@ -1804,9 +1787,7 @@ class MonarchMoney(object):
           }
         """
         )
-        return await self.gql_call(
-            operation="ManageGetCategoryGroups", graphql_query=query
-        )
+        return await self.gql_call(operation="ManageGetCategoryGroups", graphql_query=query)
 
     async def create_transaction_category(
         self,
@@ -1956,9 +1937,7 @@ class MonarchMoney(object):
           }
         """
         )
-        return await self.gql_call(
-            operation="GetHouseholdTransactionTags", graphql_query=query
-        )
+        return await self.gql_call(operation="GetHouseholdTransactionTags", graphql_query=query)
 
     async def set_transaction_tags(
         self,
@@ -2279,9 +2258,7 @@ class MonarchMoney(object):
         if split_data is None:
             split_data = []
 
-        variables = {
-            "input": {"transactionId": transaction_id, "splitData": split_data}
-        }
+        variables = {"input": {"transactionId": transaction_id, "splitData": split_data}}
 
         return await self.gql_call(
             operation="Common_SplitTransactionMutation",
@@ -2383,9 +2360,7 @@ class MonarchMoney(object):
             variables["filters"]["startDate"] = start_date
             variables["filters"]["endDate"] = end_date
         elif (start_date is None) ^ (end_date is None):
-            raise Exception(
-                "You must specify both a startDate and endDate, not just one of them."
-            )
+            raise Exception("You must specify both a startDate and endDate, not just one of them.")
         else:
             variables["filters"]["startDate"] = self._get_start_of_current_month()
             variables["filters"]["endDate"] = self._get_end_of_current_month()
@@ -2435,9 +2410,7 @@ class MonarchMoney(object):
             variables["filters"]["startDate"] = start_date
             variables["filters"]["endDate"] = end_date
         elif bool(start_date) != bool(end_date):
-            raise Exception(
-                "You must specify both a startDate and endDate, not just one of them."
-            )
+            raise Exception("You must specify both a startDate and endDate, not just one of them.")
         else:
             variables["filters"]["startDate"] = self._get_start_of_current_month()
             variables["filters"]["endDate"] = self._get_end_of_current_month()
@@ -2639,9 +2612,7 @@ class MonarchMoney(object):
 
         # Will be true if neither of the parameters are set, or both are
         if (category_id is None) is (category_group_id is None):
-            raise Exception(
-                "You must specify either a category_id OR category_group_id; not both"
-            )
+            raise Exception("You must specify either a category_id OR category_group_id; not both")
 
         query = gql(
             """
@@ -2678,9 +2649,7 @@ class MonarchMoney(object):
             graphql_query=query,
         )
 
-    async def upload_account_balance_history(
-        self, account_id: str, csv_content: str
-    ) -> None:
+    async def upload_account_balance_history(self, account_id: str, csv_content: str) -> None:
         """
         Uploads the account balance history csv for a given account.
 
@@ -2765,9 +2734,7 @@ class MonarchMoney(object):
             variables["startDate"] = self._get_start_of_current_month()
             variables["endDate"] = self._get_end_of_current_month()
 
-        return await self.gql_call(
-            "Web_GetUpcomingRecurringTransactionItems", query, variables
-        )
+        return await self.gql_call("Web_GetUpcomingRecurringTransactionItems", query, variables)
 
     def _get_current_date(self) -> str:
         """
@@ -2806,10 +2773,9 @@ class MonarchMoney(object):
         # Handle gql v3.5+ API changes
         if GQL_V3_5_PLUS:
             from gql.graphql_request import GraphQLRequest
+
             request = GraphQLRequest(
-                request=graphql_query,
-                operation_name=operation,
-                variable_values=variables
+                request=graphql_query, operation_name=operation, variable_values=variables
             )
             return await client.execute_async(request)
         else:
@@ -2854,9 +2820,7 @@ class MonarchMoney(object):
         if os.path.exists(filename):
             os.remove(filename)
 
-    async def _login_user(
-        self, email: str, password: str, mfa_secret_key: Optional[str]
-    ) -> None:
+    async def _login_user(self, email: str, password: str, mfa_secret_key: Optional[str]) -> None:
         """
         Performs the initial login to a Monarch Money account.
         """
@@ -2871,23 +2835,17 @@ class MonarchMoney(object):
             data["totp"] = oathtool.generate_otp(mfa_secret_key)
 
         async with ClientSession(headers=self._headers) as session:
-            async with session.post(
-                MonarchMoneyEndpoints.getLoginEndpoint(), json=data
-            ) as resp:
+            async with session.post(MonarchMoneyEndpoints.getLoginEndpoint(), json=data) as resp:
                 if resp.status == 403:
                     raise RequireMFAException("Multi-Factor Auth Required")
                 elif resp.status != 200:
-                    raise LoginFailedException(
-                        f"HTTP Code {resp.status}: {resp.reason}"
-                    )
+                    raise LoginFailedException(f"HTTP Code {resp.status}: {resp.reason}")
 
                 response = await resp.json()
                 self.set_token(response["token"])
                 self._headers["Authorization"] = f"Token {self._token}"
 
-    async def _multi_factor_authenticate(
-        self, email: str, password: str, code: str
-    ) -> None:
+    async def _multi_factor_authenticate(self, email: str, password: str, code: str) -> None:
         """
         Performs the MFA step of login.
         """
@@ -2900,9 +2858,7 @@ class MonarchMoney(object):
         }
 
         async with ClientSession(headers=self._headers) as session:
-            async with session.post(
-                MonarchMoneyEndpoints.getLoginEndpoint(), json=data
-            ) as resp:
+            async with session.post(MonarchMoneyEndpoints.getLoginEndpoint(), json=data) as resp:
                 if resp.status != 200:
                     try:
                         response = await resp.json()

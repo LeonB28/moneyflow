@@ -148,11 +148,11 @@ class MonarchTUI(App):
 
             try:
                 await self.mm.login(
-                    email=creds['email'],
-                    password=creds['password'],
+                    email=creds["email"],
+                    password=creds["password"],
                     use_saved_session=False,
                     save_session=True,
-                    mfa_secret_key=creds['mfa_secret']
+                    mfa_secret_key=creds["mfa_secret"],
                 )
                 loading_status.update("✅ Logged in successfully!")
             except (RequireMFAException, LoginFailedException) as e:
@@ -169,11 +169,13 @@ class MonarchTUI(App):
             # Determine date range based on CLI arguments
             if self.custom_start_date:
                 start_date = self.custom_start_date
-                end_date = datetime.now().strftime('%Y-%m-%d')
-                loading_status.update(f"📊 Fetching transactions from {self.custom_start_date} onwards...")
+                end_date = datetime.now().strftime("%Y-%m-%d")
+                loading_status.update(
+                    f"📊 Fetching transactions from {self.custom_start_date} onwards..."
+                )
             elif self.start_year:
                 start_date = f"{self.start_year}-01-01"
-                end_date = datetime.now().strftime('%Y-%m-%d')
+                end_date = datetime.now().strftime("%Y-%m-%d")
                 loading_status.update(f"📊 Fetching transactions from {self.start_year} onwards...")
             else:
                 # Fetch ALL transactions (no date filter for offline-first approach)
@@ -181,17 +183,19 @@ class MonarchTUI(App):
                 end_date = None
                 loading_status.update("📊 Fetching ALL transaction data from Monarch Money...")
 
-            loading_status.update("⏳ This may take a minute for large accounts (10k+ transactions)...")
-            loading_status.update("💡 TIP: This is a one-time download. Future operations will be instant!")
+            loading_status.update(
+                "⏳ This may take a minute for large accounts (10k+ transactions)..."
+            )
+            loading_status.update(
+                "💡 TIP: This is a one-time download. Future operations will be instant!"
+            )
 
             def update_progress(msg: str) -> None:
                 """Update the loading status display."""
                 loading_status.update(f"📊 {msg}")
 
             df, categories, category_groups = await self.data_manager.fetch_all_data(
-                start_date=start_date,
-                end_date=end_date,
-                progress_callback=update_progress
+                start_date=start_date, end_date=end_date, progress_callback=update_progress
             )
 
             # Store in data manager
@@ -203,6 +207,7 @@ class MonarchTUI(App):
             # Initialize time frame to THIS_YEAR (default view filter)
             # This filters the display to current year even though we loaded all data
             from datetime import date as date_type
+
             today = date_type.today()
             self.state.start_date = date_type(today.year, 1, 1)
             self.state.end_date = date_type(today.year, 12, 31)
@@ -268,21 +273,21 @@ class MonarchTUI(App):
 
         # Apply sorting
         sort_col = self.state.sort_by.value  # 'count' or 'amount' or 'date'
-        if sort_col == 'amount':
-            sort_col = 'total'  # Aggregations use 'total' column
+        if sort_col == "amount":
+            sort_col = "total"  # Aggregations use 'total' column
 
         # For expenses (negative totals), DESC means most negative first
         # So -$1000 should come before -$10
-        descending = (self.state.sort_direction == SortDirection.DESC)
+        descending = self.state.sort_direction == SortDirection.DESC
         agg = agg.sort(sort_col, descending=descending)
 
         self.state.current_data = agg
 
         # Add rows
         for row in agg.iter_rows(named=True):
-            merchant = row['merchant'] or 'Unknown'
-            count = row['count']
-            total = row['total']
+            merchant = row["merchant"] or "Unknown"
+            count = row["count"]
+            total = row["total"]
             table.add_row(merchant, str(count), f"${total:,.2f}")
 
     def show_category_aggregation(self) -> None:
@@ -302,18 +307,18 @@ class MonarchTUI(App):
 
         # Apply sorting
         sort_col = self.state.sort_by.value
-        if sort_col == 'amount':
-            sort_col = 'total'
+        if sort_col == "amount":
+            sort_col = "total"
 
-        descending = (self.state.sort_direction == SortDirection.DESC)
+        descending = self.state.sort_direction == SortDirection.DESC
         agg = agg.sort(sort_col, descending=descending)
 
         self.state.current_data = agg
 
         for row in agg.iter_rows(named=True):
-            category = row['category'] or 'Uncategorized'
-            count = row['count']
-            total = row['total']
+            category = row["category"] or "Uncategorized"
+            count = row["count"]
+            total = row["total"]
             table.add_row(category, str(count), f"${total:,.2f}")
 
     def show_group_aggregation(self) -> None:
@@ -333,18 +338,18 @@ class MonarchTUI(App):
 
         # Apply sorting
         sort_col = self.state.sort_by.value
-        if sort_col == 'amount':
-            sort_col = 'total'
+        if sort_col == "amount":
+            sort_col = "total"
 
-        descending = (self.state.sort_direction == SortDirection.DESC)
+        descending = self.state.sort_direction == SortDirection.DESC
         agg = agg.sort(sort_col, descending=descending)
 
         self.state.current_data = agg
 
         for row in agg.iter_rows(named=True):
-            group = row['group'] or 'Other'
-            count = row['count']
-            total = row['total']
+            group = row["group"] or "Other"
+            count = row["count"]
+            total = row["total"]
             table.add_row(group, str(count), f"${total:,.2f}")
 
     def show_transactions(self) -> None:
@@ -376,11 +381,11 @@ class MonarchTUI(App):
 
         # Add rows
         for row in txns.iter_rows(named=True):
-            date = str(row['date'])
-            merchant = row['merchant'] or 'Unknown'
-            category = row['category'] or 'Uncategorized'
-            amount = row['amount']
-            flags = "H" if row.get('hideFromReports', False) else ""
+            date = str(row["date"])
+            merchant = row["merchant"] or "Unknown"
+            category = row["category"] or "Uncategorized"
+            amount = row["amount"]
+            flags = "H" if row.get("hideFromReports", False) else ""
 
             table.add_row(date, merchant, category, f"${amount:,.2f}", flags)
 
@@ -397,8 +402,8 @@ class MonarchTUI(App):
         stats = self.data_manager.get_stats()
         stats_widget = self.query_one("#stats", Static)
 
-        txn_count = stats['total_transactions']
-        total_amount = stats['total_amount']
+        txn_count = stats["total_transactions"]
+        total_amount = stats["total_amount"]
 
         stats_text = f"{txn_count:,} transactions | ${total_amount:,.2f} total"
         stats_widget.update(stats_text)
@@ -416,7 +421,7 @@ class MonarchTUI(App):
 
         # Update pending changes
         changes_widget = self.query_one("#pending-changes", Static)
-        count = self.data_manager.get_stats()['pending_changes'] if self.data_manager else 0
+        count = self.data_manager.get_stats()["pending_changes"] if self.data_manager else 0
         self.pending_changes_count = count
         if count > 0:
             changes_widget.update(f"⚠ {count} pending change(s)")
@@ -551,7 +556,7 @@ class MonarchTUI(App):
         if self.data_manager is None:
             return
 
-        count = self.data_manager.get_stats()['pending_changes']
+        count = self.data_manager.get_stats()["pending_changes"]
         if count == 0:
             self.notify("No pending changes to save", timeout=2)
             return
@@ -563,7 +568,9 @@ class MonarchTUI(App):
                 self.data_manager.pending_edits
             )
             if failure_count > 0:
-                self.notify(f"Saved {success_count}, {failure_count} failed", severity="warning", timeout=5)
+                self.notify(
+                    f"Saved {success_count}, {failure_count} failed", severity="warning", timeout=5
+                )
             else:
                 self.notify(f"Saved {success_count} change(s)!", severity="information", timeout=3)
 
@@ -583,13 +590,13 @@ class MonarchTUI(App):
         from .screens.credential_screens import QuitConfirmationScreen
 
         has_changes = (
-            self.data_manager and
-            self.data_manager.get_stats()['pending_changes'] > 0
-        ) if self.data_manager else False
+            (self.data_manager and self.data_manager.get_stats()["pending_changes"] > 0)
+            if self.data_manager
+            else False
+        )
 
         should_quit = await self.push_screen(
-            QuitConfirmationScreen(has_unsaved_changes=has_changes),
-            wait_for_dismiss=True
+            QuitConfirmationScreen(has_unsaved_changes=has_changes), wait_for_dismiss=True
         )
 
         if should_quit:
@@ -618,13 +625,13 @@ def main():
         "--year",
         type=int,
         metavar="YYYY",
-        help="Only load transactions from this year onwards (e.g., --year 2025 loads from 2025-01-01 to now). Default: load all transactions."
+        help="Only load transactions from this year onwards (e.g., --year 2025 loads from 2025-01-01 to now). Default: load all transactions.",
     )
     parser.add_argument(
         "--since",
         type=str,
         metavar="YYYY-MM-DD",
-        help="Only load transactions from this date onwards (e.g., --since 2024-06-01). Overrides --year if both provided."
+        help="Only load transactions from this date onwards (e.g., --since 2024-06-01). Overrides --year if both provided.",
     )
 
     args = parser.parse_args()

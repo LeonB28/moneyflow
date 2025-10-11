@@ -3,6 +3,7 @@ Tests for duplicate transaction detection.
 
 Critical to test thoroughly since deletion is potentially destructive.
 """
+
 import pytest
 from datetime import date
 import polars as pl
@@ -38,36 +39,36 @@ class TestDuplicateDetection:
         """Test that strict account matching prevents false positives."""
         data = [
             {
-                'id': 'txn_1',
-                'date': date(2024, 10, 1),
-                'amount': -50.00,
-                'merchant': 'Starbucks',
-                'merchant_id': 'merch_1',
-                'category': 'Restaurants & Bars',
-                'category_id': 'cat_1',
-                'group': 'Food & Dining',
-                'account': 'Account A',
-                'account_id': 'acc_a',
-                'notes': '',
-                'hide_from_reports': False,
-                'pending': False,
-                'is_recurring': False,
+                "id": "txn_1",
+                "date": date(2024, 10, 1),
+                "amount": -50.00,
+                "merchant": "Starbucks",
+                "merchant_id": "merch_1",
+                "category": "Restaurants & Bars",
+                "category_id": "cat_1",
+                "group": "Food & Dining",
+                "account": "Account A",
+                "account_id": "acc_a",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
             },
             {
-                'id': 'txn_2',
-                'date': date(2024, 10, 1),
-                'amount': -50.00,
-                'merchant': 'Starbucks',
-                'merchant_id': 'merch_1',
-                'category': 'Restaurants & Bars',
-                'category_id': 'cat_1',
-                'group': 'Food & Dining',
-                'account': 'Account B',  # Different account
-                'account_id': 'acc_b',
-                'notes': '',
-                'hide_from_reports': False,
-                'pending': False,
-                'is_recurring': False,
+                "id": "txn_2",
+                "date": date(2024, 10, 1),
+                "amount": -50.00,
+                "merchant": "Starbucks",
+                "merchant_id": "merch_1",
+                "category": "Restaurants & Bars",
+                "category_id": "cat_1",
+                "group": "Food & Dining",
+                "account": "Account B",  # Different account
+                "account_id": "acc_b",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
             },
         ]
 
@@ -85,36 +86,36 @@ class TestDuplicateDetection:
         """Test date tolerance for duplicate detection."""
         data = [
             {
-                'id': 'txn_1',
-                'date': date(2024, 10, 1),
-                'amount': -50.00,
-                'merchant': 'Amazon',
-                'merchant_id': 'merch_1',
-                'category': 'Shopping',
-                'category_id': 'cat_1',
-                'group': 'Shopping',
-                'account': 'Chase',
-                'account_id': 'acc_1',
-                'notes': '',
-                'hide_from_reports': False,
-                'pending': False,
-                'is_recurring': False,
+                "id": "txn_1",
+                "date": date(2024, 10, 1),
+                "amount": -50.00,
+                "merchant": "Amazon",
+                "merchant_id": "merch_1",
+                "category": "Shopping",
+                "category_id": "cat_1",
+                "group": "Shopping",
+                "account": "Chase",
+                "account_id": "acc_1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
             },
             {
-                'id': 'txn_2',
-                'date': date(2024, 10, 2),  # One day later
-                'amount': -50.00,
-                'merchant': 'Amazon',
-                'merchant_id': 'merch_1',
-                'category': 'Shopping',
-                'category_id': 'cat_1',
-                'group': 'Shopping',
-                'account': 'Chase',
-                'account_id': 'acc_1',
-                'notes': '',
-                'hide_from_reports': False,
-                'pending': False,
-                'is_recurring': False,
+                "id": "txn_2",
+                "date": date(2024, 10, 2),  # One day later
+                "amount": -50.00,
+                "merchant": "Amazon",
+                "merchant_id": "merch_1",
+                "category": "Shopping",
+                "category_id": "cat_1",
+                "group": "Shopping",
+                "account": "Chase",
+                "account_id": "acc_1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
             },
         ]
 
@@ -132,36 +133,36 @@ class TestDuplicateDetection:
         """Test that merchant matching is case-insensitive."""
         data = [
             {
-                'id': 'txn_1',
-                'date': date(2024, 10, 1),
-                'amount': -50.00,
-                'merchant': 'Amazon',
-                'merchant_id': 'merch_1',
-                'category': 'Shopping',
-                'category_id': 'cat_1',
-                'group': 'Shopping',
-                'account': 'Chase',
-                'account_id': 'acc_1',
-                'notes': '',
-                'hide_from_reports': False,
-                'pending': False,
-                'is_recurring': False,
+                "id": "txn_1",
+                "date": date(2024, 10, 1),
+                "amount": -50.00,
+                "merchant": "Amazon",
+                "merchant_id": "merch_1",
+                "category": "Shopping",
+                "category_id": "cat_1",
+                "group": "Shopping",
+                "account": "Chase",
+                "account_id": "acc_1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
             },
             {
-                'id': 'txn_2',
-                'date': date(2024, 10, 1),
-                'amount': -50.00,
-                'merchant': 'AMAZON',  # Different case
-                'merchant_id': 'merch_1',
-                'category': 'Shopping',
-                'category_id': 'cat_1',
-                'group': 'Shopping',
-                'account': 'Chase',
-                'account_id': 'acc_1',
-                'notes': '',
-                'hide_from_reports': False,
-                'pending': False,
-                'is_recurring': False,
+                "id": "txn_2",
+                "date": date(2024, 10, 1),
+                "amount": -50.00,
+                "merchant": "AMAZON",  # Different case
+                "merchant_id": "merch_1",
+                "category": "Shopping",
+                "category_id": "cat_1",
+                "group": "Shopping",
+                "account": "Chase",
+                "account_id": "acc_1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
             },
         ]
 
@@ -177,16 +178,38 @@ class TestDuplicateGrouping:
     def test_simple_pair(self):
         """Test grouping a simple duplicate pair."""
         data = [
-            {'id': 'txn_1', 'date': date(2024, 10, 1), 'amount': -50.00,
-             'merchant': 'Test', 'merchant_id': 'm1', 'category': 'Cat',
-             'category_id': 'c1', 'group': 'G', 'account': 'Acc',
-             'account_id': 'a1', 'notes': '', 'hide_from_reports': False,
-             'pending': False, 'is_recurring': False},
-            {'id': 'txn_2', 'date': date(2024, 10, 1), 'amount': -50.00,
-             'merchant': 'Test', 'merchant_id': 'm1', 'category': 'Cat',
-             'category_id': 'c1', 'group': 'G', 'account': 'Acc',
-             'account_id': 'a1', 'notes': '', 'hide_from_reports': False,
-             'pending': False, 'is_recurring': False},
+            {
+                "id": "txn_1",
+                "date": date(2024, 10, 1),
+                "amount": -50.00,
+                "merchant": "Test",
+                "merchant_id": "m1",
+                "category": "Cat",
+                "category_id": "c1",
+                "group": "G",
+                "account": "Acc",
+                "account_id": "a1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
+            },
+            {
+                "id": "txn_2",
+                "date": date(2024, 10, 1),
+                "amount": -50.00,
+                "merchant": "Test",
+                "merchant_id": "m1",
+                "category": "Cat",
+                "category_id": "c1",
+                "group": "G",
+                "account": "Acc",
+                "account_id": "a1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
+            },
         ]
 
         df = pl.DataFrame(data)
@@ -194,16 +217,27 @@ class TestDuplicateGrouping:
         groups = DuplicateDetector.get_duplicate_groups(df, duplicates)
 
         assert len(groups) == 1
-        assert set(groups[0]) == {'txn_1', 'txn_2'}
+        assert set(groups[0]) == {"txn_1", "txn_2"}
 
     def test_triple_duplicates(self):
         """Test grouping when there are 3 identical transactions."""
         data = [
-            {'id': f'txn_{i}', 'date': date(2024, 10, 1), 'amount': -50.00,
-             'merchant': 'Test', 'merchant_id': 'm1', 'category': 'Cat',
-             'category_id': 'c1', 'group': 'G', 'account': 'Acc',
-             'account_id': 'a1', 'notes': '', 'hide_from_reports': False,
-             'pending': False, 'is_recurring': False}
+            {
+                "id": f"txn_{i}",
+                "date": date(2024, 10, 1),
+                "amount": -50.00,
+                "merchant": "Test",
+                "merchant_id": "m1",
+                "category": "Cat",
+                "category_id": "c1",
+                "group": "G",
+                "account": "Acc",
+                "account_id": "a1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
+            }
             for i in range(1, 4)  # txn_1, txn_2, txn_3
         ]
 
@@ -213,41 +247,94 @@ class TestDuplicateGrouping:
 
         assert len(groups) == 1
         assert len(groups[0]) == 3
-        assert set(groups[0]) == {'txn_1', 'txn_2', 'txn_3'}
+        assert set(groups[0]) == {"txn_1", "txn_2", "txn_3"}
 
     def test_multiple_separate_duplicate_groups(self):
         """Test when there are multiple separate duplicate groups."""
         data = [
             # Group 1: Starbucks duplicates
-            {'id': 'txn_1', 'date': date(2024, 10, 1), 'amount': -5.00,
-             'merchant': 'Starbucks', 'merchant_id': 'm1', 'category': 'Coffee',
-             'category_id': 'c1', 'group': 'Food', 'account': 'Acc',
-             'account_id': 'a1', 'notes': '', 'hide_from_reports': False,
-             'pending': False, 'is_recurring': False},
-            {'id': 'txn_2', 'date': date(2024, 10, 1), 'amount': -5.00,
-             'merchant': 'Starbucks', 'merchant_id': 'm1', 'category': 'Coffee',
-             'category_id': 'c1', 'group': 'Food', 'account': 'Acc',
-             'account_id': 'a1', 'notes': '', 'hide_from_reports': False,
-             'pending': False, 'is_recurring': False},
-
+            {
+                "id": "txn_1",
+                "date": date(2024, 10, 1),
+                "amount": -5.00,
+                "merchant": "Starbucks",
+                "merchant_id": "m1",
+                "category": "Coffee",
+                "category_id": "c1",
+                "group": "Food",
+                "account": "Acc",
+                "account_id": "a1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
+            },
+            {
+                "id": "txn_2",
+                "date": date(2024, 10, 1),
+                "amount": -5.00,
+                "merchant": "Starbucks",
+                "merchant_id": "m1",
+                "category": "Coffee",
+                "category_id": "c1",
+                "group": "Food",
+                "account": "Acc",
+                "account_id": "a1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
+            },
             # Group 2: Amazon duplicates
-            {'id': 'txn_3', 'date': date(2024, 10, 2), 'amount': -100.00,
-             'merchant': 'Amazon', 'merchant_id': 'm2', 'category': 'Shopping',
-             'category_id': 'c2', 'group': 'Shopping', 'account': 'Acc',
-             'account_id': 'a1', 'notes': '', 'hide_from_reports': False,
-             'pending': False, 'is_recurring': False},
-            {'id': 'txn_4', 'date': date(2024, 10, 2), 'amount': -100.00,
-             'merchant': 'Amazon', 'merchant_id': 'm2', 'category': 'Shopping',
-             'category_id': 'c2', 'group': 'Shopping', 'account': 'Acc',
-             'account_id': 'a1', 'notes': '', 'hide_from_reports': False,
-             'pending': False, 'is_recurring': False},
-
+            {
+                "id": "txn_3",
+                "date": date(2024, 10, 2),
+                "amount": -100.00,
+                "merchant": "Amazon",
+                "merchant_id": "m2",
+                "category": "Shopping",
+                "category_id": "c2",
+                "group": "Shopping",
+                "account": "Acc",
+                "account_id": "a1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
+            },
+            {
+                "id": "txn_4",
+                "date": date(2024, 10, 2),
+                "amount": -100.00,
+                "merchant": "Amazon",
+                "merchant_id": "m2",
+                "category": "Shopping",
+                "category_id": "c2",
+                "group": "Shopping",
+                "account": "Acc",
+                "account_id": "a1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
+            },
             # Non-duplicate
-            {'id': 'txn_5', 'date': date(2024, 10, 3), 'amount': -25.00,
-             'merchant': 'Target', 'merchant_id': 'm3', 'category': 'Shopping',
-             'category_id': 'c2', 'group': 'Shopping', 'account': 'Acc',
-             'account_id': 'a1', 'notes': '', 'hide_from_reports': False,
-             'pending': False, 'is_recurring': False},
+            {
+                "id": "txn_5",
+                "date": date(2024, 10, 3),
+                "amount": -25.00,
+                "merchant": "Target",
+                "merchant_id": "m3",
+                "category": "Shopping",
+                "category_id": "c2",
+                "group": "Shopping",
+                "account": "Acc",
+                "account_id": "a1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
+            },
         ]
 
         df = pl.DataFrame(data)
@@ -298,16 +385,38 @@ class TestEdgeCases:
     def test_different_amounts_not_duplicate(self):
         """Test that different amounts are not duplicates."""
         data = [
-            {'id': 'txn_1', 'date': date(2024, 10, 1), 'amount': -50.00,
-             'merchant': 'Test', 'merchant_id': 'm1', 'category': 'Cat',
-             'category_id': 'c1', 'group': 'G', 'account': 'Acc',
-             'account_id': 'a1', 'notes': '', 'hide_from_reports': False,
-             'pending': False, 'is_recurring': False},
-            {'id': 'txn_2', 'date': date(2024, 10, 1), 'amount': -51.00,  # Different
-             'merchant': 'Test', 'merchant_id': 'm1', 'category': 'Cat',
-             'category_id': 'c1', 'group': 'G', 'account': 'Acc',
-             'account_id': 'a1', 'notes': '', 'hide_from_reports': False,
-             'pending': False, 'is_recurring': False},
+            {
+                "id": "txn_1",
+                "date": date(2024, 10, 1),
+                "amount": -50.00,
+                "merchant": "Test",
+                "merchant_id": "m1",
+                "category": "Cat",
+                "category_id": "c1",
+                "group": "G",
+                "account": "Acc",
+                "account_id": "a1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
+            },
+            {
+                "id": "txn_2",
+                "date": date(2024, 10, 1),
+                "amount": -51.00,  # Different
+                "merchant": "Test",
+                "merchant_id": "m1",
+                "category": "Cat",
+                "category_id": "c1",
+                "group": "G",
+                "account": "Acc",
+                "account_id": "a1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
+            },
         ]
 
         df = pl.DataFrame(data)
@@ -318,17 +427,38 @@ class TestEdgeCases:
     def test_different_merchants_not_duplicate(self):
         """Test that different merchants are not duplicates."""
         data = [
-            {'id': 'txn_1', 'date': date(2024, 10, 1), 'amount': -50.00,
-             'merchant': 'Starbucks', 'merchant_id': 'm1', 'category': 'Cat',
-             'category_id': 'c1', 'group': 'G', 'account': 'Acc',
-             'account_id': 'a1', 'notes': '', 'hide_from_reports': False,
-             'pending': False, 'is_recurring': False},
-            {'id': 'txn_2', 'date': date(2024, 10, 1), 'amount': -50.00,
-             'merchant': 'Dunkin',  # Different merchant
-             'merchant_id': 'm2', 'category': 'Cat',
-             'category_id': 'c1', 'group': 'G', 'account': 'Acc',
-             'account_id': 'a1', 'notes': '', 'hide_from_reports': False,
-             'pending': False, 'is_recurring': False},
+            {
+                "id": "txn_1",
+                "date": date(2024, 10, 1),
+                "amount": -50.00,
+                "merchant": "Starbucks",
+                "merchant_id": "m1",
+                "category": "Cat",
+                "category_id": "c1",
+                "group": "G",
+                "account": "Acc",
+                "account_id": "a1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
+            },
+            {
+                "id": "txn_2",
+                "date": date(2024, 10, 1),
+                "amount": -50.00,
+                "merchant": "Dunkin",  # Different merchant
+                "merchant_id": "m2",
+                "category": "Cat",
+                "category_id": "c1",
+                "group": "G",
+                "account": "Acc",
+                "account_id": "a1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
+            },
         ]
 
         df = pl.DataFrame(data)
@@ -343,16 +473,38 @@ class TestEdgeCases:
         This is expected behavior - user can decide what to do with them.
         """
         data = [
-            {'id': 'txn_1', 'date': date(2024, 10, 1), 'amount': -9.99,
-             'merchant': 'Netflix', 'merchant_id': 'm1', 'category': 'Entertainment',
-             'category_id': 'c1', 'group': 'Entertainment', 'account': 'Acc',
-             'account_id': 'a1', 'notes': '', 'hide_from_reports': False,
-             'pending': False, 'is_recurring': True},
-            {'id': 'txn_2', 'date': date(2024, 11, 1), 'amount': -9.99,
-             'merchant': 'Netflix', 'merchant_id': 'm1', 'category': 'Entertainment',
-             'category_id': 'c1', 'group': 'Entertainment', 'account': 'Acc',
-             'account_id': 'a1', 'notes': '', 'hide_from_reports': False,
-             'pending': False, 'is_recurring': True},
+            {
+                "id": "txn_1",
+                "date": date(2024, 10, 1),
+                "amount": -9.99,
+                "merchant": "Netflix",
+                "merchant_id": "m1",
+                "category": "Entertainment",
+                "category_id": "c1",
+                "group": "Entertainment",
+                "account": "Acc",
+                "account_id": "a1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": True,
+            },
+            {
+                "id": "txn_2",
+                "date": date(2024, 11, 1),
+                "amount": -9.99,
+                "merchant": "Netflix",
+                "merchant_id": "m1",
+                "category": "Entertainment",
+                "category_id": "c1",
+                "group": "Entertainment",
+                "account": "Acc",
+                "account_id": "a1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": True,
+            },
         ]
 
         df = pl.DataFrame(data)
@@ -367,11 +519,22 @@ class TestEdgeCases:
     def test_single_transaction_no_duplicates(self):
         """Test that a single transaction has no duplicates."""
         data = [
-            {'id': 'txn_1', 'date': date(2024, 10, 1), 'amount': -50.00,
-             'merchant': 'Test', 'merchant_id': 'm1', 'category': 'Cat',
-             'category_id': 'c1', 'group': 'G', 'account': 'Acc',
-             'account_id': 'a1', 'notes': '', 'hide_from_reports': False,
-             'pending': False, 'is_recurring': False},
+            {
+                "id": "txn_1",
+                "date": date(2024, 10, 1),
+                "amount": -50.00,
+                "merchant": "Test",
+                "merchant_id": "m1",
+                "category": "Cat",
+                "category_id": "c1",
+                "group": "G",
+                "account": "Acc",
+                "account_id": "a1",
+                "notes": "",
+                "hide_from_reports": False,
+                "pending": False,
+                "is_recurring": False,
+            },
         ]
 
         df = pl.DataFrame(data)
@@ -395,22 +558,24 @@ class TestDuplicateDetectionPerformance:
             amount = -50.00 if i % 10 == 0 else -float(i)
             merchant = "Duplicate Merchant" if i % 10 == 0 else f"Merchant {i}"
 
-            data.append({
-                'id': f'txn_{i}',
-                'date': date(2024, 10, i % 28 + 1),
-                'amount': amount,
-                'merchant': merchant,
-                'merchant_id': f'm{i}',
-                'category': 'Category',
-                'category_id': 'c1',
-                'group': 'Group',
-                'account': 'Account',
-                'account_id': 'a1',
-                'notes': '',
-                'hide_from_reports': False,
-                'pending': False,
-                'is_recurring': False,
-            })
+            data.append(
+                {
+                    "id": f"txn_{i}",
+                    "date": date(2024, 10, i % 28 + 1),
+                    "amount": amount,
+                    "merchant": merchant,
+                    "merchant_id": f"m{i}",
+                    "category": "Category",
+                    "category_id": "c1",
+                    "group": "Group",
+                    "account": "Account",
+                    "account_id": "a1",
+                    "notes": "",
+                    "hide_from_reports": False,
+                    "pending": False,
+                    "is_recurring": False,
+                }
+            )
 
         df = pl.DataFrame(data)
 

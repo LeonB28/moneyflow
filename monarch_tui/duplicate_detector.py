@@ -7,6 +7,7 @@ Identifies potential duplicate transactions based on:
 - Same merchant (case-insensitive)
 - Same account (optional)
 """
+
 from typing import List, Tuple
 import polars as pl
 
@@ -16,9 +17,7 @@ class DuplicateDetector:
 
     @staticmethod
     def find_duplicates(
-        df: pl.DataFrame,
-        strict_account_match: bool = True,
-        date_tolerance_days: int = 0
+        df: pl.DataFrame, strict_account_match: bool = True, date_tolerance_days: int = 0
     ) -> pl.DataFrame:
         """
         Find potential duplicate transactions.
@@ -44,32 +43,32 @@ class DuplicateDetector:
                 row_j = df.row(j, named=True)
 
                 if DuplicateDetector._is_duplicate(
-                    row_i, row_j,
+                    row_i,
+                    row_j,
                     strict_account_match=strict_account_match,
-                    date_tolerance_days=date_tolerance_days
+                    date_tolerance_days=date_tolerance_days,
                 ):
                     # Add both transactions as a duplicate pair
-                    duplicates.append({
-                        'id_1': row_i['id'],
-                        'id_2': row_j['id'],
-                        'date': row_i['date'],
-                        'amount': row_i['amount'],
-                        'merchant': row_i['merchant'],
-                        'account': row_i['account'],
-                    })
+                    duplicates.append(
+                        {
+                            "id_1": row_i["id"],
+                            "id_2": row_j["id"],
+                            "date": row_i["date"],
+                            "amount": row_i["amount"],
+                            "merchant": row_i["merchant"],
+                            "account": row_i["account"],
+                        }
+                    )
 
         if not duplicates:
             return pl.DataFrame()
 
         dup_df = pl.DataFrame(duplicates)
-        return dup_df.sort(['date', 'amount'], descending=[True, False])
+        return dup_df.sort(["date", "amount"], descending=[True, False])
 
     @staticmethod
     def _is_duplicate(
-        txn1: dict,
-        txn2: dict,
-        strict_account_match: bool = True,
-        date_tolerance_days: int = 0
+        txn1: dict, txn2: dict, strict_account_match: bool = True, date_tolerance_days: int = 0
     ) -> bool:
         """
         Check if two transactions are potential duplicates.
@@ -84,23 +83,23 @@ class DuplicateDetector:
             True if transactions are potential duplicates
         """
         # Check amount (exact match)
-        if txn1['amount'] != txn2['amount']:
+        if txn1["amount"] != txn2["amount"]:
             return False
 
         # Check date (within tolerance)
-        date_diff = abs((txn1['date'] - txn2['date']).days)
+        date_diff = abs((txn1["date"] - txn2["date"]).days)
         if date_diff > date_tolerance_days:
             return False
 
         # Check merchant (case-insensitive)
-        merchant1 = txn1['merchant'].lower() if txn1['merchant'] else ""
-        merchant2 = txn2['merchant'].lower() if txn2['merchant'] else ""
+        merchant1 = txn1["merchant"].lower() if txn1["merchant"] else ""
+        merchant2 = txn2["merchant"].lower() if txn2["merchant"] else ""
         if merchant1 != merchant2:
             return False
 
         # Check account if strict matching
         if strict_account_match:
-            if txn1['account'] != txn2['account']:
+            if txn1["account"] != txn2["account"]:
                 return False
 
         return True
@@ -125,8 +124,8 @@ class DuplicateDetector:
         # Build a graph of connections
         connections = {}
         for row in duplicate_pairs.iter_rows(named=True):
-            id1 = row['id_1']
-            id2 = row['id_2']
+            id1 = row["id_1"]
+            id2 = row["id_2"]
 
             if id1 not in connections:
                 connections[id1] = set()
@@ -156,10 +155,7 @@ class DuplicateDetector:
         return groups
 
     @staticmethod
-    def format_duplicate_report(
-        df: pl.DataFrame,
-        duplicate_groups: List[List[str]]
-    ) -> str:
+    def format_duplicate_report(df: pl.DataFrame, duplicate_groups: List[List[str]]) -> str:
         """
         Format a human-readable duplicate report.
 
@@ -177,7 +173,7 @@ class DuplicateDetector:
             "Duplicate Transaction Report",
             "=" * 60,
             f"Found {len(duplicate_groups)} duplicate group(s)",
-            ""
+            "",
         ]
 
         for i, group in enumerate(duplicate_groups, 1):
@@ -185,7 +181,7 @@ class DuplicateDetector:
             lines.append("-" * 40)
 
             for txn_id in group:
-                txn_rows = df.filter(pl.col('id') == txn_id)
+                txn_rows = df.filter(pl.col("id") == txn_id)
                 if len(txn_rows) > 0:
                     txn = txn_rows.row(0, named=True)
                     lines.append(

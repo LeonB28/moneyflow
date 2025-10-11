@@ -46,6 +46,7 @@ dev = [
     "pytest-cov>=4.1.0",
     "pytest-mock>=3.11.0",
     "textual-dev>=1.0.0",
+    "ruff>=0.1.0",
 ]
 
 [tool.pytest.ini_options]

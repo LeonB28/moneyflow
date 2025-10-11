@@ -4,6 +4,7 @@ Mock MonarchMoney backend for testing without making real API calls.
 This provides a safe way to test all business logic without risk of
 modifying real data.
 """
+
 from typing import Dict, List, Any, Optional
 from datetime import datetime, date
 
@@ -36,107 +37,107 @@ class MockMonarchMoney:
         # Categories
         self.categories = [
             {
-                'id': 'cat_groceries',
-                'name': 'Groceries',
-                'group': {'id': 'grp_food', 'type': 'expense'},
+                "id": "cat_groceries",
+                "name": "Groceries",
+                "group": {"id": "grp_food", "type": "expense"},
             },
             {
-                'id': 'cat_restaurants',
-                'name': 'Restaurants & Bars',
-                'group': {'id': 'grp_food', 'type': 'expense'},
+                "id": "cat_restaurants",
+                "name": "Restaurants & Bars",
+                "group": {"id": "grp_food", "type": "expense"},
             },
             {
-                'id': 'cat_gas',
-                'name': 'Gas',
-                'group': {'id': 'grp_transport', 'type': 'expense'},
+                "id": "cat_gas",
+                "name": "Gas",
+                "group": {"id": "grp_transport", "type": "expense"},
             },
             {
-                'id': 'cat_shopping',
-                'name': 'Shopping',
-                'group': {'id': 'grp_shopping', 'type': 'expense'},
+                "id": "cat_shopping",
+                "name": "Shopping",
+                "group": {"id": "grp_shopping", "type": "expense"},
             },
         ]
 
         # Category groups
         self.category_groups = [
-            {'id': 'grp_food', 'name': 'Food & Dining', 'type': 'expense'},
-            {'id': 'grp_transport', 'name': 'Transportation', 'type': 'expense'},
-            {'id': 'grp_shopping', 'name': 'Shopping', 'type': 'expense'},
+            {"id": "grp_food", "name": "Food & Dining", "type": "expense"},
+            {"id": "grp_transport", "name": "Transportation", "type": "expense"},
+            {"id": "grp_shopping", "name": "Shopping", "type": "expense"},
         ]
 
         # Transactions (including some duplicates for testing)
         self.transactions = [
             {
-                'id': 'txn_1',
-                'date': '2024-10-01',
-                'amount': -45.67,
-                'merchant': {'id': 'merch_wholef', 'name': 'Whole Foods'},
-                'category': {'id': 'cat_groceries', 'name': 'Groceries'},
-                'account': {'id': 'acc_checking', 'displayName': 'Chase Checking'},
-                'notes': '',
-                'hideFromReports': False,
-                'pending': False,
-                'isRecurring': False,
+                "id": "txn_1",
+                "date": "2024-10-01",
+                "amount": -45.67,
+                "merchant": {"id": "merch_wholef", "name": "Whole Foods"},
+                "category": {"id": "cat_groceries", "name": "Groceries"},
+                "account": {"id": "acc_checking", "displayName": "Chase Checking"},
+                "notes": "",
+                "hideFromReports": False,
+                "pending": False,
+                "isRecurring": False,
             },
             {
-                'id': 'txn_2',
-                'date': '2024-10-02',
-                'amount': -23.45,
-                'merchant': {'id': 'merch_starbucks', 'name': 'Starbucks'},
-                'category': {'id': 'cat_restaurants', 'name': 'Restaurants & Bars'},
-                'account': {'id': 'acc_checking', 'displayName': 'Chase Checking'},
-                'notes': '',
-                'hideFromReports': False,
-                'pending': False,
-                'isRecurring': False,
+                "id": "txn_2",
+                "date": "2024-10-02",
+                "amount": -23.45,
+                "merchant": {"id": "merch_starbucks", "name": "Starbucks"},
+                "category": {"id": "cat_restaurants", "name": "Restaurants & Bars"},
+                "account": {"id": "acc_checking", "displayName": "Chase Checking"},
+                "notes": "",
+                "hideFromReports": False,
+                "pending": False,
+                "isRecurring": False,
             },
             {
-                'id': 'txn_3',
-                'date': '2024-10-02',
-                'amount': -23.45,  # Duplicate amount and date
-                'merchant': {'id': 'merch_starbucks', 'name': 'Starbucks'},
-                'category': {'id': 'cat_restaurants', 'name': 'Restaurants & Bars'},
-                'account': {'id': 'acc_checking', 'displayName': 'Chase Checking'},
-                'notes': '',
-                'hideFromReports': False,
-                'pending': False,
-                'isRecurring': False,
+                "id": "txn_3",
+                "date": "2024-10-02",
+                "amount": -23.45,  # Duplicate amount and date
+                "merchant": {"id": "merch_starbucks", "name": "Starbucks"},
+                "category": {"id": "cat_restaurants", "name": "Restaurants & Bars"},
+                "account": {"id": "acc_checking", "displayName": "Chase Checking"},
+                "notes": "",
+                "hideFromReports": False,
+                "pending": False,
+                "isRecurring": False,
             },
             {
-                'id': 'txn_4',
-                'date': '2024-10-03',
-                'amount': -52.00,
-                'merchant': {'id': 'merch_shell', 'name': 'Shell Gas Station'},
-                'category': {'id': 'cat_gas', 'name': 'Gas'},
-                'account': {'id': 'acc_checking', 'displayName': 'Chase Checking'},
-                'notes': '',
-                'hideFromReports': False,
-                'pending': False,
-                'isRecurring': False,
+                "id": "txn_4",
+                "date": "2024-10-03",
+                "amount": -52.00,
+                "merchant": {"id": "merch_shell", "name": "Shell Gas Station"},
+                "category": {"id": "cat_gas", "name": "Gas"},
+                "account": {"id": "acc_checking", "displayName": "Chase Checking"},
+                "notes": "",
+                "hideFromReports": False,
+                "pending": False,
+                "isRecurring": False,
             },
             {
-                'id': 'txn_5',
-                'date': '2024-10-04',
-                'amount': -123.99,
-                'merchant': {'id': 'merch_amazon', 'name': 'Amazon'},
-                'category': {'id': 'cat_shopping', 'name': 'Shopping'},
-                'account': {'id': 'acc_credit', 'displayName': 'Chase Sapphire'},
-                'notes': '',
-                'hideFromReports': False,
-                'pending': False,
-                'isRecurring': False,
+                "id": "txn_5",
+                "date": "2024-10-04",
+                "amount": -123.99,
+                "merchant": {"id": "merch_amazon", "name": "Amazon"},
+                "category": {"id": "cat_shopping", "name": "Shopping"},
+                "account": {"id": "acc_credit", "displayName": "Chase Sapphire"},
+                "notes": "",
+                "hideFromReports": False,
+                "pending": False,
+                "isRecurring": False,
             },
             {
-                'id': 'txn_6',
-                'date': '2024-10-05',
-                'amount': -67.89,
-                'merchant': {'id': 'merch_wholef', 'name': 'Whole Foods'},
-                'category': {'id': 'cat_groceries', 'name': 'Groceries'},
-                'account': {'id': 'acc_checking', 'displayName': 'Chase Checking'},
-                'notes': '',
-                'hideFromReports': False,
-                'pending': False,
-                'isRecurring': False,
+                "id": "txn_6",
+                "date": "2024-10-05",
+                "amount": -67.89,
+                "merchant": {"id": "merch_wholef", "name": "Whole Foods"},
+                "category": {"id": "cat_groceries", "name": "Groceries"},
+                "account": {"id": "acc_checking", "displayName": "Chase Checking"},
+                "notes": "",
+                "hideFromReports": False,
+                "pending": False,
+                "isRecurring": False,
             },
         ]
 
@@ -153,11 +154,11 @@ class MockMonarchMoney:
 
     async def get_transaction_categories(self) -> Dict[str, Any]:
         """Return mock categories."""
-        return {'categories': self.categories}
+        return {"categories": self.categories}
 
     async def get_transaction_category_groups(self) -> Dict[str, Any]:
         """Return mock category groups."""
-        return {'categoryGroups': self.category_groups}
+        return {"categoryGroups": self.category_groups}
 
     async def get_transactions(
         self,
@@ -165,28 +166,23 @@ class MockMonarchMoney:
         offset: int = 0,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """Return mock transactions with pagination."""
         # Filter by date if specified
         filtered = self.transactions
 
         if start_date:
-            filtered = [t for t in filtered if t['date'] >= start_date]
+            filtered = [t for t in filtered if t["date"] >= start_date]
         if end_date:
-            filtered = [t for t in filtered if t['date'] <= end_date]
+            filtered = [t for t in filtered if t["date"] <= end_date]
 
         # Apply pagination
         start = offset
         end = offset + limit
         page = filtered[start:end]
 
-        return {
-            'allTransactions': {
-                'results': page,
-                'totalCount': len(filtered)
-            }
-        }
+        return {"allTransactions": {"results": page, "totalCount": len(filtered)}}
 
     async def update_transaction(
         self,
@@ -194,7 +190,7 @@ class MockMonarchMoney:
         merchant_name: Optional[str] = None,
         category_id: Optional[str] = None,
         hide_from_reports: Optional[bool] = None,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Mock update transaction.
@@ -202,38 +198,37 @@ class MockMonarchMoney:
         Records the update call for testing and modifies the in-memory data.
         """
         # Record the update call
-        self.update_calls.append({
-            'transaction_id': transaction_id,
-            'merchant_name': merchant_name,
-            'category_id': category_id,
-            'hide_from_reports': hide_from_reports,
-            'kwargs': kwargs,
-        })
+        self.update_calls.append(
+            {
+                "transaction_id": transaction_id,
+                "merchant_name": merchant_name,
+                "category_id": category_id,
+                "hide_from_reports": hide_from_reports,
+                "kwargs": kwargs,
+            }
+        )
 
         # Find and update the transaction
         for txn in self.transactions:
-            if txn['id'] == transaction_id:
+            if txn["id"] == transaction_id:
                 if merchant_name is not None:
-                    txn['merchant']['name'] = merchant_name
+                    txn["merchant"]["name"] = merchant_name
                 if category_id is not None:
                     # Find category name from ID
                     for cat in self.categories:
-                        if cat['id'] == category_id:
-                            txn['category'] = {
-                                'id': category_id,
-                                'name': cat['name']
-                            }
+                        if cat["id"] == category_id:
+                            txn["category"] = {"id": category_id, "name": cat["name"]}
                             break
                 if hide_from_reports is not None:
-                    txn['hideFromReports'] = hide_from_reports
+                    txn["hideFromReports"] = hide_from_reports
                 break
 
-        return {'updateTransaction': {'transaction': {'id': transaction_id}}}
+        return {"updateTransaction": {"transaction": {"id": transaction_id}}}
 
     def get_transaction_by_id(self, transaction_id: str) -> Optional[Dict[str, Any]]:
         """Helper to get a transaction by ID for testing."""
         for txn in self.transactions:
-            if txn['id'] == transaction_id:
+            if txn["id"] == transaction_id:
                 return txn
         return None
 
@@ -250,16 +245,16 @@ class MockMonarchMoney:
         txn_id = f"txn_test_{len(self.transactions) + 1}"
 
         txn = {
-            'id': txn_id,
-            'date': kwargs.get('date', '2024-10-10'),
-            'amount': kwargs.get('amount', -10.00),
-            'merchant': kwargs.get('merchant', {'id': 'merch_test', 'name': 'Test Merchant'}),
-            'category': kwargs.get('category', {'id': 'cat_groceries', 'name': 'Groceries'}),
-            'account': kwargs.get('account', {'id': 'acc_test', 'displayName': 'Test Account'}),
-            'notes': kwargs.get('notes', ''),
-            'hideFromReports': kwargs.get('hideFromReports', False),
-            'pending': kwargs.get('pending', False),
-            'isRecurring': kwargs.get('isRecurring', False),
+            "id": txn_id,
+            "date": kwargs.get("date", "2024-10-10"),
+            "amount": kwargs.get("amount", -10.00),
+            "merchant": kwargs.get("merchant", {"id": "merch_test", "name": "Test Merchant"}),
+            "category": kwargs.get("category", {"id": "cat_groceries", "name": "Groceries"}),
+            "account": kwargs.get("account", {"id": "acc_test", "displayName": "Test Account"}),
+            "notes": kwargs.get("notes", ""),
+            "hideFromReports": kwargs.get("hideFromReports", False),
+            "pending": kwargs.get("pending", False),
+            "isRecurring": kwargs.get("isRecurring", False),
         }
 
         self.transactions.append(txn)

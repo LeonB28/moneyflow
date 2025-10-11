@@ -1,6 +1,7 @@
 """
 App state management with change tracking and undo/redo support.
 """
+
 from dataclasses import dataclass, field
 from datetime import datetime, date
 from enum import Enum
@@ -10,6 +11,7 @@ import polars as pl
 
 class ViewMode(Enum):
     """Available view modes for transaction aggregation."""
+
     MERCHANT = "merchant"
     CATEGORY = "category"
     GROUP = "group"
@@ -18,6 +20,7 @@ class ViewMode(Enum):
 
 class SortMode(Enum):
     """Sorting options for transactions."""
+
     COUNT = "count"
     AMOUNT = "amount"
     DATE = "date"
@@ -25,12 +28,14 @@ class SortMode(Enum):
 
 class SortDirection(Enum):
     """Sort direction."""
+
     DESC = "desc"
     ASC = "asc"
 
 
 class TimeFrame(Enum):
     """Time frame for filtering transactions."""
+
     ALL_TIME = "all_time"
     THIS_YEAR = "this_year"
     THIS_MONTH = "this_month"
@@ -40,6 +45,7 @@ class TimeFrame(Enum):
 @dataclass
 class TransactionEdit:
     """Represents a pending transaction edit."""
+
     transaction_id: str
     field: str  # 'merchant', 'category', 'hide_from_reports'
     old_value: Any
@@ -52,6 +58,7 @@ class AppState:
     """
     Central app state with undo/redo support.
     """
+
     # Data
     transactions_df: Optional[pl.DataFrame] = None
     categories: Dict[str, Any] = field(default_factory=dict)
@@ -99,10 +106,7 @@ class AppState:
     def add_edit(self, transaction_id: str, field: str, old_value: Any, new_value: Any):
         """Add a pending edit to the change tracker."""
         edit = TransactionEdit(
-            transaction_id=transaction_id,
-            field=field,
-            old_value=old_value,
-            new_value=new_value
+            transaction_id=transaction_id, field=field, old_value=old_value, new_value=new_value
         )
         self.pending_edits.append(edit)
         self.undo_stack.append(edit)
@@ -155,7 +159,12 @@ class AppState:
         """Clear all selected transactions."""
         self.selected_ids.clear()
 
-    def set_timeframe(self, timeframe: TimeFrame, start_date: Optional[date] = None, end_date: Optional[date] = None):
+    def set_timeframe(
+        self,
+        timeframe: TimeFrame,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+    ):
         """Set the time frame for filtering transactions."""
         self.time_frame = timeframe
 
@@ -175,6 +184,7 @@ class AppState:
             else:
                 next_month = date(today.year, today.month + 1, 1)
                 from datetime import timedelta
+
                 self.end_date = next_month - timedelta(days=1)
         else:  # ALL_TIME
             self.start_date = None
@@ -203,17 +213,14 @@ class AppState:
 
         # Apply time filter
         if self.start_date and self.end_date:
-            df = df.filter(
-                (pl.col("date") >= self.start_date) &
-                (pl.col("date") <= self.end_date)
-            )
+            df = df.filter((pl.col("date") >= self.start_date) & (pl.col("date") <= self.end_date))
 
         # Apply search filter
         if self.search_query:
             query = self.search_query.lower()
             df = df.filter(
-                pl.col("merchant").str.to_lowercase().str.contains(query) |
-                pl.col("category").str.to_lowercase().str.contains(query)
+                pl.col("merchant").str.to_lowercase().str.contains(query)
+                | pl.col("category").str.to_lowercase().str.contains(query)
             )
 
         # Apply view-specific filters

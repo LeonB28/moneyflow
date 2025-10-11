@@ -1,6 +1,7 @@
 """
 Data management layer using Polars for high-performance aggregation and filtering.
 """
+
 import asyncio
 from datetime import datetime, date
 from typing import Dict, List, Optional, Any, Tuple
@@ -11,46 +12,43 @@ from .monarchmoney import MonarchMoney
 # Category group mapping (since not consistently available in API)
 CATEGORY_GROUPS = {
     "Food & Dining": [
-        "Restaurants & Bars", "Coffee Shops", "Groceries",
-        "Fast Food", "Food & Drink"
+        "Restaurants & Bars",
+        "Coffee Shops",
+        "Groceries",
+        "Fast Food",
+        "Food & Drink",
     ],
     "Transportation": [
-        "Gas", "Public Transit", "Parking & Tolls",
-        "Taxi & Ride Shares", "Auto Payment", "Auto Maintenance"
+        "Gas",
+        "Public Transit",
+        "Parking & Tolls",
+        "Taxi & Ride Shares",
+        "Auto Payment",
+        "Auto Maintenance",
     ],
     "Home": [
-        "Mortgage", "Rent", "Home Improvement",
-        "Gas & Electric", "Water", "Garbage", "Internet & Cable"
+        "Mortgage",
+        "Rent",
+        "Home Improvement",
+        "Gas & Electric",
+        "Water",
+        "Garbage",
+        "Internet & Cable",
     ],
-    "Shopping": [
-        "Shopping", "Clothing", "Electronics",
-        "Furniture & Housewares"
-    ],
-    "Entertainment": [
-        "Entertainment & Recreation", "Travel & Vacation"
-    ],
-    "Health & Fitness": [
-        "Medical", "Dentist", "Fitness", "Pets"
-    ],
-    "Personal": [
-        "Personal", "Gifts", "Charity"
-    ],
-    "Bills & Utilities": [
-        "Phone", "Insurance"
-    ],
+    "Shopping": ["Shopping", "Clothing", "Electronics", "Furniture & Housewares"],
+    "Entertainment": ["Entertainment & Recreation", "Travel & Vacation"],
+    "Health & Fitness": ["Medical", "Dentist", "Fitness", "Pets"],
+    "Personal": ["Personal", "Gifts", "Charity"],
+    "Bills & Utilities": ["Phone", "Insurance"],
     "Financial": [
-        "Financial & Legal Services", "Financial Fees",
-        "Loan Repayment", "Student Loans"
+        "Financial & Legal Services",
+        "Financial Fees",
+        "Loan Repayment",
+        "Student Loans",
     ],
-    "Income": [
-        "Paychecks", "Interest", "Business Income", "Other Income"
-    ],
-    "Transfers": [
-        "Transfer", "Credit Card Payment", "Balance Adjustments"
-    ],
-    "Uncategorized": [
-        "Uncategorized", "Check", "Miscellaneous"
-    ]
+    "Income": ["Paychecks", "Interest", "Business Income", "Other Income"],
+    "Transfers": ["Transfer", "Credit Card Payment", "Balance Adjustments"],
+    "Uncategorized": ["Uncategorized", "Check", "Miscellaneous"],
 }
 
 
@@ -81,7 +79,7 @@ class DataManager:
         self,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        progress_callback: Optional[callable] = None
+        progress_callback: Optional[callable] = None,
     ) -> Tuple[pl.DataFrame, Dict, Dict]:
         """
         Fetch all transactions and metadata from Monarch Money API.
@@ -96,26 +94,23 @@ class DataManager:
         categories_task = self.mm.get_transaction_categories()
         groups_task = self.mm.get_transaction_category_groups()
 
-        categories_data, groups_data = await asyncio.gather(
-            categories_task,
-            groups_task
-        )
+        categories_data, groups_data = await asyncio.gather(categories_task, groups_task)
 
         # Parse categories
         categories = {}
-        for cat in categories_data.get('categories', []):
-            categories[cat['id']] = {
-                'name': cat['name'],
-                'group_id': cat.get('group', {}).get('id'),
-                'group_type': cat.get('group', {}).get('type'),
+        for cat in categories_data.get("categories", []):
+            categories[cat["id"]] = {
+                "name": cat["name"],
+                "group_id": cat.get("group", {}).get("id"),
+                "group_type": cat.get("group", {}).get("type"),
             }
 
         # Parse category groups
         category_groups = {}
-        for group in groups_data.get('categoryGroups', []):
-            category_groups[group['id']] = {
-                'name': group['name'],
-                'type': group['type'],
+        for group in groups_data.get("categoryGroups", []):
+            category_groups[group["id"]] = {
+                "name": group["name"],
+                "type": group["type"],
             }
 
         # Fetch transactions in batches
@@ -123,9 +118,7 @@ class DataManager:
             progress_callback("Fetching transactions...")
 
         transactions = await self._fetch_all_transactions(
-            start_date=start_date,
-            end_date=end_date,
-            progress_callback=progress_callback
+            start_date=start_date, end_date=end_date, progress_callback=progress_callback
         )
 
         # Convert to Polars DataFrame
@@ -140,7 +133,7 @@ class DataManager:
         self,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        progress_callback: Optional[callable] = None
+        progress_callback: Optional[callable] = None,
     ) -> List[Dict]:
         """Fetch all transactions from API in batches."""
         all_transactions = []
@@ -151,24 +144,23 @@ class DataManager:
 
         while True:
             batch = await self.mm.get_transactions(
-                start_date=start_date,
-                end_date=end_date,
-                limit=batch_size,
-                offset=offset
+                start_date=start_date, end_date=end_date, limit=batch_size, offset=offset
             )
 
             # Get total count on first batch
-            if total_count is None and 'allTransactions' in batch:
-                total_count = batch['allTransactions'].get('totalCount', 0)
+            if total_count is None and "allTransactions" in batch:
+                total_count = batch["allTransactions"].get("totalCount", 0)
                 if progress_callback and total_count:
-                    progress_callback(f"Found {total_count:,} total transactions. Starting download...")
+                    progress_callback(
+                        f"Found {total_count:,} total transactions. Starting download..."
+                    )
 
             # Get results from batch
             batch_results = []
-            if 'allTransactions' in batch:
-                batch_results = batch['allTransactions'].get('results', [])
-            elif 'results' in batch:
-                batch_results = batch['results']
+            if "allTransactions" in batch:
+                batch_results = batch["allTransactions"].get("results", [])
+            elif "results" in batch:
+                batch_results = batch["results"]
 
             if not batch_results:
                 break
@@ -183,9 +175,7 @@ class DataManager:
                         f"Downloaded {len(all_transactions):,} / {total_count:,} transactions ({pct}%)"
                     )
                 else:
-                    progress_callback(
-                        f"Downloaded {len(all_transactions):,} transactions..."
-                    )
+                    progress_callback(f"Downloaded {len(all_transactions):,} transactions...")
 
             offset += batch_size
             batch_num += 1
@@ -200,9 +190,7 @@ class DataManager:
         return all_transactions
 
     def _transactions_to_dataframe(
-        self,
-        transactions: List[Dict],
-        categories: Dict
+        self, transactions: List[Dict], categories: Dict
     ) -> pl.DataFrame:
         """
         Convert raw transaction data to Polars DataFrame with enriched fields.
@@ -213,31 +201,35 @@ class DataManager:
         # Prepare data for DataFrame
         rows = []
         for txn in transactions:
-            merchant_obj = txn.get('merchant', {}) or {}
-            category_obj = txn.get('category', {}) or {}
-            account_obj = txn.get('account', {}) or {}
+            merchant_obj = txn.get("merchant", {}) or {}
+            category_obj = txn.get("category", {}) or {}
+            account_obj = txn.get("account", {}) or {}
 
-            category_id = category_obj.get('id', '')
-            category_name = category_obj.get('name', 'Uncategorized')
+            category_id = category_obj.get("id", "")
+            category_name = category_obj.get("name", "Uncategorized")
 
             # Get group from our mapping
-            group = self.category_to_group.get(category_name, 'Uncategorized')
+            group = self.category_to_group.get(category_name, "Uncategorized")
 
             row = {
-                'id': str(txn.get('id', '')),
-                'date': str(txn.get('date', '')),
-                'amount': float(txn.get('amount', 0)),
-                'merchant': str(merchant_obj.get('name', '') if merchant_obj.get('name') else 'Unknown'),
-                'merchant_id': str(merchant_obj.get('id', '')),
-                'category': str(category_name if category_name else 'Uncategorized'),
-                'category_id': str(category_id),
-                'group': str(group),
-                'account': str(account_obj.get('displayName', '') if account_obj.get('displayName') else ''),
-                'account_id': str(account_obj.get('id', '')),
-                'notes': str(txn.get('notes', '') if txn.get('notes') else ''),
-                'hideFromReports': bool(txn.get('hideFromReports', False)),
-                'pending': bool(txn.get('pending', False)),
-                'isRecurring': bool(txn.get('isRecurring', False)),
+                "id": str(txn.get("id", "")),
+                "date": str(txn.get("date", "")),
+                "amount": float(txn.get("amount", 0)),
+                "merchant": str(
+                    merchant_obj.get("name", "") if merchant_obj.get("name") else "Unknown"
+                ),
+                "merchant_id": str(merchant_obj.get("id", "")),
+                "category": str(category_name if category_name else "Uncategorized"),
+                "category_id": str(category_id),
+                "group": str(group),
+                "account": str(
+                    account_obj.get("displayName", "") if account_obj.get("displayName") else ""
+                ),
+                "account_id": str(account_obj.get("id", "")),
+                "notes": str(txn.get("notes", "") if txn.get("notes") else ""),
+                "hideFromReports": bool(txn.get("hideFromReports", False)),
+                "pending": bool(txn.get("pending", False)),
+                "isRecurring": bool(txn.get("isRecurring", False)),
             }
             rows.append(row)
 
@@ -245,9 +237,7 @@ class DataManager:
         df = pl.DataFrame(rows)
 
         # Convert date column to date type
-        df = df.with_columns(
-            pl.col('date').str.strptime(pl.Date, format='%Y-%m-%d')
-        )
+        df = df.with_columns(pl.col("date").str.strptime(pl.Date, format="%Y-%m-%d"))
 
         return df
 
@@ -256,45 +246,63 @@ class DataManager:
         if df.is_empty():
             return pl.DataFrame()
 
-        return df.group_by('merchant').agg([
-            pl.count('id').alias('count'),
-            pl.sum('amount').alias('total'),
-            pl.first('merchant_id').alias('merchant_id'),
-        ]).sort('count', descending=True)
+        return (
+            df.group_by("merchant")
+            .agg(
+                [
+                    pl.count("id").alias("count"),
+                    pl.sum("amount").alias("total"),
+                    pl.first("merchant_id").alias("merchant_id"),
+                ]
+            )
+            .sort("count", descending=True)
+        )
 
     def aggregate_by_category(self, df: pl.DataFrame) -> pl.DataFrame:
         """Aggregate transactions by category."""
         if df.is_empty():
             return pl.DataFrame()
 
-        return df.group_by('category').agg([
-            pl.count('id').alias('count'),
-            pl.sum('amount').alias('total'),
-            pl.first('category_id').alias('category_id'),
-            pl.first('group').alias('group'),
-        ]).sort('count', descending=True)
+        return (
+            df.group_by("category")
+            .agg(
+                [
+                    pl.count("id").alias("count"),
+                    pl.sum("amount").alias("total"),
+                    pl.first("category_id").alias("category_id"),
+                    pl.first("group").alias("group"),
+                ]
+            )
+            .sort("count", descending=True)
+        )
 
     def aggregate_by_group(self, df: pl.DataFrame) -> pl.DataFrame:
         """Aggregate transactions by category group."""
         if df.is_empty():
             return pl.DataFrame()
 
-        return df.group_by('group').agg([
-            pl.count('id').alias('count'),
-            pl.sum('amount').alias('total'),
-        ]).sort('count', descending=True)
+        return (
+            df.group_by("group")
+            .agg(
+                [
+                    pl.count("id").alias("count"),
+                    pl.sum("amount").alias("total"),
+                ]
+            )
+            .sort("count", descending=True)
+        )
 
     def filter_by_merchant(self, df: pl.DataFrame, merchant: str) -> pl.DataFrame:
         """Filter transactions by merchant name."""
-        return df.filter(pl.col('merchant') == merchant)
+        return df.filter(pl.col("merchant") == merchant)
 
     def filter_by_category(self, df: pl.DataFrame, category: str) -> pl.DataFrame:
         """Filter transactions by category name."""
-        return df.filter(pl.col('category') == category)
+        return df.filter(pl.col("category") == category)
 
     def filter_by_group(self, df: pl.DataFrame, group: str) -> pl.DataFrame:
         """Filter transactions by group name."""
-        return df.filter(pl.col('group') == group)
+        return df.filter(pl.col("group") == group)
 
     def search_transactions(self, df: pl.DataFrame, query: str) -> pl.DataFrame:
         """Search transactions by merchant, category, or notes."""
@@ -303,9 +311,9 @@ class DataManager:
 
         query_lower = query.lower()
         return df.filter(
-            pl.col('merchant').str.to_lowercase().str.contains(query_lower) |
-            pl.col('category').str.to_lowercase().str.contains(query_lower) |
-            pl.col('notes').str.to_lowercase().str.contains(query_lower)
+            pl.col("merchant").str.to_lowercase().str.contains(query_lower)
+            | pl.col("category").str.to_lowercase().str.contains(query_lower)
+            | pl.col("notes").str.to_lowercase().str.contains(query_lower)
         )
 
     async def commit_pending_edits(self, edits: List[Any]) -> Tuple[int, int]:
@@ -325,22 +333,17 @@ class DataManager:
             if txn_id not in edits_by_txn:
                 edits_by_txn[txn_id] = {}
 
-            if edit.field == 'merchant':
-                edits_by_txn[txn_id]['merchant_name'] = edit.new_value
-            elif edit.field == 'category':
-                edits_by_txn[txn_id]['category_id'] = edit.new_value
-            elif edit.field == 'hide_from_reports':
-                edits_by_txn[txn_id]['hide_from_reports'] = edit.new_value
+            if edit.field == "merchant":
+                edits_by_txn[txn_id]["merchant_name"] = edit.new_value
+            elif edit.field == "category":
+                edits_by_txn[txn_id]["category_id"] = edit.new_value
+            elif edit.field == "hide_from_reports":
+                edits_by_txn[txn_id]["hide_from_reports"] = edit.new_value
 
         # Create update tasks
         tasks = []
         for txn_id, updates in edits_by_txn.items():
-            tasks.append(
-                self.mm.update_transaction(
-                    transaction_id=txn_id,
-                    **updates
-                )
-            )
+            tasks.append(self.mm.update_transaction(transaction_id=txn_id, **updates))
 
         # Execute in parallel
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -355,13 +358,13 @@ class DataManager:
         """Get statistics about current data."""
         if self.df is None or self.df.is_empty():
             return {
-                'total_transactions': 0,
-                'total_amount': 0.0,
-                'pending_changes': len(self.pending_edits)
+                "total_transactions": 0,
+                "total_amount": 0.0,
+                "pending_changes": len(self.pending_edits),
             }
 
         return {
-            'total_transactions': len(self.df),
-            'total_amount': float(self.df['amount'].sum()),
-            'pending_changes': len(self.pending_edits)
+            "total_transactions": len(self.df),
+            "total_amount": float(self.df["amount"].sum()),
+            "pending_changes": len(self.pending_edits),
         }

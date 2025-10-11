@@ -1,9 +1,17 @@
 """
 Tests for state management, undo/redo, and change tracking.
 """
+
 import pytest
 from datetime import date, datetime
-from monarch_tui.state import AppState, ViewMode, SortMode, SortDirection, TimeFrame, TransactionEdit
+from monarch_tui.state import (
+    AppState,
+    ViewMode,
+    SortMode,
+    SortDirection,
+    TimeFrame,
+    TransactionEdit,
+)
 
 
 class TestAppState:
@@ -78,7 +86,7 @@ class TestChangeTracking:
             transaction_id="txn_1",
             field="merchant",
             old_value="Old Merchant",
-            new_value="New Merchant"
+            new_value="New Merchant",
         )
 
         assert len(app_state.pending_edits) == 1

@@ -72,45 +72,37 @@ class CredentialSetupScreen(Screen):
             yield Static(
                 "This will securely store your Monarch Money credentials\n"
                 "encrypted with a password of your choice.",
-                classes="setup-help"
+                classes="setup-help",
             )
 
             yield Label("Monarch Money Email:", classes="setup-label")
-            yield Input(
-                placeholder="your@email.com",
-                id="email-input",
-                classes="setup-input"
-            )
+            yield Input(placeholder="your@email.com", id="email-input", classes="setup-input")
 
             yield Label("Monarch Money Password:", classes="setup-label")
             yield Input(
-                placeholder="password",
-                password=True,
-                id="password-input",
-                classes="setup-input"
+                placeholder="password", password=True, id="password-input", classes="setup-input"
             )
 
             yield Label("2FA/TOTP Secret Key:", classes="setup-label")
             yield Static(
                 "Get this from: Settings → Security → Re-enable 2FA → 'Can't scan?'",
-                classes="setup-help"
+                classes="setup-help",
             )
             yield Input(
                 placeholder="JBSWY3DPEHPK3PXP (base32 string)",
                 id="mfa-input",
-                classes="setup-input"
+                classes="setup-input",
             )
 
             yield Label("Encryption Password (for monarch-tui):", classes="setup-label")
             yield Static(
-                "Create a NEW password to encrypt your stored credentials",
-                classes="setup-help"
+                "Create a NEW password to encrypt your stored credentials", classes="setup-help"
             )
             yield Input(
                 placeholder="encryption password",
                 password=True,
                 id="encrypt-pass-input",
-                classes="setup-input"
+                classes="setup-input",
             )
 
             yield Label("Confirm Encryption Password:", classes="setup-label")
@@ -118,7 +110,7 @@ class CredentialSetupScreen(Screen):
                 placeholder="confirm password",
                 password=True,
                 id="confirm-pass-input",
-                classes="setup-input"
+                classes="setup-input",
             )
 
             with Container(id="button-container"):
@@ -169,17 +161,13 @@ class CredentialSetupScreen(Screen):
                 email=email,
                 password=password,
                 mfa_secret=mfa_secret,
-                encryption_password=encrypt_pass
+                encryption_password=encrypt_pass,
             )
 
             error_label.update("✅ Credentials saved! Loading app...")
 
             # Dismiss this screen and pass credentials back
-            self.dismiss({
-                'email': email,
-                'password': password,
-                'mfa_secret': mfa_secret
-            })
+            self.dismiss({"email": email, "password": password, "mfa_secret": mfa_secret})
 
         except Exception as e:
             error_label.update(f"❌ Error saving credentials: {e}")
@@ -248,8 +236,7 @@ class CredentialUnlockScreen(Screen):
             yield Label("🔓 Unlock Credentials", id="unlock-title")
 
             yield Static(
-                "Enter your encryption password to unlock stored credentials",
-                classes="unlock-help"
+                "Enter your encryption password to unlock stored credentials", classes="unlock-help"
             )
 
             yield Label("Encryption Password:", classes="unlock-label")
@@ -257,7 +244,7 @@ class CredentialUnlockScreen(Screen):
                 placeholder="encryption password",
                 password=True,
                 id="unlock-input",
-                classes="unlock-input"
+                classes="unlock-input",
             )
 
             with Container(id="button-container"):
@@ -382,13 +369,10 @@ class QuitConfirmationScreen(ModalScreen):
             if self.has_unsaved_changes:
                 yield Static(
                     "You have unsaved changes!\nThey will be lost if you quit now.",
-                    id="quit-message"
+                    id="quit-message",
                 )
             else:
-                yield Static(
-                    "Are you sure you want to quit?",
-                    id="quit-message"
-                )
+                yield Static("Are you sure you want to quit?", id="quit-message")
 
             with Container(id="button-container"):
                 yield Button("Cancel", variant="primary", id="cancel-button")

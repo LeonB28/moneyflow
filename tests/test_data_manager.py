@@ -1,6 +1,7 @@
 """
 Tests for DataManager operations including aggregation, filtering, and API integration.
 """
+
 import pytest
 import polars as pl
 from monarch_tui.data_manager import DataManager
@@ -21,10 +22,7 @@ class TestDataFetching:
 
     async def test_fetch_with_date_filter(self, data_manager):
         """Test fetching with date range."""
-        df, _, _ = await data_manager.fetch_all_data(
-            start_date="2024-10-01",
-            end_date="2024-10-03"
-        )
+        df, _, _ = await data_manager.fetch_all_data(start_date="2024-10-01", end_date="2024-10-03")
 
         assert df is not None
         # Should have filtered transactions
@@ -159,7 +157,7 @@ class TestCommitEdits:
                 field="merchant",
                 old_value="Old Name",
                 new_value="New Name",
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
             )
         ]
 
@@ -204,9 +202,7 @@ class TestCommitEdits:
         from monarch_tui.state import TransactionEdit
         from datetime import datetime
 
-        edits = [
-            TransactionEdit("txn_1", "merchant", "Amazon.com", "Amazon", datetime.now())
-        ]
+        edits = [TransactionEdit("txn_1", "merchant", "Amazon.com", "Amazon", datetime.now())]
 
         await data_manager.commit_pending_edits(edits)
 
@@ -236,9 +232,7 @@ class TestCommitEdits:
         from monarch_tui.state import TransactionEdit
         from datetime import datetime
 
-        edits = [
-            TransactionEdit("txn_1", "hide_from_reports", False, True, datetime.now())
-        ]
+        edits = [TransactionEdit("txn_1", "hide_from_reports", False, True, datetime.now())]
 
         await data_manager.commit_pending_edits(edits)
 
