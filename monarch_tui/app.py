@@ -146,24 +146,23 @@ class MonarchTUI(App):
             # Initialize data manager
             self.data_manager = DataManager(self.mm)
 
-            # Load last year of data
-            start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
-            end_date = datetime.now().strftime('%Y-%m-%d')
-
-            self.state.start_date = start_date
-            self.state.end_date = end_date
+            # Fetch ALL transactions (no date filter for offline-first approach)
+            # This downloads everything once, then all operations are local
+            self.state.start_date = None
+            self.state.end_date = None
 
             # Fetch data from API with progress updates
-            loading_status.update("📊 Fetching transaction data from Monarch Money...")
+            loading_status.update("📊 Fetching ALL transaction data from Monarch Money...")
             loading_status.update("⏳ This may take a minute for large accounts (10k+ transactions)...")
+            loading_status.update("💡 TIP: This is a one-time download. Future operations will be instant!")
 
             def update_progress(msg: str) -> None:
                 """Update the loading status display."""
                 loading_status.update(f"📊 {msg}")
 
             df, categories, category_groups = await self.data_manager.fetch_all_data(
-                start_date=start_date,
-                end_date=end_date,
+                start_date=None,  # No date filter - fetch ALL transactions
+                end_date=None,
                 progress_callback=update_progress
             )
 
