@@ -18,8 +18,8 @@ A blazing-fast terminal UI for power users to manage Monarch Money transactions.
 # Install uv if needed
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install monarch-tui and dependencies
-uv pip install -e .
+# Install dependencies
+uv sync
 
 # Run the TUI (will prompt for login on first run)
 uv run python -m monarch_tui
