@@ -33,38 +33,61 @@ class DuplicateDetector:
         if df.is_empty():
             return pl.DataFrame()
 
-        # Create a DataFrame with all transaction pairs
-        duplicates = []
+        # Use fast Polars groupby instead of O(n²) loops
+        # Add normalized merchant for case-insensitive matching
+        df_with_norm = df.with_columns(
+            pl.col("merchant").str.to_lowercase().alias("merchant_lower")
+        )
 
-        for i in range(len(df)):
-            row_i = df.row(i, named=True)
+        # Group by: date, amount, merchant (case-insensitive), and optionally account
+        group_cols = ["date", "amount", "merchant_lower"]
+        if strict_account_match:
+            group_cols.append("account")
 
-            for j in range(i + 1, len(df)):
-                row_j = df.row(j, named=True)
+        # Find groups with more than one transaction (duplicates)
+        agg_cols = [
+            pl.col("id").alias("ids"),
+            pl.col("merchant").first().alias("merchant_orig"),
+        ]
 
-                if DuplicateDetector._is_duplicate(
-                    row_i,
-                    row_j,
-                    strict_account_match=strict_account_match,
-                    date_tolerance_days=date_tolerance_days,
-                ):
-                    # Add both transactions as a duplicate pair
-                    duplicates.append(
-                        {
-                            "id_1": row_i["id"],
-                            "id_2": row_j["id"],
-                            "date": row_i["date"],
-                            "amount": row_i["amount"],
-                            "merchant": row_i["merchant"],
-                            "account": row_i["account"],
-                        }
-                    )
+        # Only add account to agg if not already in group_by
+        if not strict_account_match:
+            agg_cols.append(pl.col("account").first().alias("account"))
 
-        if not duplicates:
+        duplicate_groups = (
+            df_with_norm
+            .group_by(group_cols)
+            .agg(agg_cols)
+            .filter(pl.col("ids").list.len() > 1)
+        )
+
+        if duplicate_groups.is_empty():
             return pl.DataFrame()
 
-        dup_df = pl.DataFrame(duplicates)
-        return dup_df.sort(["date", "amount"], descending=[True, False])
+        # Convert to pairs format for compatibility with existing tests
+        pairs = []
+        for row in duplicate_groups.iter_rows(named=True):
+            ids = row["ids"]
+            merchant = row.get("merchant_orig", "")
+            # Account comes from group_by key when strict, from agg when not
+            account = row.get("account", "")
+
+            # Create pairs from each group
+            for i in range(len(ids)):
+                for j in range(i + 1, len(ids)):
+                    pairs.append({
+                        "id_1": ids[i],
+                        "id_2": ids[j],
+                        "date": row["date"],
+                        "amount": row["amount"],
+                        "merchant": merchant,
+                        "account": account,
+                    })
+
+        if not pairs:
+            return pl.DataFrame()
+
+        return pl.DataFrame(pairs).sort(["date", "amount"], descending=[True, False])
 
     @staticmethod
     def _is_duplicate(

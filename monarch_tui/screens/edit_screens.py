@@ -173,7 +173,7 @@ class SelectCategoryScreen(ModalScreen):
             with Container(id="button-container"):
                 yield Button("Cancel", variant="default", id="cancel-button")
 
-    async def on_list_item_selected(self, event: ListView.ItemSelected) -> None:
+    async def on_list_item_selected(self, event) -> None:
         """Handle category selection."""
         # Extract category ID from item id
         item_id = str(event.item.id)

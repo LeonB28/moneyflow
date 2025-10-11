@@ -484,6 +484,7 @@ class MonarchTUI(App):
             return
 
         from .duplicate_detector import DuplicateDetector
+        from .screens.duplicates_screen import DuplicatesScreen
 
         # Find duplicates in current filtered view
         filtered_df = self.state.get_filtered_df()
@@ -491,21 +492,15 @@ class MonarchTUI(App):
             self.notify("No transactions to check", timeout=2)
             return
 
+        self.notify("Scanning for duplicates...", timeout=1)
         duplicates = DuplicateDetector.find_duplicates(filtered_df)
 
         if duplicates.is_empty():
-            self.notify("No duplicates found!", severity="information", timeout=3)
+            self.notify("✅ No duplicates found!", severity="information", timeout=3)
         else:
             groups = DuplicateDetector.get_duplicate_groups(filtered_df, duplicates)
-            count = len(duplicates)
-            group_count = len(groups)
-            self.notify(
-                f"Found {count} potential duplicates in {group_count} groups. "
-                "Check the Help screen for details.",
-                severity="warning",
-                timeout=5
-            )
-            # TODO: Show duplicates in a dedicated view or modal
+            # Show duplicates screen
+            self.push_screen(DuplicatesScreen(duplicates, groups, filtered_df))
 
     # Time navigation actions
     def action_this_year(self) -> None:
