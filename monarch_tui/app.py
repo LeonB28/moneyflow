@@ -17,7 +17,7 @@ from textual.reactive import reactive
 
 from .monarchmoney import MonarchMoney
 from .data_manager import DataManager
-from .state import AppState, ViewMode, SortMode
+from .state import AppState, ViewMode, SortMode, SortDirection, TimeFrame
 from .widgets.help_screen import HelpScreen
 
 
@@ -44,11 +44,13 @@ class MonarchTUI(App):
         Binding("7", "select_month_7", "Jul", show=False),
         Binding("8", "select_month_8", "Aug", show=False),
         Binding("9", "select_month_9", "Sep", show=False),
+        # Sorting
+        Binding("s", "toggle_sort_field", "Count/Amount", show=True),
+        Binding("h,left", "reverse_sort", "Reverse", show=True),
+        Binding("l,right", "reverse_sort", "Reverse", show=True),
         # Other actions
         Binding("question_mark", "help", "Help", show=True, key_display="?"),
         Binding("slash", "search", "Search", show=True, key_display="/"),
-        Binding("h,left", "toggle_sort", "Sort", show=True),
-        Binding("l,right", "toggle_sort", "Sort", show=True),
         Binding("escape", "go_back", "Back", show=False),
         Binding("ctrl+s", "save", "Save", show=True),
         Binding("q", "quit_app", "Quit", show=True),
@@ -263,10 +265,17 @@ class MonarchTUI(App):
 
         # Get aggregated data
         agg = self.data_manager.aggregate_by_merchant(filtered_df)
-        # Sort based on mode
-        if self.state.sort_mode != SortMode.COUNT_DESC:
-            sort_col = "total" if "AMOUNT" in self.state.sort_mode.value else "count"
-            agg = agg.sort(sort_col, descending=True)
+
+        # Apply sorting
+        sort_col = self.state.sort_by.value  # 'count' or 'amount' or 'date'
+        if sort_col == 'amount':
+            sort_col = 'total'  # Aggregations use 'total' column
+
+        # For expenses (negative totals), DESC means most negative first
+        # So -$1000 should come before -$10
+        descending = (self.state.sort_direction == SortDirection.DESC)
+        agg = agg.sort(sort_col, descending=descending)
+
         self.state.current_data = agg
 
         # Add rows
@@ -290,10 +299,15 @@ class MonarchTUI(App):
             return
 
         agg = self.data_manager.aggregate_by_category(filtered_df)
-        # Sort based on mode
-        if self.state.sort_mode != SortMode.COUNT_DESC:
-            sort_col = "total" if "AMOUNT" in self.state.sort_mode.value else "count"
-            agg = agg.sort(sort_col, descending=True)
+
+        # Apply sorting
+        sort_col = self.state.sort_by.value
+        if sort_col == 'amount':
+            sort_col = 'total'
+
+        descending = (self.state.sort_direction == SortDirection.DESC)
+        agg = agg.sort(sort_col, descending=descending)
+
         self.state.current_data = agg
 
         for row in agg.iter_rows(named=True):
@@ -316,10 +330,15 @@ class MonarchTUI(App):
             return
 
         agg = self.data_manager.aggregate_by_group(filtered_df)
-        # Sort based on mode
-        if self.state.sort_mode != SortMode.COUNT_DESC:
-            sort_col = "total" if "AMOUNT" in self.state.sort_mode.value else "count"
-            agg = agg.sort(sort_col, descending=True)
+
+        # Apply sorting
+        sort_col = self.state.sort_by.value
+        if sort_col == 'amount':
+            sort_col = 'total'
+
+        descending = (self.state.sort_direction == SortDirection.DESC)
+        agg = agg.sort(sort_col, descending=descending)
+
         self.state.current_data = agg
 
         for row in agg.iter_rows(named=True):
@@ -499,12 +518,19 @@ class MonarchTUI(App):
         self.refresh_view()
         self.notify(f"Viewing: {month_name} {year}", timeout=1)
 
-    def action_toggle_sort(self) -> None:
-        """Toggle sort order."""
-        self.state.toggle_sort()
+    def action_reverse_sort(self) -> None:
+        """Reverse the current sort direction."""
+        self.state.reverse_sort()
         self.refresh_view()
-        sort_name = "Count" if self.state.sort_mode == SortMode.COUNT_DESC else "Amount"
-        self.notify(f"Sorted by {sort_name}", timeout=1)
+        direction = "Descending" if self.state.sort_direction == SortDirection.DESC else "Ascending"
+        self.notify(f"Sort: {direction}", timeout=1)
+
+    def action_toggle_sort_field(self) -> None:
+        """Toggle between sorting by count and amount."""
+        self.state.toggle_sort_field()
+        self.refresh_view()
+        field = "Count" if self.state.sort_by == SortMode.COUNT else "Amount"
+        self.notify(f"Sorting by: {field}", timeout=1)
 
     def action_help(self) -> None:
         """Show help screen."""

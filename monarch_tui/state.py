@@ -18,11 +18,15 @@ class ViewMode(Enum):
 
 class SortMode(Enum):
     """Sorting options for transactions."""
-    AMOUNT_DESC = "amount_desc"
-    AMOUNT_ASC = "amount_asc"
-    DATE_DESC = "date_desc"
-    DATE_ASC = "date_asc"
-    COUNT_DESC = "count_desc"
+    COUNT = "count"
+    AMOUNT = "amount"
+    DATE = "date"
+
+
+class SortDirection(Enum):
+    """Sort direction."""
+    DESC = "desc"
+    ASC = "asc"
 
 
 class TimeFrame(Enum):
@@ -56,7 +60,8 @@ class AppState:
 
     # View state
     view_mode: ViewMode = ViewMode.MERCHANT
-    sort_mode: SortMode = SortMode.COUNT_DESC
+    sort_by: SortMode = SortMode.AMOUNT  # What to sort by (count/amount/date)
+    sort_direction: SortDirection = SortDirection.DESC  # Direction (asc/desc)
     time_frame: TimeFrame = TimeFrame.THIS_YEAR
 
     # Time filtering
@@ -175,14 +180,19 @@ class AppState:
             self.start_date = None
             self.end_date = None
 
-    def toggle_sort(self):
-        """Cycle through sort modes: COUNT -> DATE -> AMOUNT -> COUNT."""
-        if self.sort_mode == SortMode.COUNT_DESC:
-            self.sort_mode = SortMode.DATE_DESC
-        elif self.sort_mode == SortMode.DATE_DESC:
-            self.sort_mode = SortMode.AMOUNT_DESC
+    def reverse_sort(self):
+        """Reverse the current sort direction."""
+        if self.sort_direction == SortDirection.DESC:
+            self.sort_direction = SortDirection.ASC
         else:
-            self.sort_mode = SortMode.COUNT_DESC
+            self.sort_direction = SortDirection.DESC
+
+    def toggle_sort_field(self):
+        """Toggle between sorting by count and amount."""
+        if self.sort_by == SortMode.COUNT:
+            self.sort_by = SortMode.AMOUNT
+        else:
+            self.sort_by = SortMode.COUNT
 
     def get_filtered_df(self) -> Optional[pl.DataFrame]:
         """Get filtered DataFrame based on current state."""

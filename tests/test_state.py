@@ -3,7 +3,7 @@ Tests for state management, undo/redo, and change tracking.
 """
 import pytest
 from datetime import date, datetime
-from monarch_tui.state import AppState, ViewMode, SortMode, TimeFrame, TransactionEdit
+from monarch_tui.state import AppState, ViewMode, SortMode, SortDirection, TimeFrame, TransactionEdit
 
 
 class TestAppState:
@@ -12,7 +12,8 @@ class TestAppState:
     def test_initial_state(self, app_state):
         """Test that AppState initializes with correct defaults."""
         assert app_state.view_mode == ViewMode.MERCHANT
-        assert app_state.sort_mode == SortMode.COUNT_DESC
+        assert app_state.sort_by == SortMode.AMOUNT
+        assert app_state.sort_direction == SortDirection.DESC
         assert app_state.time_frame == TimeFrame.THIS_YEAR
         assert app_state.transactions_df is None
         assert len(app_state.pending_edits) == 0
@@ -47,17 +48,25 @@ class TestAppState:
         assert app_state.end_date == end
 
     def test_toggle_sort(self, app_state):
-        """Test sort mode toggling."""
-        # Start with COUNT_DESC
-        assert app_state.sort_mode == SortMode.COUNT_DESC
+        """Test sort field toggling."""
+        # Start with AMOUNT
+        assert app_state.sort_by == SortMode.AMOUNT
+        assert app_state.sort_direction == SortDirection.DESC
 
-        # Toggle to DATE_DESC
-        app_state.toggle_sort()
-        assert app_state.sort_mode == SortMode.DATE_DESC
+        # Toggle to COUNT
+        app_state.toggle_sort_field()
+        assert app_state.sort_by == SortMode.COUNT
 
-        # Toggle back to AMOUNT_DESC (not COUNT)
-        app_state.toggle_sort()
-        assert app_state.sort_mode == SortMode.AMOUNT_DESC
+        # Toggle back to AMOUNT
+        app_state.toggle_sort_field()
+        assert app_state.sort_by == SortMode.AMOUNT
+
+        # Test reverse sort
+        app_state.reverse_sort()
+        assert app_state.sort_direction == SortDirection.ASC
+
+        app_state.reverse_sort()
+        assert app_state.sort_direction == SortDirection.DESC
 
 
 class TestChangeTracking:
