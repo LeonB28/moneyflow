@@ -17,7 +17,7 @@ from textual.reactive import reactive
 
 from .monarchmoney import MonarchMoney
 from .data_manager import DataManager
-from .state import AppState, ViewMode, SortMode, SortDirection, TimeFrame
+from .state import AppState, ViewMode, SortMode, SortDirection, TimeFrame, TransactionEdit
 from .widgets.help_screen import HelpScreen
 
 
@@ -48,6 +48,10 @@ class MonarchTUI(App):
         Binding("s", "toggle_sort_field", "Count/Amount", show=True),
         Binding("h,left", "reverse_sort", "Reverse", show=True),
         Binding("l,right", "reverse_sort", "Reverse", show=True),
+        # Editing
+        Binding("e", "edit_merchant", "Edit Merchant", show=False),
+        Binding("r", "recategorize", "Recategorize", show=False),
+        Binding("space", "toggle_select", "Select", show=False),
         # Other actions
         Binding("f", "show_filters", "Filters", show=True),
         Binding("question_mark", "help", "Help", show=True, key_display="?"),
@@ -583,6 +587,135 @@ class MonarchTUI(App):
         """Show search input."""
         # TODO: Implement search modal
         self.notify("Search not yet implemented", timeout=2)
+
+    def action_toggle_select(self) -> None:
+        """Toggle selection of current row for bulk operations."""
+        if self.data_manager is None or self.state.current_data is None:
+            return
+
+        table = self.query_one("#data-table", DataTable)
+        if table.cursor_row < 0:
+            return
+
+        # Get the transaction ID from current row
+        row_data = self.state.current_data.row(table.cursor_row, named=True)
+        txn_id = row_data.get("id")
+
+        if txn_id:
+            self.state.toggle_selection(txn_id)
+            count = len(self.state.selected_ids)
+            self.notify(f"Selected: {count} transaction(s)", timeout=1)
+
+    def action_edit_merchant(self) -> None:
+        """Edit merchant name for current selection."""
+        if self.data_manager is None:
+            return
+
+        # Check if in aggregate view or detail view
+        if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP]:
+            # Aggregate view - edit all transactions for this merchant
+            self.run_worker(self._bulk_edit_merchant_from_aggregate(), exclusive=False)
+        else:
+            # Detail view - edit selected transaction(s)
+            self.run_worker(self._edit_merchant_detail(), exclusive=False)
+
+    async def _bulk_edit_merchant_from_aggregate(self) -> None:
+        """Edit merchant for all transactions in selected aggregate row."""
+        from .screens.edit_screens import EditMerchantScreen
+
+        if self.state.current_data is None:
+            return
+
+        table = self.query_one("#data-table", DataTable)
+        if table.cursor_row < 0:
+            return
+
+        # Get the merchant/category/group from current row
+        row_data = self.state.current_data.row(table.cursor_row, named=True)
+
+        if self.state.view_mode == ViewMode.MERCHANT:
+            merchant_name = row_data["merchant"]
+            transaction_count = row_data["count"]
+
+            # Show edit modal
+            new_merchant = await self.push_screen(
+                EditMerchantScreen(merchant_name, transaction_count),
+                wait_for_dismiss=True
+            )
+
+            if new_merchant:
+                # Get all transactions for this merchant
+                filtered_df = self.state.get_filtered_df()
+                merchant_txns = self.data_manager.filter_by_merchant(filtered_df, merchant_name)
+
+                # Add edits for all transactions
+                for txn in merchant_txns.iter_rows(named=True):
+                    self.data_manager.pending_edits.append(
+                        TransactionEdit(
+                            transaction_id=txn["id"],
+                            field="merchant",
+                            old_value=merchant_name,
+                            new_value=new_merchant,
+                            timestamp=datetime.now()
+                        )
+                    )
+
+                self.notify(f"Queued {len(merchant_txns)} edits. Press Ctrl+S to save.", timeout=3)
+                self.refresh_view()
+        else:
+            self.notify("Edit merchant only works from Merchant view", timeout=2)
+
+    async def _edit_merchant_detail(self) -> None:
+        """Edit merchant in detail view."""
+        # TODO: Implement for detail view
+        self.notify("Edit merchant in detail view not yet implemented", timeout=2)
+
+    def action_recategorize(self) -> None:
+        """Change category for current selection."""
+        if self.data_manager is None:
+            return
+
+        self.run_worker(self._recategorize(), exclusive=False)
+
+    async def _recategorize(self) -> None:
+        """Show category selection and apply."""
+        from .screens.edit_screens import SelectCategoryScreen
+        from .state import TransactionEdit
+
+        if self.state.current_data is None:
+            return
+
+        table = self.query_one("#data-table", DataTable)
+        if table.cursor_row < 0:
+            return
+
+        # Show category selection
+        new_category_id = await self.push_screen(
+            SelectCategoryScreen(self.data_manager.categories),
+            wait_for_dismiss=True
+        )
+
+        if new_category_id:
+            # In detail view, categorize current transaction
+            if self.state.view_mode == ViewMode.DETAIL:
+                row_data = self.state.current_data.row(table.cursor_row, named=True)
+                txn_id = row_data["id"]
+                old_category_id = row_data["category_id"]
+
+                self.data_manager.pending_edits.append(
+                    TransactionEdit(
+                        transaction_id=txn_id,
+                        field="category",
+                        old_value=old_category_id,
+                        new_value=new_category_id,
+                        timestamp=datetime.now()
+                    )
+                )
+
+                self.notify("Category changed. Press Ctrl+S to save.", timeout=2)
+                self.refresh_view()
+            else:
+                self.notify("Recategorize only works in transaction detail view", timeout=2)
 
     def action_go_back(self) -> None:
         """Go back to previous view."""
