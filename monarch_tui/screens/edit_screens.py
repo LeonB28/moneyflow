@@ -4,7 +4,8 @@ from textual.app import ComposeResult
 from textual.events import Key
 from textual.screen import ModalScreen
 from textual.containers import Container, Vertical, VerticalScroll
-from textual.widgets import Button, Input, Label, Static, ListView, ListItem
+from textual.widgets import Button, Input, Label, Static, OptionList
+from textual.widgets.option_list import Option
 
 
 class EditMerchantScreen(ModalScreen):
@@ -62,11 +63,6 @@ class EditMerchantScreen(ModalScreen):
     #button-container Button {
         margin: 0 1;
     }
-
-    .merchant-button {
-        width: 100%;
-        text-align: left;
-    }
     """
 
     def __init__(self, current_merchant: str, transaction_count: int = 1, all_merchants: list = None):
@@ -87,7 +83,7 @@ class EditMerchantScreen(ModalScreen):
 
             yield Label("Current: " + self.current_merchant, classes="edit-label")
 
-            yield Label("Type new merchant name (or select below):", classes="edit-label")
+            yield Label("Type new name or ↓ to select existing:", classes="edit-label")
             yield Input(
                 placeholder="Type merchant name...",
                 value=self.current_merchant,
@@ -97,38 +93,25 @@ class EditMerchantScreen(ModalScreen):
 
             if self.all_merchants:
                 yield Static(
-                    f"{len(self.all_merchants)} existing merchants",
+                    "Existing merchants (↑↓ to navigate, Enter to select):",
                     id="suggestions-count"
                 )
-                with VerticalScroll(id="suggestions"):
-                    for merchant in sorted(set(self.all_merchants))[:20]:  # Show top 20
-                        if merchant and merchant != self.current_merchant:
-                            yield Button(
-                                merchant,
-                                variant="default",
-                                id=f"merch-{hash(merchant)}",
-                                classes="merchant-button"
-                            )
+                yield OptionList(id="suggestions")
 
             with Container(id="button-container"):
                 yield Button("Save", variant="primary", id="save-button")
                 yield Button("Cancel", variant="default", id="cancel-button")
 
     async def on_mount(self) -> None:
-        """Focus the input when screen loads."""
+        """Initialize suggestions list."""
+        if self.all_merchants:
+            await self._update_suggestions("")
         self.query_one("#merchant-input", Input).focus()
 
-    async def on_input_changed(self, event: Input.Changed) -> None:
-        """Filter merchant suggestions as user types."""
-        if event.input.id != "merchant-input" or not self.all_merchants:
-            return
-
-        query = event.value.lower().strip()
-        suggestions = self.query_one("#suggestions", VerticalScroll)
+    async def _update_suggestions(self, query: str) -> None:
+        """Update merchant suggestions based on query."""
+        option_list = self.query_one("#suggestions", OptionList)
         count_widget = self.query_one("#suggestions-count", Static)
-
-        # Clear current suggestions
-        await suggestions.remove_children()
 
         # Filter merchants
         if query and query != self.current_merchant.lower():
@@ -140,18 +123,28 @@ class EditMerchantScreen(ModalScreen):
             matches = [m for m in self.all_merchants if m and m != self.current_merchant]
 
         # Update count
-        count_widget.update(f"{len(matches)} matching merchants")
+        count_widget.update(f"{len(matches)} matching merchants (↑↓ to navigate, Enter to select)")
+
+        # Clear and rebuild
+        option_list.clear_options()
 
         # Show top 20 matches
         for merchant in sorted(set(matches))[:20]:
-            await suggestions.mount(
-                Button(
-                    merchant,
-                    variant="default",
-                    id=f"merch-{hash(merchant)}",
-                    classes="merchant-button"
-                )
-            )
+            option_list.add_option(Option(merchant, id=merchant))
+
+    async def on_input_changed(self, event: Input.Changed) -> None:
+        """Filter merchant suggestions as user types."""
+        if event.input.id != "merchant-input" or not self.all_merchants:
+            return
+
+        query = event.value.lower().strip()
+        await self._update_suggestions(query)
+
+    async def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        """Handle merchant selection from suggestions."""
+        if event.option.id:
+            # Set input value and dismiss
+            self.dismiss(str(event.option.id))
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "cancel-button":
@@ -162,14 +155,9 @@ class EditMerchantScreen(ModalScreen):
                 self.dismiss(new_merchant)
             else:
                 self.dismiss(None)
-        elif event.button.id and event.button.id.startswith("merch-"):
-            # User clicked a suggestion
-            new_merchant = event.control.label
-            self.query_one("#merchant-input", Input).value = new_merchant
-            self.dismiss(new_merchant)
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
-        """Handle Enter key in input."""
+        """Handle Enter key in input - save the typed value."""
         new_merchant = event.value.strip()
         if new_merchant and new_merchant != self.current_merchant:
             self.dismiss(new_merchant)
@@ -180,10 +168,14 @@ class EditMerchantScreen(ModalScreen):
         """Handle keyboard shortcuts."""
         if event.key == "escape":
             self.dismiss(None)
+        elif event.key == "down":
+            # Move focus to suggestions list
+            if self.all_merchants:
+                self.query_one("#suggestions", OptionList).focus()
 
 
 class SelectCategoryScreen(ModalScreen):
-    """Modal for selecting a category with type-to-search."""
+    """Modal for selecting a category with keyboard-driven type-to-search."""
 
     CSS = """
     SelectCategoryScreen {
@@ -193,7 +185,7 @@ class SelectCategoryScreen(ModalScreen):
     #category-dialog {
         width: 70;
         height: auto;
-        max-height: 40;
+        max-height: 35;
         border: thick $primary;
         background: $surface;
         padding: 2 4;
@@ -211,7 +203,7 @@ class SelectCategoryScreen(ModalScreen):
         margin: 1 0;
     }
 
-    #category-results {
+    #category-list {
         height: 20;
         border: solid $panel;
         margin: 1 0;
@@ -221,27 +213,17 @@ class SelectCategoryScreen(ModalScreen):
         color: $text-muted;
         margin: 1 0;
     }
-
-    #button-container {
-        layout: horizontal;
-        width: 100%;
-        align: center middle;
-    }
-
-    #button-container Button {
-        margin: 0 1;
-    }
     """
 
     def __init__(self, categories: dict, current_category_id: str = None):
         super().__init__()
         self.categories = categories
         self.current_category_id = current_category_id
-        self.filtered_categories = list(categories.items())
+        self.category_map = {}  # Maps option index to category ID
 
     def compose(self) -> ComposeResult:
         with Container(id="category-dialog"):
-            yield Label("📋 Select Category (type to search)", id="category-title")
+            yield Label("📋 Select Category (type to filter, ↑↓ navigate, Enter to select)", id="category-title")
 
             yield Input(
                 placeholder="Type to filter categories...",
@@ -253,37 +235,20 @@ class SelectCategoryScreen(ModalScreen):
                 id="results-count"
             )
 
-            with VerticalScroll(id="category-results"):
-                for cat_id, cat_data in sorted(self.categories.items(), key=lambda x: x[1]["name"]):
-                    cat_name = cat_data["name"]
-                    is_current = " ← current" if cat_id == self.current_category_id else ""
-                    yield Button(
-                        f"{cat_name}{is_current}",
-                        variant="default" if cat_id != self.current_category_id else "primary",
-                        id=f"cat-{cat_id}",
-                        classes="category-button"
-                    )
-
-            with Container(id="button-container"):
-                yield Button("Cancel", variant="default", id="cancel-button")
+            yield OptionList(id="category-list")
 
     async def on_mount(self) -> None:
-        """Focus search input on load."""
-        self.query_one("#search-input", Input).focus()
+        """Initialize category list."""
+        await self._update_category_list("")
+        # Don't focus input initially - let OptionList have focus for arrow keys
+        self.query_one("#category-list", OptionList).focus()
 
-    async def on_input_changed(self, event: Input.Changed) -> None:
-        """Filter categories as user types."""
-        if event.input.id != "search-input":
-            return
-
-        query = event.value.lower().strip()
-        results_container = self.query_one("#category-results", VerticalScroll)
+    async def _update_category_list(self, query: str) -> None:
+        """Update the category list based on search query."""
+        option_list = self.query_one("#category-list", OptionList)
         results_count = self.query_one("#results-count", Static)
 
-        # Clear current results
-        await results_container.remove_children()
-
-        # Filter and show matching categories
+        # Filter categories
         if query:
             matches = [
                 (cat_id, cat_data)
@@ -296,30 +261,36 @@ class SelectCategoryScreen(ModalScreen):
         # Update count
         results_count.update(f"{len(matches)} categories")
 
-        # Show filtered results
-        for cat_id, cat_data in sorted(matches, key=lambda x: x[1]["name"]):
+        # Clear and rebuild list
+        option_list.clear_options()
+        self.category_map.clear()
+
+        for idx, (cat_id, cat_data) in enumerate(sorted(matches, key=lambda x: x[1]["name"])):
             cat_name = cat_data["name"]
             is_current = " ← current" if cat_id == self.current_category_id else ""
-            await results_container.mount(
-                Button(
-                    f"{cat_name}{is_current}",
-                    variant="default" if cat_id != self.current_category_id else "primary",
-                    id=f"cat-{cat_id}",
-                    classes="category-button"
-                )
-            )
+            option_list.add_option(Option(f"{cat_name}{is_current}", id=cat_id))
+            self.category_map[idx] = cat_id
 
-    async def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "cancel-button":
-            self.dismiss(None)
-        elif event.button.id and event.button.id.startswith("cat-"):
-            category_id = event.button.id[4:]  # Remove "cat-" prefix
-            self.dismiss(category_id)
+    async def on_input_changed(self, event: Input.Changed) -> None:
+        """Filter categories as user types."""
+        if event.input.id != "search-input":
+            return
+
+        query = event.value.lower().strip()
+        await self._update_category_list(query)
+
+    async def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        """Handle category selection with Enter key."""
+        if event.option.id:
+            self.dismiss(str(event.option.id))
 
     def on_key(self, event: Key) -> None:
         """Handle keyboard shortcuts."""
         if event.key == "escape":
             self.dismiss(None)
+        elif event.key == "slash":
+            # Focus search input when user presses /
+            self.query_one("#search-input", Input).focus()
 
 
 class DeleteConfirmationScreen(ModalScreen):
