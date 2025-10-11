@@ -1,7 +1,8 @@
-"""Credential setup and unlock screens."""
+"""Credential setup and unlock screens, and quit confirmation."""
 
 from textual.app import ComposeResult
-from textual.screen import Screen
+from textual.events import Key
+from textual.screen import ModalScreen, Screen
 from textual.containers import Container, Vertical
 from textual.widgets import Button, Input, Label, Static
 
@@ -326,3 +327,82 @@ class CredentialUnlockScreen(Screen):
         except Exception as e:
             error_label = self.query_one("#error-label", Label)
             error_label.update(f"❌ Error resetting: {e}")
+
+
+class QuitConfirmationScreen(ModalScreen):
+    """Confirmation screen before quitting."""
+
+    CSS = """
+    QuitConfirmationScreen {
+        align: center middle;
+    }
+
+    #quit-dialog {
+        width: 50;
+        height: auto;
+        border: thick $warning;
+        background: $surface;
+        padding: 2 4;
+    }
+
+    #quit-title {
+        width: 100%;
+        text-align: center;
+        text-style: bold;
+        color: $warning;
+        margin-bottom: 1;
+    }
+
+    #quit-message {
+        text-align: center;
+        color: $text;
+        margin-bottom: 2;
+    }
+
+    #button-container {
+        layout: horizontal;
+        width: 100%;
+        height: auto;
+        align: center middle;
+    }
+
+    #button-container Button {
+        margin: 0 1;
+    }
+    """
+
+    def __init__(self, has_unsaved_changes: bool = False):
+        super().__init__()
+        self.has_unsaved_changes = has_unsaved_changes
+
+    def compose(self) -> ComposeResult:
+        with Container(id="quit-dialog"):
+            yield Label("⚠️  Quit Monarch TUI?", id="quit-title")
+
+            if self.has_unsaved_changes:
+                yield Static(
+                    "You have unsaved changes!\nThey will be lost if you quit now.",
+                    id="quit-message"
+                )
+            else:
+                yield Static(
+                    "Are you sure you want to quit?",
+                    id="quit-message"
+                )
+
+            with Container(id="button-container"):
+                yield Button("Cancel", variant="primary", id="cancel-button")
+                yield Button("Quit", variant="error", id="quit-button")
+
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "cancel-button":
+            self.dismiss(False)
+        elif event.button.id == "quit-button":
+            self.dismiss(True)
+
+    def on_key(self, event: Key) -> None:
+        """Handle keyboard shortcuts."""
+        if event.key == "escape":
+            self.dismiss(False)
+        elif event.key == "q":
+            self.dismiss(True)

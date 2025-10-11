@@ -426,12 +426,26 @@ class MonarchTUI(App):
             self.notify(f"Error saving: {e}", severity="error", timeout=5)
 
     def action_quit_app(self) -> None:
-        """Quit the application."""
-        if self.data_manager and self.data_manager.get_stats()['pending_changes'] > 0:
-            # TODO: Show confirmation dialog
-            self.notify("Warning: You have unsaved changes!", severity="warning", timeout=3)
+        """Quit the application - show confirmation first."""
+        # Show confirmation in a worker (required for push_screen with wait_for_dismiss)
+        self.run_worker(self._confirm_and_quit(), exclusive=False)
 
-        self.exit()
+    async def _confirm_and_quit(self) -> None:
+        """Show quit confirmation dialog and exit if confirmed."""
+        from .screens.credential_screens import QuitConfirmationScreen
+
+        has_changes = (
+            self.data_manager and
+            self.data_manager.get_stats()['pending_changes'] > 0
+        ) if self.data_manager else False
+
+        should_quit = await self.push_screen(
+            QuitConfirmationScreen(has_unsaved_changes=has_changes),
+            wait_for_dismiss=True
+        )
+
+        if should_quit:
+            self.exit()
 
     async def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection (Enter key)."""
