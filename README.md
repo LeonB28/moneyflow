@@ -62,6 +62,5 @@ python monarch_tui.py
 ## Performance
 
 - Bulk fetch all transactions on startup (1000 per batch)
-- All aggregations done locally with Polars
+- All aggregations done locally
 - Batch updates committed in parallel
-- Sub-100ms response time for all UI interactions

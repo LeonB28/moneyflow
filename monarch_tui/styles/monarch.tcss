@@ -1,0 +1,96 @@
+/* Monarch Money TUI Styles */
+
+/* Main layout */
+Screen {
+    background: $surface;
+}
+
+#app-body {
+    height: 100%;
+    background: $surface;
+}
+
+#status-bar {
+    height: 1;
+    background: $panel;
+    padding: 0 1;
+    dock: top;
+}
+
+#breadcrumb {
+    width: 1fr;
+    text-style: bold;
+    color: $accent;
+}
+
+#stats {
+    width: auto;
+    color: $text-muted;
+    text-align: right;
+}
+
+#content-area {
+    height: 1fr;
+    padding: 0 1;
+}
+
+#loading {
+    height: 3;
+    align: center middle;
+}
+
+#data-table {
+    height: 1fr;
+    border: solid $primary;
+}
+
+DataTable > .datatable--header {
+    background: $primary;
+    color: $text;
+    text-style: bold;
+}
+
+DataTable > .datatable--cursor {
+    background: $accent;
+    color: $text;
+}
+
+DataTable > .datatable--even-row {
+    background: $surface;
+}
+
+DataTable > .datatable--odd-row {
+    background: $panel;
+}
+
+#action-bar {
+    height: 1;
+    background: $panel;
+    padding: 0 1;
+    dock: bottom;
+}
+
+#action-hints {
+    width: 1fr;
+    color: $text-muted;
+}
+
+#pending-changes {
+    width: auto;
+    color: $warning;
+    text-style: bold;
+}
+
+/* Footer */
+Footer {
+    background: $primary;
+}
+
+Footer > .footer--highlight {
+    background: $accent;
+}
+
+Footer > .footer--key {
+    background: $surface;
+    color: $text;
+}
