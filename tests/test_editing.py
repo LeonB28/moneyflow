@@ -123,6 +123,43 @@ class TestIndividualEdits:
         updated = mock_mm.get_transaction_by_id(txn["id"])
         assert updated["merchant"]["name"] == new_merchant
 
+    async def test_edit_merchant_detail_view_with_multiselect(self, loaded_data_manager, mock_mm, app_state):
+        """Test editing merchant with multiple selected transactions in detail view."""
+        dm, df, _, _ = loaded_data_manager
+
+        # Select multiple transactions
+        txn_ids = [df.row(i, named=True)["id"] for i in range(3)]
+        for txn_id in txn_ids:
+            app_state.toggle_selection(txn_id)
+
+        assert len(app_state.selected_ids) == 3
+
+        # Simulate edit workflow
+        new_merchant = "Corrected Name"
+        for txn_id in txn_ids:
+            txn_rows = df.filter(pl.col("id") == txn_id)
+            txn = txn_rows.row(0, named=True)
+            dm.pending_edits.append(
+                TransactionEdit(
+                    transaction_id=txn_id,
+                    field="merchant",
+                    old_value=txn["merchant"],
+                    new_value=new_merchant,
+                    timestamp=datetime.now()
+                )
+            )
+
+        # Commit
+        success, failure = await dm.commit_pending_edits(dm.pending_edits)
+
+        assert success == 3
+        assert failure == 0
+
+        # Verify all were updated
+        for txn_id in txn_ids:
+            updated = mock_mm.get_transaction_by_id(txn_id)
+            assert updated["merchant"]["name"] == new_merchant
+
     async def test_recategorize_transaction(self, loaded_data_manager, mock_mm):
         """Test changing category for a transaction."""
         dm, df, categories, _ = loaded_data_manager
@@ -159,6 +196,30 @@ class TestIndividualEdits:
         # Verify
         updated = mock_mm.get_transaction_by_id(txn["id"])
         assert updated["category"]["id"] == new_category_id
+
+    async def test_edit_single_transaction_in_detail_view(self, loaded_data_manager, mock_mm):
+        """Test editing single transaction without multiselect."""
+        dm, df, _, _ = loaded_data_manager
+
+        txn = df.row(0, named=True)
+        new_merchant = "New Merchant"
+
+        # Edit without multiselect
+        dm.pending_edits.append(
+            TransactionEdit(
+                transaction_id=txn["id"],
+                field="merchant",
+                old_value=txn["merchant"],
+                new_value=new_merchant,
+                timestamp=datetime.now()
+            )
+        )
+
+        success, failure = await dm.commit_pending_edits(dm.pending_edits)
+
+        assert success == 1
+        updated = mock_mm.get_transaction_by_id(txn["id"])
+        assert updated["merchant"]["name"] == new_merchant
 
 
 class TestMultiSelect:

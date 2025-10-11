@@ -8,6 +8,7 @@ import argparse
 import asyncio
 from datetime import datetime, timedelta
 from typing import Optional
+import polars as pl
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -695,8 +696,71 @@ class MonarchTUI(App):
 
     async def _edit_merchant_detail(self) -> None:
         """Edit merchant in detail view."""
-        # TODO: Implement for detail view
-        self.notify("Edit merchant in detail view not yet implemented", timeout=2)
+        from .screens.edit_screens import EditMerchantScreen
+
+        if self.state.current_data is None:
+            return
+
+        table = self.query_one("#data-table", DataTable)
+        if table.cursor_row < 0:
+            return
+
+        # Get current transaction
+        row_data = self.state.current_data.row(table.cursor_row, named=True)
+        current_merchant = row_data["merchant"]
+
+        # Check if we have selected transactions for bulk edit
+        if len(self.state.selected_ids) > 0:
+            # Bulk edit selected transactions
+            new_merchant = await self.push_screen(
+                EditMerchantScreen(current_merchant, len(self.state.selected_ids)),
+                wait_for_dismiss=True
+            )
+
+            if new_merchant:
+                # Edit all selected transactions
+                for txn_id in self.state.selected_ids:
+                    # Find the transaction in current view
+                    txn_rows = self.state.current_data.filter(pl.col("id") == txn_id)
+                    if len(txn_rows) > 0:
+                        txn = txn_rows.row(0, named=True)
+                        self.data_manager.pending_edits.append(
+                            TransactionEdit(
+                                transaction_id=txn_id,
+                                field="merchant",
+                                old_value=txn["merchant"],
+                                new_value=new_merchant,
+                                timestamp=datetime.now()
+                            )
+                        )
+
+                self.state.clear_selection()
+                self.notify(
+                    f"Queued {len(self.state.selected_ids)} edits. Press Ctrl+S to save.",
+                    timeout=3
+                )
+                self.update_action_hints()
+        else:
+            # Edit single transaction
+            new_merchant = await self.push_screen(
+                EditMerchantScreen(current_merchant, 1),
+                wait_for_dismiss=True
+            )
+
+            if new_merchant:
+                txn_id = row_data["id"]
+                self.data_manager.pending_edits.append(
+                    TransactionEdit(
+                        transaction_id=txn_id,
+                        field="merchant",
+                        old_value=current_merchant,
+                        new_value=new_merchant,
+                        timestamp=datetime.now()
+                    )
+                )
+
+                self.notify("Merchant changed. Press Ctrl+S to save.", timeout=2)
+                self.update_action_hints()
 
     def action_recategorize(self) -> None:
         """Change category for current selection."""
