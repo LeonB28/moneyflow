@@ -24,8 +24,8 @@ from .demo import DemoBackend
 
 # Backend registry: maps backend names to their classes
 _BACKEND_REGISTRY: Dict[str, Type[FinanceBackend]] = {
-    'monarch': MonarchBackend,
-    'demo': DemoBackend,
+    "monarch": MonarchBackend,
+    "demo": DemoBackend,
 }
 
 
@@ -49,10 +49,8 @@ def get_backend(name: str, **kwargs) -> FinanceBackend:
     """
     backend_class = _BACKEND_REGISTRY.get(name.lower())
     if backend_class is None:
-        available = ', '.join(_BACKEND_REGISTRY.keys())
-        raise ValueError(
-            f"Unknown backend '{name}'. Available backends: {available}"
-        )
+        available = ", ".join(_BACKEND_REGISTRY.keys())
+        raise ValueError(f"Unknown backend '{name}'. Available backends: {available}")
     return backend_class(**kwargs)
 
 
@@ -74,9 +72,7 @@ def register_backend(name: str, backend_class: Type[FinanceBackend]) -> None:
         backend = get_backend('mycustom')
     """
     if not issubclass(backend_class, FinanceBackend):
-        raise TypeError(
-            f"{backend_class.__name__} must inherit from FinanceBackend"
-        )
+        raise TypeError(f"{backend_class.__name__} must inherit from FinanceBackend")
     _BACKEND_REGISTRY[name.lower()] = backend_class
 
 
@@ -96,10 +92,10 @@ def list_backends() -> list[str]:
 
 # Export public API
 __all__ = [
-    'FinanceBackend',
-    'MonarchBackend',
-    'DemoBackend',
-    'get_backend',
-    'register_backend',
-    'list_backends',
+    "FinanceBackend",
+    "MonarchBackend",
+    "DemoBackend",
+    "get_backend",
+    "register_backend",
+    "list_backends",
 ]

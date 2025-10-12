@@ -80,12 +80,7 @@ class DemoBackend(FinanceBackend):
         end = offset + limit
         page = filtered[start:end]
 
-        return {
-            "allTransactions": {
-                "results": page,
-                "totalCount": len(filtered)
-            }
-        }
+        return {"allTransactions": {"results": page, "totalCount": len(filtered)}}
 
     async def update_transaction(
         self,
@@ -102,13 +97,15 @@ class DemoBackend(FinanceBackend):
         during demo session.
         """
         # Record the update call
-        self.update_calls.append({
-            "transaction_id": transaction_id,
-            "merchant_name": merchant_name,
-            "category_id": category_id,
-            "hide_from_reports": hide_from_reports,
-            "kwargs": kwargs,
-        })
+        self.update_calls.append(
+            {
+                "transaction_id": transaction_id,
+                "merchant_name": merchant_name,
+                "category_id": category_id,
+                "hide_from_reports": hide_from_reports,
+                "kwargs": kwargs,
+            }
+        )
 
         # Find and update the transaction in demo data
         found = False
@@ -121,10 +118,7 @@ class DemoBackend(FinanceBackend):
                     # Find category name from ID
                     for cat in self.categories:
                         if cat["id"] == category_id:
-                            txn["category"] = {
-                                "id": category_id,
-                                "name": cat["name"]
-                            }
+                            txn["category"] = {"id": category_id, "name": cat["name"]}
                             break
                 if hide_from_reports is not None:
                     txn["hideFromReports"] = hide_from_reports

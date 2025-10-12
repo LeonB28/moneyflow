@@ -85,11 +85,11 @@ class DuplicatesScreen(Screen):
                 yield Label(
                     f"🔍 Found {len(self.duplicates_df)} potential duplicates "
                     f"in {len(self.duplicate_groups)} groups",
-                    id="duplicates-title"
+                    id="duplicates-title",
                 )
                 yield Static(
                     "Review transactions below. Duplicates are grouped together.",
-                    id="duplicates-help"
+                    id="duplicates-help",
                 )
 
             yield DataTable(id="duplicates-table", cursor_type="row", zebra_stripes=True)
@@ -129,7 +129,7 @@ class DuplicatesScreen(Screen):
                         str(txn["date"]),
                         txn["merchant"],
                         f"${txn['amount']:,.2f}",
-                        txn["account"]
+                        txn["account"],
                     )
 
                     # Store mapping
@@ -224,6 +224,7 @@ class DuplicatesScreen(Screen):
             return
 
         from .transaction_detail_screen import TransactionDetailScreen
+
         self.app.push_screen(TransactionDetailScreen(txn_data))
 
     async def action_delete_transaction(self) -> None:
@@ -239,9 +240,9 @@ class DuplicatesScreen(Screen):
 
         # Show confirmation
         from .edit_screens import DeleteConfirmationScreen
+
         confirmed = await self.push_screen(
-            DeleteConfirmationScreen(transaction_count=len(to_delete)),
-            wait_for_dismiss=True
+            DeleteConfirmationScreen(transaction_count=len(to_delete)), wait_for_dismiss=True
         )
 
         if confirmed:
@@ -257,7 +258,7 @@ class DuplicatesScreen(Screen):
                 f"Marked {len(to_delete)} transaction(s) for deletion. "
                 "Note: Deletes are not yet committed to API.",
                 severity="warning",
-                timeout=5
+                timeout=5,
             )
 
     def action_toggle_hide(self) -> None:
@@ -286,7 +287,7 @@ class DuplicatesScreen(Screen):
             f"Toggled hide status for {len(to_toggle)} transaction(s). "
             "Note: Changes are not yet committed to API.",
             severity="warning",
-            timeout=3
+            timeout=3,
         )
 
     def action_close(self) -> None:

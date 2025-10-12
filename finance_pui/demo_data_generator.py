@@ -56,24 +56,80 @@ class DemoDataGenerator:
     def _create_categories(self) -> List[Dict]:
         """Create categories matching Monarch's structure."""
         return [
-            {"id": "cat_groceries", "name": "Groceries", "group": {"id": "grp_food", "type": "expense"}},
-            {"id": "cat_restaurants", "name": "Restaurants & Bars", "group": {"id": "grp_food", "type": "expense"}},
-            {"id": "cat_coffee", "name": "Coffee Shops", "group": {"id": "grp_food", "type": "expense"}},
+            {
+                "id": "cat_groceries",
+                "name": "Groceries",
+                "group": {"id": "grp_food", "type": "expense"},
+            },
+            {
+                "id": "cat_restaurants",
+                "name": "Restaurants & Bars",
+                "group": {"id": "grp_food", "type": "expense"},
+            },
+            {
+                "id": "cat_coffee",
+                "name": "Coffee Shops",
+                "group": {"id": "grp_food", "type": "expense"},
+            },
             {"id": "cat_gas", "name": "Gas", "group": {"id": "grp_transport", "type": "expense"}},
-            {"id": "cat_parking", "name": "Parking & Tolls", "group": {"id": "grp_transport", "type": "expense"}},
-            {"id": "cat_uber", "name": "Taxi & Ride Shares", "group": {"id": "grp_transport", "type": "expense"}},
+            {
+                "id": "cat_parking",
+                "name": "Parking & Tolls",
+                "group": {"id": "grp_transport", "type": "expense"},
+            },
+            {
+                "id": "cat_uber",
+                "name": "Taxi & Ride Shares",
+                "group": {"id": "grp_transport", "type": "expense"},
+            },
             {"id": "cat_rent", "name": "Rent", "group": {"id": "grp_home", "type": "expense"}},
-            {"id": "cat_utilities", "name": "Gas & Electric", "group": {"id": "grp_home", "type": "expense"}},
-            {"id": "cat_internet", "name": "Internet & Cable", "group": {"id": "grp_home", "type": "expense"}},
-            {"id": "cat_shopping", "name": "Shopping", "group": {"id": "grp_shopping", "type": "expense"}},
-            {"id": "cat_amazon", "name": "Amazon", "group": {"id": "grp_shopping", "type": "expense"}},
-            {"id": "cat_streaming", "name": "Entertainment & Recreation", "group": {"id": "grp_entertainment", "type": "expense"}},
+            {
+                "id": "cat_utilities",
+                "name": "Gas & Electric",
+                "group": {"id": "grp_home", "type": "expense"},
+            },
+            {
+                "id": "cat_internet",
+                "name": "Internet & Cable",
+                "group": {"id": "grp_home", "type": "expense"},
+            },
+            {
+                "id": "cat_shopping",
+                "name": "Shopping",
+                "group": {"id": "grp_shopping", "type": "expense"},
+            },
+            {
+                "id": "cat_amazon",
+                "name": "Amazon",
+                "group": {"id": "grp_shopping", "type": "expense"},
+            },
+            {
+                "id": "cat_streaming",
+                "name": "Entertainment & Recreation",
+                "group": {"id": "grp_entertainment", "type": "expense"},
+            },
             {"id": "cat_gym", "name": "Fitness", "group": {"id": "grp_health", "type": "expense"}},
-            {"id": "cat_medical", "name": "Medical", "group": {"id": "grp_health", "type": "expense"}},
+            {
+                "id": "cat_medical",
+                "name": "Medical",
+                "group": {"id": "grp_health", "type": "expense"},
+            },
             {"id": "cat_phone", "name": "Phone", "group": {"id": "grp_bills", "type": "expense"}},
-            {"id": "cat_insurance", "name": "Insurance", "group": {"id": "grp_bills", "type": "expense"}},
-            {"id": "cat_paycheck", "name": "Paychecks", "group": {"id": "grp_income", "type": "income"}},
-            {"id": "cat_transfer", "name": "Transfer", "group": {"id": "grp_transfers", "type": "transfer"}},
+            {
+                "id": "cat_insurance",
+                "name": "Insurance",
+                "group": {"id": "grp_bills", "type": "expense"},
+            },
+            {
+                "id": "cat_paycheck",
+                "name": "Paychecks",
+                "group": {"id": "grp_income", "type": "income"},
+            },
+            {
+                "id": "cat_transfer",
+                "name": "Transfer",
+                "group": {"id": "grp_transfers", "type": "transfer"},
+            },
         ]
 
     def _generate_transactions(self) -> List[Dict]:
@@ -128,22 +184,28 @@ class DemoDataGenerator:
 
         for day in pay_dates:
             # Person 1 paycheck
-            transactions.append(self._create_transaction(
-                month, day,
-                amount=4300 + random.uniform(-50, 50),
-                merchant="Employer 1 Payroll",
-                category_id="cat_paycheck",
-                account="Chase Checking"
-            ))
+            transactions.append(
+                self._create_transaction(
+                    month,
+                    day,
+                    amount=4300 + random.uniform(-50, 50),
+                    merchant="Employer 1 Payroll",
+                    category_id="cat_paycheck",
+                    account="Chase Checking",
+                )
+            )
 
             # Person 2 paycheck
-            transactions.append(self._create_transaction(
-                month, day,
-                amount=2900 + random.uniform(-50, 50),
-                merchant="Employer 2 Payroll",
-                category_id="cat_paycheck",
-                account="Chase Checking"
-            ))
+            transactions.append(
+                self._create_transaction(
+                    month,
+                    day,
+                    amount=2900 + random.uniform(-50, 50),
+                    merchant="Employer 2 Payroll",
+                    category_id="cat_paycheck",
+                    account="Chase Checking",
+                )
+            )
 
         return transactions
 
@@ -152,69 +214,90 @@ class DemoDataGenerator:
         transactions = []
 
         # Rent on 1st
-        transactions.append(self._create_transaction(
-            month, 1,
-            amount=-3400,
-            merchant="Property Management Co",
-            category_id="cat_rent",
-            account="Chase Checking"
-        ))
+        transactions.append(
+            self._create_transaction(
+                month,
+                1,
+                amount=-3400,
+                merchant="Property Management Co",
+                category_id="cat_rent",
+                account="Chase Checking",
+            )
+        )
 
         # Utilities mid-month
-        transactions.append(self._create_transaction(
-            month, 15,
-            amount=-random.uniform(150, 250),
-            merchant="Pacific Gas & Electric",
-            category_id="cat_utilities",
-            account="Chase Checking"
-        ))
+        transactions.append(
+            self._create_transaction(
+                month,
+                15,
+                amount=-random.uniform(150, 250),
+                merchant="Pacific Gas & Electric",
+                category_id="cat_utilities",
+                account="Chase Checking",
+            )
+        )
 
         # Internet
-        transactions.append(self._create_transaction(
-            month, 5,
-            amount=-89.99,
-            merchant="Comcast",
-            category_id="cat_internet",
-            account="Chase Checking"
-        ))
+        transactions.append(
+            self._create_transaction(
+                month,
+                5,
+                amount=-89.99,
+                merchant="Comcast",
+                category_id="cat_internet",
+                account="Chase Checking",
+            )
+        )
 
         # Phone
-        transactions.append(self._create_transaction(
-            month, 10,
-            amount=-140,
-            merchant="Verizon Wireless",
-            category_id="cat_phone",
-            account="Chase Sapphire Reserve"
-        ))
+        transactions.append(
+            self._create_transaction(
+                month,
+                10,
+                amount=-140,
+                merchant="Verizon Wireless",
+                category_id="cat_phone",
+                account="Chase Sapphire Reserve",
+            )
+        )
 
         # Gym memberships
-        transactions.append(self._create_transaction(
-            month, 3,
-            amount=-120,
-            merchant="Equinox Fitness",
-            category_id="cat_gym",
-            account="Chase Sapphire Reserve"
-        ))
+        transactions.append(
+            self._create_transaction(
+                month,
+                3,
+                amount=-120,
+                merchant="Equinox Fitness",
+                category_id="cat_gym",
+                account="Chase Sapphire Reserve",
+            )
+        )
 
         # Streaming services
         for service, amount in [("Netflix", 22.99), ("Spotify Premium", 16.99), ("HBO Max", 15.99)]:
-            transactions.append(self._create_transaction(
-                month, random.randint(5, 10),
-                amount=-amount,
-                merchant=service,
-                category_id="cat_streaming",
-                account="Chase Sapphire Reserve",
-                is_recurring=True
-            ))
+            transactions.append(
+                self._create_transaction(
+                    month,
+                    random.randint(5, 10),
+                    amount=-amount,
+                    merchant=service,
+                    category_id="cat_streaming",
+                    account="Chase Sapphire Reserve",
+                    is_recurring=True,
+                )
+            )
 
         # Insurance
-        transactions.append(self._create_transaction(
-            month, 1,
-            amount=-185,
-            merchant="State Farm Insurance",
-            category_id="cat_insurance",
-            account="Chase Checking"
-        ))
+        transactions.append(
+            self._create_transaction(
+                month,
+                1,
+                amount=-185,
+                merchant="State Farm Insurance",
+                category_id="cat_insurance",
+                account="Chase Checking",
+            )
+        )
 
         return transactions
 
@@ -236,13 +319,16 @@ class DemoDataGenerator:
             store = random.choice(grocery_stores)
             amount = -random.uniform(60, 180)
 
-            transactions.append(self._create_transaction(
-                month, day,
-                amount=amount,
-                merchant=store,
-                category_id="cat_groceries",
-                account=random.choice(["Chase Checking", "Chase Sapphire Reserve"])
-            ))
+            transactions.append(
+                self._create_transaction(
+                    month,
+                    day,
+                    amount=amount,
+                    merchant=store,
+                    category_id="cat_groceries",
+                    account=random.choice(["Chase Checking", "Chase Sapphire Reserve"]),
+                )
+            )
 
         return transactions
 
@@ -271,13 +357,16 @@ class DemoDataGenerator:
             else:
                 amount = -random.uniform(25, 80)
 
-            transactions.append(self._create_transaction(
-                month, day,
-                amount=amount,
-                merchant=restaurant,
-                category_id="cat_restaurants",
-                account="Chase Sapphire Reserve"  # Get points on dining
-            ))
+            transactions.append(
+                self._create_transaction(
+                    month,
+                    day,
+                    amount=amount,
+                    merchant=restaurant,
+                    category_id="cat_restaurants",
+                    account="Chase Sapphire Reserve",  # Get points on dining
+                )
+            )
 
         return transactions
 
@@ -300,13 +389,16 @@ class DemoDataGenerator:
             shop = random.choice(coffee_shops)
             amount = -random.uniform(4.50, 12.00)
 
-            transactions.append(self._create_transaction(
-                month, day,
-                amount=amount,
-                merchant=shop,
-                category_id="cat_coffee",
-                account=random.choice(["Chase Checking", "Chase Sapphire Reserve"])
-            ))
+            transactions.append(
+                self._create_transaction(
+                    month,
+                    day,
+                    amount=amount,
+                    merchant=shop,
+                    category_id="cat_coffee",
+                    account=random.choice(["Chase Checking", "Chase Sapphire Reserve"]),
+                )
+            )
 
         return transactions
 
@@ -327,13 +419,16 @@ class DemoDataGenerator:
             station = random.choice(gas_stations)
             amount = -random.uniform(45, 75)
 
-            transactions.append(self._create_transaction(
-                month, day,
-                amount=amount,
-                merchant=station,
-                category_id="cat_gas",
-                account="Chase Sapphire Reserve"
-            ))
+            transactions.append(
+                self._create_transaction(
+                    month,
+                    day,
+                    amount=amount,
+                    merchant=station,
+                    category_id="cat_gas",
+                    account="Chase Sapphire Reserve",
+                )
+            )
 
         return transactions
 
@@ -356,19 +451,24 @@ class DemoDataGenerator:
             amount = -random.uniform(15, 250)
 
             # Sometimes miscategorized (should be recategorized in demo)
-            category = random.choice([
-                "cat_amazon",
-                "cat_shopping",
-                "cat_groceries",  # Sometimes groceries from Amazon
-            ])
+            category = random.choice(
+                [
+                    "cat_amazon",
+                    "cat_shopping",
+                    "cat_groceries",  # Sometimes groceries from Amazon
+                ]
+            )
 
-            transactions.append(self._create_transaction(
-                month, day,
-                amount=amount,
-                merchant=name,
-                category_id=category,
-                account="Amex Platinum"
-            ))
+            transactions.append(
+                self._create_transaction(
+                    month,
+                    day,
+                    amount=amount,
+                    merchant=name,
+                    category_id=category,
+                    account="Amex Platinum",
+                )
+            )
 
         return transactions
 
@@ -391,13 +491,16 @@ class DemoDataGenerator:
             store = random.choice(stores)
             amount = -random.uniform(50, 400)
 
-            transactions.append(self._create_transaction(
-                month, day,
-                amount=amount,
-                merchant=store,
-                category_id="cat_shopping",
-                account=random.choice(["Chase Sapphire Reserve", "Amex Platinum"])
-            ))
+            transactions.append(
+                self._create_transaction(
+                    month,
+                    day,
+                    amount=amount,
+                    merchant=store,
+                    category_id="cat_shopping",
+                    account=random.choice(["Chase Sapphire Reserve", "Amex Platinum"]),
+                )
+            )
 
         return transactions
 
@@ -420,13 +523,16 @@ class DemoDataGenerator:
             venue = random.choice(venues)
             amount = -random.uniform(30, 200)
 
-            transactions.append(self._create_transaction(
-                month, day,
-                amount=amount,
-                merchant=venue,
-                category_id="cat_streaming",
-                account="Chase Sapphire Reserve"
-            ))
+            transactions.append(
+                self._create_transaction(
+                    month,
+                    day,
+                    amount=amount,
+                    merchant=venue,
+                    category_id="cat_streaming",
+                    account="Chase Sapphire Reserve",
+                )
+            )
 
         return transactions
 
@@ -435,22 +541,28 @@ class DemoDataGenerator:
         transactions = []
 
         # Flight
-        transactions.append(self._create_transaction(
-            month, random.randint(1, 10),
-            amount=-random.uniform(600, 1200),
-            merchant="United Airlines",
-            category_id="cat_streaming",
-            account="Chase Sapphire Reserve"
-        ))
+        transactions.append(
+            self._create_transaction(
+                month,
+                random.randint(1, 10),
+                amount=-random.uniform(600, 1200),
+                merchant="United Airlines",
+                category_id="cat_streaming",
+                account="Chase Sapphire Reserve",
+            )
+        )
 
         # Hotel
-        transactions.append(self._create_transaction(
-            month, random.randint(15, 25),
-            amount=-random.uniform(800, 1500),
-            merchant="Marriott Hotels",
-            category_id="cat_streaming",
-            account="Chase Sapphire Reserve"
-        ))
+        transactions.append(
+            self._create_transaction(
+                month,
+                random.randint(15, 25),
+                amount=-random.uniform(800, 1500),
+                merchant="Marriott Hotels",
+                category_id="cat_streaming",
+                account="Chase Sapphire Reserve",
+            )
+        )
 
         return transactions
 
@@ -459,24 +571,30 @@ class DemoDataGenerator:
         transactions = []
 
         # Savings transfer each month
-        transactions.append(self._create_transaction(
-            month, 2,
-            amount=-2000,
-            merchant="Transfer to Savings",
-            category_id="cat_transfer",
-            account="Chase Checking",
-            hide_from_reports=True
-        ))
+        transactions.append(
+            self._create_transaction(
+                month,
+                2,
+                amount=-2000,
+                merchant="Transfer to Savings",
+                category_id="cat_transfer",
+                account="Chase Checking",
+                hide_from_reports=True,
+            )
+        )
 
         # Credit card payment
-        transactions.append(self._create_transaction(
-            month, 20,
-            amount=-random.uniform(2000, 4000),
-            merchant="Credit Card Payment",
-            category_id="cat_transfer",
-            account="Chase Checking",
-            hide_from_reports=True
-        ))
+        transactions.append(
+            self._create_transaction(
+                month,
+                20,
+                amount=-random.uniform(2000, 4000),
+                merchant="Credit Card Payment",
+                category_id="cat_transfer",
+                account="Chase Checking",
+                hide_from_reports=True,
+            )
+        )
 
         return transactions
 
@@ -503,7 +621,7 @@ class DemoDataGenerator:
         category_id: str,
         account: str,
         hide_from_reports: bool = False,
-        is_recurring: bool = False
+        is_recurring: bool = False,
     ) -> Dict[str, Any]:
         """Create a single transaction."""
         txn_id = self._generate_id()
@@ -512,7 +630,10 @@ class DemoDataGenerator:
         account_map = {
             "Chase Checking": {"id": "acc_chase_checking", "displayName": "Chase Checking"},
             "Chase Savings": {"id": "acc_chase_savings", "displayName": "Chase Savings"},
-            "Chase Sapphire Reserve": {"id": "acc_chase_sapphire", "displayName": "Chase Sapphire Reserve"},
+            "Chase Sapphire Reserve": {
+                "id": "acc_chase_sapphire",
+                "displayName": "Chase Sapphire Reserve",
+            },
             "Amex Platinum": {"id": "acc_amex_platinum", "displayName": "Amex Platinum"},
         }
 
@@ -546,11 +667,11 @@ class DemoDataGenerator:
             "amount": round(amount, 2),
             "merchant": {
                 "id": f"merch_{hashlib.md5(merchant.encode()).hexdigest()[:8]}",
-                "name": merchant
+                "name": merchant,
             },
             "category": {
                 "id": category_id,
-                "name": category_names.get(category_id, "Uncategorized")
+                "name": category_names.get(category_id, "Uncategorized"),
             },
             "account": account_info,
             "notes": "",

@@ -398,7 +398,10 @@ class AppState:
             parts.append(f"{month_name} {year}")
         elif self.time_frame == TimeFrame.CUSTOM and self.start_date and self.end_date:
             # Check if it's a single month
-            if self.start_date.year == self.end_date.year and self.start_date.month == self.end_date.month:
+            if (
+                self.start_date.year == self.end_date.year
+                and self.start_date.month == self.end_date.month
+            ):
                 month_name = self.start_date.strftime("%B")
                 parts.append(f"{month_name} {self.start_date.year}")
             else:

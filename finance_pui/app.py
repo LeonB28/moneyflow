@@ -83,7 +83,7 @@ class MonarchTUI(App):
         custom_start_date: Optional[str] = None,
         demo_mode: bool = False,
         cache_path: Optional[str] = None,
-        force_refresh: bool = False
+        force_refresh: bool = False,
     ):
         super().__init__()
         self.demo_mode = demo_mode
@@ -161,7 +161,7 @@ class MonarchTUI(App):
                 from .screens.credential_screens import (
                     BackendSelectionScreen,
                     CredentialSetupScreen,
-                    CredentialUnlockScreen
+                    CredentialUnlockScreen,
                 )
                 from .backends import get_backend
 
@@ -174,14 +174,15 @@ class MonarchTUI(App):
 
                     if result is None:
                         # User chose to reset - show backend selection then setup screen
-                        backend_type = await self.push_screen(BackendSelectionScreen(), wait_for_dismiss=True)
+                        backend_type = await self.push_screen(
+                            BackendSelectionScreen(), wait_for_dismiss=True
+                        )
                         if not backend_type:
                             self.exit()
                             return
 
                         creds = await self.push_screen(
-                            CredentialSetupScreen(backend_type=backend_type),
-                            wait_for_dismiss=True
+                            CredentialSetupScreen(backend_type=backend_type), wait_for_dismiss=True
                         )
                         if not creds:
                             self.exit()
@@ -190,14 +191,15 @@ class MonarchTUI(App):
                         creds = result
                 else:
                     # No credentials - show backend selection first, then setup screen
-                    backend_type = await self.push_screen(BackendSelectionScreen(), wait_for_dismiss=True)
+                    backend_type = await self.push_screen(
+                        BackendSelectionScreen(), wait_for_dismiss=True
+                    )
                     if not backend_type:
                         self.exit()
                         return
 
                     creds = await self.push_screen(
-                        CredentialSetupScreen(backend_type=backend_type),
-                        wait_for_dismiss=True
+                        CredentialSetupScreen(backend_type=backend_type), wait_for_dismiss=True
                     )
                     if not creds:
                         self.exit()
@@ -241,6 +243,7 @@ class MonarchTUI(App):
             cache_mgr = None
             if self.cache_path is not None:
                 from .cache_manager import CacheManager
+
                 cache_mgr = CacheManager(cache_dir=self.cache_path)
 
             # Determine date range based on CLI arguments
@@ -263,18 +266,23 @@ class MonarchTUI(App):
 
             # Check if we should use cache (only if --cache was passed)
             use_cache = False
-            if cache_mgr and not self.force_refresh and cache_mgr.is_cache_valid(year=year_filter, since=since_filter):
+            if (
+                cache_mgr
+                and not self.force_refresh
+                and cache_mgr.is_cache_valid(year=year_filter, since=since_filter)
+            ):
                 # Cache is valid - show prompt
                 cache_info = cache_mgr.get_cache_info()
                 if cache_info:
                     from .screens.credential_screens import CachePromptScreen
+
                     use_cache = await self.push_screen(
                         CachePromptScreen(
                             age=cache_info["age"],
                             transaction_count=cache_info["transaction_count"],
-                            filter_desc=cache_info["filter"]
+                            filter_desc=cache_info["filter"],
                         ),
-                        wait_for_dismiss=True
+                        wait_for_dismiss=True,
                     )
 
             if use_cache:
@@ -296,7 +304,9 @@ class MonarchTUI(App):
                         f"📊 Fetching transactions from {self.custom_start_date} onwards..."
                     )
                 elif self.start_year:
-                    loading_status.update(f"📊 Fetching transactions from {self.start_year} onwards...")
+                    loading_status.update(
+                        f"📊 Fetching transactions from {self.start_year} onwards..."
+                    )
                 else:
                     loading_status.update("📊 Fetching ALL transaction data from Monarch Money...")
 
@@ -323,7 +333,7 @@ class MonarchTUI(App):
                         categories=categories,
                         category_groups=category_groups,
                         year=year_filter,
-                        since=since_filter
+                        since=since_filter,
                     )
                     loading_status.update(f"✅ Loaded {len(df):,} transactions and cached!")
                 else:
@@ -647,7 +657,9 @@ class MonarchTUI(App):
         hints_widget = self.query_one("#action-hints", Static)
 
         if self.state.view_mode == ViewMode.MERCHANT:
-            hints = "Enter=Drill down | e=Edit merchant (bulk) | g=Change grouping | ←/→=Change period"
+            hints = (
+                "Enter=Drill down | e=Edit merchant (bulk) | g=Change grouping | ←/→=Change period"
+            )
         elif self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
             hints = "Enter=Drill down | g=Change grouping | ←/→=Change period"
         else:  # DETAIL (transactions)
@@ -825,9 +837,11 @@ class MonarchTUI(App):
 
         # Check if viewing full year (Jan 1 - Dec 31)
         is_full_year = (
-            self.state.start_date.month == 1 and self.state.start_date.day == 1 and
-            self.state.end_date.month == 12 and self.state.end_date.day == 31 and
-            self.state.start_date.year == self.state.end_date.year
+            self.state.start_date.month == 1
+            and self.state.start_date.day == 1
+            and self.state.end_date.month == 12
+            and self.state.end_date.day == 31
+            and self.state.start_date.year == self.state.end_date.year
         )
 
         if is_full_year:
@@ -836,7 +850,7 @@ class MonarchTUI(App):
             self.state.set_timeframe(
                 TimeFrame.CUSTOM,
                 start_date=date_type(new_year, 1, 1),
-                end_date=date_type(new_year, 12, 31)
+                end_date=date_type(new_year, 12, 31),
             )
             self.notify(f"Viewing: Year {new_year}", timeout=1)
         else:
@@ -846,9 +860,7 @@ class MonarchTUI(App):
             prev_month_end = prev_month_start.replace(day=last_day)
 
             self.state.set_timeframe(
-                TimeFrame.CUSTOM,
-                start_date=prev_month_start,
-                end_date=prev_month_end
+                TimeFrame.CUSTOM, start_date=prev_month_start, end_date=prev_month_end
             )
             month_name = prev_month_start.strftime("%B")
             self.notify(f"Viewing: {month_name} {prev_month_start.year}", timeout=1)
@@ -868,9 +880,11 @@ class MonarchTUI(App):
 
         # Check if viewing full year (Jan 1 - Dec 31)
         is_full_year = (
-            self.state.start_date.month == 1 and self.state.start_date.day == 1 and
-            self.state.end_date.month == 12 and self.state.end_date.day == 31 and
-            self.state.start_date.year == self.state.end_date.year
+            self.state.start_date.month == 1
+            and self.state.start_date.day == 1
+            and self.state.end_date.month == 12
+            and self.state.end_date.day == 31
+            and self.state.start_date.year == self.state.end_date.year
         )
 
         if is_full_year:
@@ -879,7 +893,7 @@ class MonarchTUI(App):
             self.state.set_timeframe(
                 TimeFrame.CUSTOM,
                 start_date=date_type(new_year, 1, 1),
-                end_date=date_type(new_year, 12, 31)
+                end_date=date_type(new_year, 12, 31),
             )
             self.notify(f"Viewing: Year {new_year}", timeout=1)
         else:
@@ -889,9 +903,7 @@ class MonarchTUI(App):
             next_month_end = next_month_start.replace(day=last_day)
 
             self.state.set_timeframe(
-                TimeFrame.CUSTOM,
-                start_date=next_month_start,
-                end_date=next_month_end
+                TimeFrame.CUSTOM, start_date=next_month_start, end_date=next_month_end
             )
             month_name = next_month_start.strftime("%B")
             self.notify(f"Viewing: {month_name} {next_month_start.year}", timeout=1)
@@ -932,8 +944,10 @@ class MonarchTUI(App):
         from .screens.credential_screens import FilterScreen
 
         result = await self.push_screen(
-            FilterScreen(show_transfers=self.state.show_transfers, show_hidden=self.state.show_hidden),
-            wait_for_dismiss=True
+            FilterScreen(
+                show_transfers=self.state.show_transfers, show_hidden=self.state.show_hidden
+            ),
+            wait_for_dismiss=True,
         )
 
         if result is not None:
@@ -969,8 +983,7 @@ class MonarchTUI(App):
 
         # Show search modal with current query
         new_query = await self.push_screen(
-            SearchScreen(current_query=self.state.search_query),
-            wait_for_dismiss=True
+            SearchScreen(current_query=self.state.search_query), wait_for_dismiss=True
         )
 
         if new_query is not None:  # None means cancelled
@@ -1055,7 +1068,7 @@ class MonarchTUI(App):
             # Show edit modal
             new_merchant = await self.push_screen(
                 EditMerchantScreen(merchant_name, transaction_count, all_merchants, bulk_summary),
-                wait_for_dismiss=True
+                wait_for_dismiss=True,
             )
 
             if new_merchant:
@@ -1071,11 +1084,13 @@ class MonarchTUI(App):
                             field="merchant",
                             old_value=merchant_name,
                             new_value=new_merchant,
-                            timestamp=datetime.now()
+                            timestamp=datetime.now(),
                         )
                     )
 
-                self.notify(f"Queued {len(merchant_txns)} edits. Press w to review and commit.", timeout=3)
+                self.notify(
+                    f"Queued {len(merchant_txns)} edits. Press w to review and commit.", timeout=3
+                )
                 self.refresh_view()
         else:
             self.notify("Edit merchant only works from Merchant view", timeout=2)
@@ -1103,7 +1118,7 @@ class MonarchTUI(App):
             # Bulk edit selected transactions
             new_merchant = await self.push_screen(
                 EditMerchantScreen(current_merchant, len(self.state.selected_ids), all_merchants),
-                wait_for_dismiss=True
+                wait_for_dismiss=True,
             )
 
             if new_merchant:
@@ -1122,14 +1137,13 @@ class MonarchTUI(App):
                                 field="merchant",
                                 old_value=txn["merchant"],
                                 new_value=new_merchant,
-                                timestamp=datetime.now()
+                                timestamp=datetime.now(),
                             )
                         )
 
                 self.state.clear_selection()
                 self.notify(
-                    f"Queued {num_selected} edits. Press w to review and commit.",
-                    timeout=3
+                    f"Queued {num_selected} edits. Press w to review and commit.", timeout=3
                 )
                 # Refresh to update the * markers but stay in current view
                 self.refresh_view()
@@ -1143,7 +1157,7 @@ class MonarchTUI(App):
 
             new_merchant = await self.push_screen(
                 EditMerchantScreen(current_merchant, 1, all_merchants, txn_details),
-                wait_for_dismiss=True
+                wait_for_dismiss=True,
             )
 
             if new_merchant:
@@ -1154,7 +1168,7 @@ class MonarchTUI(App):
                         field="merchant",
                         old_value=current_merchant,
                         new_value=new_merchant,
-                        timestamp=datetime.now()
+                        timestamp=datetime.now(),
                     )
                 )
 
@@ -1195,9 +1209,9 @@ class MonarchTUI(App):
                     SelectCategoryScreen(
                         self.data_manager.categories,
                         row_data["category_id"],
-                        None  # No single transaction details for bulk operation
+                        None,  # No single transaction details for bulk operation
                     ),
-                    wait_for_dismiss=True
+                    wait_for_dismiss=True,
                 )
 
                 if new_category_id:
@@ -1212,12 +1226,15 @@ class MonarchTUI(App):
                                     field="category",
                                     old_value=txn["category_id"],
                                     new_value=new_category_id,
-                                    timestamp=datetime.now()
+                                    timestamp=datetime.now(),
                                 )
                             )
 
                     self.state.clear_selection()
-                    self.notify(f"Queued {num_selected} category changes. Press w to review and commit.", timeout=3)
+                    self.notify(
+                        f"Queued {num_selected} category changes. Press w to review and commit.",
+                        timeout=3,
+                    )
                     self.refresh_view()
             else:
                 # Single transaction recategorize
@@ -1231,11 +1248,9 @@ class MonarchTUI(App):
                 # Show category selection
                 new_category_id = await self.push_screen(
                     SelectCategoryScreen(
-                        self.data_manager.categories,
-                        row_data["category_id"],
-                        txn_details
+                        self.data_manager.categories, row_data["category_id"], txn_details
                     ),
-                    wait_for_dismiss=True
+                    wait_for_dismiss=True,
                 )
 
                 if new_category_id:
@@ -1248,7 +1263,7 @@ class MonarchTUI(App):
                             field="category",
                             old_value=old_category_id,
                             new_value=new_category_id,
-                            timestamp=datetime.now()
+                            timestamp=datetime.now(),
                         )
                     )
 
@@ -1286,12 +1301,15 @@ class MonarchTUI(App):
                             field="hide_from_reports",
                             old_value=current_hidden,
                             new_value=not current_hidden,
-                            timestamp=datetime.now()
+                            timestamp=datetime.now(),
                         )
                     )
 
             self.state.clear_selection()
-            self.notify(f"Toggled hide/unhide for {num_selected} transactions. Press w to commit.", timeout=3)
+            self.notify(
+                f"Toggled hide/unhide for {num_selected} transactions. Press w to commit.",
+                timeout=3,
+            )
             self.refresh_view()
         else:
             # Toggle single transaction
@@ -1305,7 +1323,7 @@ class MonarchTUI(App):
                     field="hide_from_reports",
                     old_value=current_hidden,
                     new_value=not current_hidden,
-                    timestamp=datetime.now()
+                    timestamp=datetime.now(),
                 )
             )
 
@@ -1331,6 +1349,7 @@ class MonarchTUI(App):
 
         # Show detail modal (doesn't change view state, just displays info)
         from .screens.transaction_detail_screen import TransactionDetailScreen
+
         self.push_screen(TransactionDetailScreen(dict(row_data)))
 
     def action_delete_transaction(self) -> None:
@@ -1358,8 +1377,7 @@ class MonarchTUI(App):
 
         # Show confirmation
         confirmed = await self.push_screen(
-            DeleteConfirmationScreen(transaction_count=1),
-            wait_for_dismiss=True
+            DeleteConfirmationScreen(transaction_count=1), wait_for_dismiss=True
         )
 
         if confirmed:
@@ -1442,7 +1460,7 @@ class MonarchTUI(App):
         # Show review screen with category names for readable display
         should_commit = await self.push_screen(
             ReviewChangesScreen(self.data_manager.pending_edits, self.data_manager.categories),
-            wait_for_dismiss=True
+            wait_for_dismiss=True,
         )
 
         if should_commit:
@@ -1457,13 +1475,13 @@ class MonarchTUI(App):
                     self.notify(
                         f"✅ Saved {success_count}, ❌ {failure_count} failed",
                         severity="warning",
-                        timeout=5
+                        timeout=5,
                     )
                 else:
                     self.notify(
                         f"✅ Committed {success_count} change(s) successfully!",
                         severity="information",
-                        timeout=3
+                        timeout=3,
                     )
 
                 # Apply edits to local DataFrame for instant UI update
@@ -1486,7 +1504,9 @@ class MonarchTUI(App):
                             )
                     elif edit.field == "category":
                         # Update category in DataFrame - lookup category name from ID
-                        cat_name = self.data_manager.categories.get(edit.new_value, {}).get("name", "Unknown")
+                        cat_name = self.data_manager.categories.get(edit.new_value, {}).get(
+                            "name", "Unknown"
+                        )
                         self.data_manager.df = self.data_manager.df.with_columns(
                             pl.when(pl.col("id") == edit.transaction_id)
                             .then(pl.lit(edit.new_value))
@@ -1570,7 +1590,12 @@ class MonarchTUI(App):
 
     async def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection (Enter key)."""
-        if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
+        if self.state.view_mode in [
+            ViewMode.MERCHANT,
+            ViewMode.CATEGORY,
+            ViewMode.GROUP,
+            ViewMode.ACCOUNT,
+        ]:
             # Drill down - save cursor position for restoration on go_back
             table = self.query_one("#data-table", DataTable)
             cursor_position = table.cursor_row
@@ -1638,7 +1663,7 @@ def main():
     # Handle cache path
     # If --cache passed without path, use empty string (triggers default in CacheManager)
     # If --cache not passed at all, args.cache is None (no caching)
-    cache_path = args.cache if hasattr(args, 'cache') and args.cache is not None else None
+    cache_path = args.cache if hasattr(args, "cache") and args.cache is not None else None
 
     try:
         app = MonarchTUI(
@@ -1646,7 +1671,7 @@ def main():
             custom_start_date=custom_start_date,
             demo_mode=args.demo,
             cache_path=cache_path,
-            force_refresh=args.refresh
+            force_refresh=args.refresh,
         )
 
         # Enable dev mode if requested
@@ -1657,13 +1682,13 @@ def main():
             app.run()
     except Exception as e:
         # Print full traceback to console
-        print("\n" + "="*80, file=sys.stderr)
+        print("\n" + "=" * 80, file=sys.stderr)
         print("FATAL ERROR - Monarch TUI crashed!", file=sys.stderr)
-        print("="*80, file=sys.stderr)
+        print("=" * 80, file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
-        print("\n" + "="*80, file=sys.stderr)
+        print("\n" + "=" * 80, file=sys.stderr)
         print("Please report this error with the traceback above.", file=sys.stderr)
-        print("="*80 + "\n", file=sys.stderr)
+        print("=" * 80 + "\n", file=sys.stderr)
         sys.exit(1)
 
 

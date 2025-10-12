@@ -79,25 +79,37 @@ class TransactionDetailScreen(ModalScreen):
                 yield Static(f"${amount:,.2f}", classes="field-value")
 
                 yield Label("Merchant:", classes="field-label")
-                yield Static(str(self.transaction_data.get("merchant", "N/A")), classes="field-value")
+                yield Static(
+                    str(self.transaction_data.get("merchant", "N/A")), classes="field-value"
+                )
 
                 yield Label("Merchant ID:", classes="field-label")
-                yield Static(str(self.transaction_data.get("merchant_id", "N/A")), classes="field-value")
+                yield Static(
+                    str(self.transaction_data.get("merchant_id", "N/A")), classes="field-value"
+                )
 
                 yield Label("Category:", classes="field-label")
-                yield Static(str(self.transaction_data.get("category", "N/A")), classes="field-value")
+                yield Static(
+                    str(self.transaction_data.get("category", "N/A")), classes="field-value"
+                )
 
                 yield Label("Category ID:", classes="field-label")
-                yield Static(str(self.transaction_data.get("category_id", "N/A")), classes="field-value")
+                yield Static(
+                    str(self.transaction_data.get("category_id", "N/A")), classes="field-value"
+                )
 
                 yield Label("Group:", classes="field-label")
                 yield Static(str(self.transaction_data.get("group", "N/A")), classes="field-value")
 
                 yield Label("Account:", classes="field-label")
-                yield Static(str(self.transaction_data.get("account", "N/A")), classes="field-value")
+                yield Static(
+                    str(self.transaction_data.get("account", "N/A")), classes="field-value"
+                )
 
                 yield Label("Account ID:", classes="field-label")
-                yield Static(str(self.transaction_data.get("account_id", "N/A")), classes="field-value")
+                yield Static(
+                    str(self.transaction_data.get("account_id", "N/A")), classes="field-value"
+                )
 
                 # Additional fields
                 yield Label("Notes:", classes="field-label")

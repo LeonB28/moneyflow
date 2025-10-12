@@ -66,10 +66,7 @@ class BackendSelectionScreen(Screen):
             )
 
             yield Button(
-                "🏦 Monarch Money",
-                variant="primary",
-                id="monarch-button",
-                classes="backend-option"
+                "🏦 Monarch Money", variant="primary", id="monarch-button", classes="backend-option"
             )
 
             yield Static(
@@ -257,12 +254,14 @@ class CredentialSetupScreen(Screen):
             error_label.update("✅ Credentials saved! Loading app...")
 
             # Dismiss this screen and pass credentials back (including backend type)
-            self.dismiss({
-                "email": email,
-                "password": password,
-                "mfa_secret": mfa_secret,
-                "backend_type": self.backend_type
-            })
+            self.dismiss(
+                {
+                    "email": email,
+                    "password": password,
+                    "mfa_secret": mfa_secret,
+                    "backend_type": self.backend_type,
+                }
+            )
 
         except Exception as e:
             error_label.update(f"❌ Error saving credentials: {e}")
@@ -476,10 +475,7 @@ class QuitConfirmationScreen(ModalScreen):
             else:
                 yield Static("Are you sure you want to quit?", id="quit-message")
 
-            yield Static(
-                "y=Quit | n/Esc=Cancel",
-                id="quit-instructions"
-            )
+            yield Static("y=Quit | n/Esc=Cancel", id="quit-instructions")
 
             with Container(id="button-container"):
                 yield Button("Cancel (N)", variant="primary", id="cancel-button")
@@ -553,14 +549,14 @@ class FilterScreen(ModalScreen):
                 "Show hidden from reports transactions",
                 value=self.show_hidden,
                 id="show-hidden-checkbox",
-                classes="filter-option"
+                classes="filter-option",
             )
 
             yield Checkbox(
                 "Show Transfer transactions",
                 value=self.show_transfers,
                 id="show-transfers-checkbox",
-                classes="filter-option"
+                classes="filter-option",
             )
 
             with Container(id="button-container"):
@@ -648,10 +644,7 @@ class CachePromptScreen(ModalScreen):
             )
             yield Static(cache_message, id="cache-info")
 
-            yield Static(
-                "y=Use cache | n=Refresh | Esc=Cancel",
-                id="cache-instructions"
-            )
+            yield Static("y=Use cache | n=Refresh | Esc=Cancel", id="cache-instructions")
 
             with Container(id="button-container"):
                 yield Button("Use Cache (Y)", variant="primary", id="cache-button")

@@ -91,7 +91,7 @@ class CredentialManager:
         password: str,
         mfa_secret: str,
         encryption_password: Optional[str] = None,
-        backend_type: str = "monarch"
+        backend_type: str = "monarch",
     ) -> None:
         """
         Save encrypted credentials to disk.
@@ -126,7 +126,7 @@ class CredentialManager:
             "email": email,
             "password": password,
             "mfa_secret": mfa_secret,
-            "backend_type": backend_type
+            "backend_type": backend_type,
         }
 
         # Encrypt and save

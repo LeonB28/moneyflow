@@ -77,21 +77,14 @@ class ReviewChangesScreen(Screen):
         with Container(id="review-container"):
             with Container(id="review-header"):
                 yield Label(
-                    f"📝 Review {len(self.pending_edits)} Pending Change(s)",
-                    id="review-title"
+                    f"📝 Review {len(self.pending_edits)} Pending Change(s)", id="review-title"
                 )
-                yield Static(
-                    "Review changes below",
-                    id="review-help"
-                )
+                yield Static("Review changes below", id="review-help")
 
             yield DataTable(id="changes-table", cursor_type="row", zebra_stripes=True)
 
             with Container(id="review-footer"):
-                yield Static(
-                    "c=Commit | Esc=Cancel",
-                    classes="footer-instructions"
-                )
+                yield Static("c=Commit | Esc=Cancel", classes="footer-instructions")
                 with Container(id="button-container"):
                     yield Button("Commit to Monarch (C)", variant="primary", id="commit-button")
                     yield Button("Cancel (Esc)", variant="default", id="cancel-button")
@@ -109,7 +102,13 @@ class ReviewChangesScreen(Screen):
 
         # Add rows for each pending edit
         for edit in self.pending_edits:
-            edit_type = "Merchant" if edit.field == "merchant" else "Category" if edit.field == "category" else "Hide"
+            edit_type = (
+                "Merchant"
+                if edit.field == "merchant"
+                else "Category"
+                if edit.field == "category"
+                else "Hide"
+            )
             txn_id_short = edit.transaction_id[:12] + "..."
 
             # For category changes, show category names not IDs
@@ -124,13 +123,7 @@ class ReviewChangesScreen(Screen):
             old_val = old_val[:29] if len(old_val) > 29 else old_val
             new_val = new_val[:29] if len(new_val) > 29 else new_val
 
-            table.add_row(
-                edit_type,
-                txn_id_short,
-                edit.field,
-                old_val,
-                new_val
-            )
+            table.add_row(edit_type, txn_id_short, edit.field, old_val, new_val)
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button clicks."""

@@ -65,7 +65,13 @@ class EditMerchantScreen(ModalScreen):
     }
     """
 
-    def __init__(self, current_merchant: str, transaction_count: int = 1, all_merchants: list = None, transaction_details: dict = None):
+    def __init__(
+        self,
+        current_merchant: str,
+        transaction_count: int = 1,
+        all_merchants: list = None,
+        transaction_details: dict = None,
+    ):
         super().__init__()
         self.current_merchant = current_merchant
         self.transaction_count = transaction_count
@@ -76,8 +82,7 @@ class EditMerchantScreen(ModalScreen):
         with Container(id="edit-dialog"):
             if self.transaction_count > 1:
                 yield Label(
-                    f"✏️  Edit Merchant ({self.transaction_count} transactions)",
-                    id="edit-title"
+                    f"✏️  Edit Merchant ({self.transaction_count} transactions)", id="edit-title"
                 )
             else:
                 yield Label("✏️  Edit Merchant", id="edit-title")
@@ -94,10 +99,9 @@ class EditMerchantScreen(ModalScreen):
                     yield Static(details_text, classes="edit-label")
                 else:
                     # Bulk edit summary
-                    total = self.transaction_details.get('total_amount', 0)
+                    total = self.transaction_details.get("total_amount", 0)
                     details_text = (
-                        f"Editing {self.transaction_count} transactions | "
-                        f"Total: ${total:,.2f}"
+                        f"Editing {self.transaction_count} transactions | Total: ${total:,.2f}"
                     )
                     yield Static(details_text, classes="edit-label")
 
@@ -108,13 +112,12 @@ class EditMerchantScreen(ModalScreen):
                 placeholder="Type merchant name...",
                 value=self.current_merchant,
                 id="merchant-input",
-                classes="edit-input"
+                classes="edit-input",
             )
 
             if self.all_merchants:
                 yield Static(
-                    "Existing merchants - ↑/↓=Navigate | Enter=Select:",
-                    id="suggestions-count"
+                    "Existing merchants - ↑/↓=Navigate | Enter=Select:", id="suggestions-count"
                 )
                 yield OptionList(id="suggestions")
 
@@ -136,7 +139,8 @@ class EditMerchantScreen(ModalScreen):
         # Filter merchants
         if query and query != self.current_merchant.lower():
             matches = [
-                m for m in self.all_merchants
+                m
+                for m in self.all_merchants
                 if m and query in m.lower() and m != self.current_merchant
             ]
         else:
@@ -235,7 +239,9 @@ class SelectCategoryScreen(ModalScreen):
     }
     """
 
-    def __init__(self, categories: dict, current_category_id: str = None, transaction_details: dict = None):
+    def __init__(
+        self, categories: dict, current_category_id: str = None, transaction_details: dict = None
+    ):
         super().__init__()
         self.categories = categories
         self.current_category_id = current_category_id
@@ -244,7 +250,10 @@ class SelectCategoryScreen(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Container(id="category-dialog"):
-            yield Label("📋 Select Category - Type to filter | ↑/↓=Navigate | Enter=Select", id="category-title")
+            yield Label(
+                "📋 Select Category - Type to filter | ↑/↓=Navigate | Enter=Select",
+                id="category-title",
+            )
 
             # Show transaction details if available
             if self.transaction_details:
@@ -255,15 +264,9 @@ class SelectCategoryScreen(ModalScreen):
                 )
                 yield Static(details_text, classes="edit-label")
 
-            yield Input(
-                placeholder="Type to filter categories...",
-                id="search-input"
-            )
+            yield Input(placeholder="Type to filter categories...", id="search-input")
 
-            yield Static(
-                f"{len(self.categories)} categories",
-                id="results-count"
-            )
+            yield Static(f"{len(self.categories)} categories", id="results-count")
 
             yield OptionList(id="category-list")
 
@@ -379,13 +382,13 @@ class DeleteConfirmationScreen(ModalScreen):
                 yield Static(
                     f"Are you sure you want to delete {self.transaction_count} transactions?\n"
                     "This action CANNOT be undone!",
-                    id="delete-message"
+                    id="delete-message",
                 )
             else:
                 yield Static(
                     "Are you sure you want to delete this transaction?\n"
                     "This action CANNOT be undone!",
-                    id="delete-message"
+                    id="delete-message",
                 )
 
             with Container(id="button-container"):

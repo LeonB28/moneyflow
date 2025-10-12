@@ -55,10 +55,7 @@ class DuplicateDetector:
             agg_cols.append(pl.col("account").first().alias("account"))
 
         duplicate_groups = (
-            df_with_norm
-            .group_by(group_cols)
-            .agg(agg_cols)
-            .filter(pl.col("ids").list.len() > 1)
+            df_with_norm.group_by(group_cols).agg(agg_cols).filter(pl.col("ids").list.len() > 1)
         )
 
         if duplicate_groups.is_empty():
@@ -75,14 +72,16 @@ class DuplicateDetector:
             # Create pairs from each group
             for i in range(len(ids)):
                 for j in range(i + 1, len(ids)):
-                    pairs.append({
-                        "id_1": ids[i],
-                        "id_2": ids[j],
-                        "date": row["date"],
-                        "amount": row["amount"],
-                        "merchant": merchant,
-                        "account": account,
-                    })
+                    pairs.append(
+                        {
+                            "id_1": ids[i],
+                            "id_2": ids[j],
+                            "date": row["date"],
+                            "amount": row["amount"],
+                            "merchant": merchant,
+                            "account": account,
+                        }
+                    )
 
         if not pairs:
             return pl.DataFrame()

@@ -41,9 +41,9 @@ class CacheManager:
     def cache_exists(self) -> bool:
         """Check if cache files exist."""
         return (
-            self.transactions_file.exists() and
-            self.metadata_file.exists() and
-            self.categories_file.exists()
+            self.transactions_file.exists()
+            and self.metadata_file.exists()
+            and self.categories_file.exists()
         )
 
     def is_cache_valid(self, year: Optional[int] = None, since: Optional[str] = None) -> bool:
@@ -104,7 +104,7 @@ class CacheManager:
         categories: Dict,
         category_groups: Dict,
         year: Optional[int] = None,
-        since: Optional[str] = None
+        since: Optional[str] = None,
     ) -> None:
         """
         Save transaction data to cache.
