@@ -1,14 +1,44 @@
 # Monarch Money PUI - Implementation Status
 
-**Last Updated**: October 11, 2025
-**Total Tests**: 181 passing, 1 skipped
-**Code Coverage**: 55% overall, 100% of business logic (state.py, data_manager.py)
+**Last Updated**: October 12, 2025
+**Total Tests**: 233 passing, 1 skipped
+**Code Coverage**: 62% overall, 100% of business logic (state.py, data_manager.py, demo modules)
 
 ## Project Renamed
 
 **monarch-tui → monarch-pui (Power User Interface)**
 
 Rationale: Allows for future non-terminal interfaces (web UI) while maintaining current terminal focus.
+
+## Demo Mode - NEW! ✅
+
+**Run safely without Monarch account or exposing personal data:**
+```bash
+uv run python -m monarch_pui --demo
+```
+
+### What Demo Mode Provides
+- ✅ **No authentication required** - skips all credential screens
+- ✅ **Realistic synthetic data** - 1000+ transactions for a millennial couple
+- ✅ **\$250k household income** - biweekly paychecks, realistic spending
+- ✅ **All features work** - edit, search, filter, categorize, hide, delete
+- ✅ **Safe testing** - changes only affect in-memory data (not saved)
+- ✅ **Clear indicator** - Title shows "[DEMO MODE]"
+
+### Demo Data Characteristics
+- Biweekly paychecks (~\$173k annual)
+- Monthly recurring bills (rent \$3,400, utilities, subscriptions)
+- Variable expenses (groceries, restaurants, coffee, gas, shopping)
+- Quarterly travel
+- Merchant name variations ("Whole Foods" vs "WHOLE FOODS MARKET #123")
+- Intentional duplicates for testing duplicate detection
+- Hidden transfers and credit card payments
+- Multiple accounts (Chase Checking, Chase Sapphire, Amex Platinum)
+
+### Test Coverage
+- ✅ 52 comprehensive demo tests
+- ✅ 100% coverage of demo_backend.py (60 statements)
+- ✅ 100% coverage of demo_data_generator.py (162 statements)
 
 ## Core Features - IMPLEMENTED ✅
 
