@@ -102,6 +102,9 @@ class MonarchTUI(App):
         self.stored_credentials: Optional[dict] = None
         self.cache_path = cache_path
         self.force_refresh = force_refresh
+        self.cache_manager = None  # Will be set if caching is enabled
+        self.cache_year_filter = None  # Track what filters the cache uses
+        self.cache_since_filter = None
 
     def compose(self) -> ComposeResult:
         """Compose the main UI."""
@@ -240,39 +243,38 @@ class MonarchTUI(App):
             self.data_manager = DataManager(self.mm)
 
             # Initialize cache manager only if user requested caching
-            cache_mgr = None
             if self.cache_path is not None:
                 from .cache_manager import CacheManager
 
-                cache_mgr = CacheManager(cache_dir=self.cache_path)
+                self.cache_manager = CacheManager(cache_dir=self.cache_path)
 
             # Determine date range based on CLI arguments
             if self.custom_start_date:
                 start_date = self.custom_start_date
                 end_date = datetime.now().strftime("%Y-%m-%d")
-                year_filter = None
-                since_filter = self.custom_start_date
+                self.cache_year_filter = None
+                self.cache_since_filter = self.custom_start_date
             elif self.start_year:
                 start_date = f"{self.start_year}-01-01"
                 end_date = datetime.now().strftime("%Y-%m-%d")
-                year_filter = self.start_year
-                since_filter = None
+                self.cache_year_filter = self.start_year
+                self.cache_since_filter = None
             else:
                 # Fetch ALL transactions (no date filter for offline-first approach)
                 start_date = None
                 end_date = None
-                year_filter = None
-                since_filter = None
+                self.cache_year_filter = None
+                self.cache_since_filter = None
 
             # Check if we should use cache (only if --cache was passed)
             use_cache = False
             if (
-                cache_mgr
+                self.cache_manager
                 and not self.force_refresh
-                and cache_mgr.is_cache_valid(year=year_filter, since=since_filter)
+                and self.cache_manager.is_cache_valid(year=self.cache_year_filter, since=self.cache_since_filter)
             ):
                 # Cache is valid - show prompt
-                cache_info = cache_mgr.get_cache_info()
+                cache_info = self.cache_manager.get_cache_info()
                 if cache_info:
                     from .screens.credential_screens import CachePromptScreen
 
@@ -288,7 +290,7 @@ class MonarchTUI(App):
             if use_cache:
                 # Load from cache
                 loading_status.update("📦 Loading from cache...")
-                result = cache_mgr.load_cache()
+                result = self.cache_manager.load_cache()
                 if result:
                     df, categories, category_groups, metadata = result
                     # Apply category grouping dynamically (so CATEGORY_GROUPS changes take effect)
@@ -329,14 +331,14 @@ class MonarchTUI(App):
                 )
 
                 # Save to cache for next time (only if --cache was passed)
-                if cache_mgr:
+                if self.cache_manager:
                     loading_status.update("💾 Saving to cache...")
-                    cache_mgr.save_cache(
+                    self.cache_manager.save_cache(
                         transactions_df=df,
                         categories=categories,
                         category_groups=category_groups,
-                        year=year_filter,
-                        since=since_filter,
+                        year=self.cache_year_filter,
+                        since=self.cache_since_filter,
                     )
                     loading_status.update(f"✅ Loaded {len(df):,} transactions and cached!")
                 else:
@@ -1555,6 +1557,20 @@ class MonarchTUI(App):
 
                 # Clear pending edits on success
                 self.data_manager.pending_edits.clear()
+
+                # Update cache with edited data (if caching is enabled)
+                if self.cache_manager:
+                    try:
+                        self.cache_manager.save_cache(
+                            transactions_df=self.data_manager.df,
+                            categories=self.data_manager.categories,
+                            category_groups=self.data_manager.category_groups,
+                            year=self.cache_year_filter,
+                            since=self.cache_since_filter,
+                        )
+                    except Exception as e:
+                        # Cache update failed - not critical, just log
+                        self.notify(f"Note: Cache update failed: {e}", severity="warning", timeout=2)
 
                 # Restore view state and refresh to show updated data in same view
                 self.state.restore_view_state(saved_state)

@@ -12,9 +12,11 @@ from .backends.base import FinanceBackend
 # Category group mapping (since not consistently available in API)
 CATEGORY_GROUPS = {
     "Business": [
+        "Accounting",
         "Office Rent",
         "Business Electronics",
         "Business Software",
+        "Postage & Shipping"
     ],
     "Food & Dining": [
         "Restaurants & Bars",
@@ -40,15 +42,14 @@ CATEGORY_GROUPS = {
         "Auto Payment",
         "Auto Maintenance",
     ],
-    "Services": ["Internet & Cable", "Streaming"],
+    "Services": ["Internet & Cable", "Streaming", "Laundry & Dry Cleaning", "Home Services", "Software"],
     "Housing": [
         "Gas & Electric",
         "Mortgage",
         "Rent",
         "Home Improvement",
         "Water",
-        "Garbage",
-        "Home Services",
+        "Garbage"
     ],
     "Shopping": [
         "Shopping",
@@ -58,6 +59,8 @@ CATEGORY_GROUPS = {
         "Furniture & Housewares",
         "Jewelry & Accessories",
         "Video Games",
+        "Hobbies",
+        "Books"
     ],
     "Entertainment": ["Entertainment & Recreation"],
     "Health & Fitness": [
@@ -69,7 +72,7 @@ CATEGORY_GROUPS = {
         "Supplements",
         "Workout Classes",
     ],
-    "Personal": ["Personal", "Gifts", "Charity"],
+    "Gifts & Charity": ["Gifts", "Charity"],
     "Bills & Utilities": ["Phone", "Insurance"],
     "Financial": [
         "Financial & Legal Services",
@@ -77,7 +80,7 @@ CATEGORY_GROUPS = {
         "Loan Repayment",
         "Student Loans",
     ],
-    "Personal Care": ["Chiropractic & Massage", "Hair"],
+    "Personal Care": ["Chiropractic & Massage", "Hair", "Personal Care"],
     "Income": ["Paychecks", "Interest", "Business Income", "Other Income"],
     "Transfers": ["Transfer", "Credit Card Payment", "Balance Adjustments"],
     "Uncategorized": ["Uncategorized", "Check", "Miscellaneous"],
