@@ -280,6 +280,19 @@ class DataManager:
             ]
         )
 
+    def aggregate_by_account(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Aggregate transactions by account."""
+        if df.is_empty():
+            return pl.DataFrame()
+
+        return df.group_by("account").agg(
+            [
+                pl.count("id").alias("count"),
+                pl.sum("amount").alias("total"),
+                pl.first("account_id").alias("account_id"),
+            ]
+        )
+
     def filter_by_merchant(self, df: pl.DataFrame, merchant: str) -> pl.DataFrame:
         """Filter transactions by merchant name."""
         return df.filter(pl.col("merchant") == merchant)
@@ -291,6 +304,10 @@ class DataManager:
     def filter_by_group(self, df: pl.DataFrame, group: str) -> pl.DataFrame:
         """Filter transactions by group name."""
         return df.filter(pl.col("group") == group)
+
+    def filter_by_account(self, df: pl.DataFrame, account: str) -> pl.DataFrame:
+        """Filter transactions by account name."""
+        return df.filter(pl.col("account") == account)
 
     def search_transactions(self, df: pl.DataFrame, query: str) -> pl.DataFrame:
         """Search transactions by merchant, category, or notes."""

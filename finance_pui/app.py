@@ -34,6 +34,7 @@ class MonarchTUI(App):
         Binding("m", "view_merchants", "Merchants", show=True),
         Binding("c", "view_categories", "Categories", show=True),
         Binding("g", "view_groups", "Groups", show=True),
+        Binding("A", "view_accounts", "Accounts", show=True, key_display="A"),
         Binding("u", "view_ungrouped", "All Txns", show=True),
         Binding("D", "find_duplicates", "Duplicates", show=True, key_display="D"),
         # Time navigation
@@ -375,6 +376,8 @@ class MonarchTUI(App):
             self.show_category_aggregation()
         elif self.state.view_mode == ViewMode.GROUP:
             self.show_group_aggregation()
+        elif self.state.view_mode == ViewMode.ACCOUNT:
+            self.show_account_aggregation()
         elif self.state.view_mode == ViewMode.DETAIL:
             self.show_transactions()
 
@@ -512,13 +515,56 @@ class MonarchTUI(App):
             total = row["total"]
             table.add_row(group, str(count), f"${total:,.2f}")
 
+    def show_account_aggregation(self) -> None:
+        """Show account aggregation view."""
+        table = self.query_one("#data-table", DataTable)
+
+        table.add_column("Account", key="account", width=40)
+        table.add_column("Count", key="count", width=10)
+        table.add_column("Total", key="total", width=15)
+
+        # Get filtered data based on time_frame
+        filtered_df = self.state.get_filtered_df()
+        if filtered_df is None:
+            return
+
+        agg = self.data_manager.aggregate_by_account(filtered_df)
+
+        # Check if we have any data
+        if agg.is_empty():
+            self.state.current_data = agg
+            return
+
+        # Apply sorting
+        sort_col = self.state.sort_by.value
+        if sort_col == "amount":
+            sort_col = "total"
+
+        # Amount sorting: invert direction so largest expenses (-1000) come first
+        descending = (
+            self.state.sort_direction == SortDirection.ASC
+            if sort_col == "total"
+            else self.state.sort_direction == SortDirection.DESC
+        )
+
+        agg = agg.sort(sort_col, descending=descending)
+
+        self.state.current_data = agg
+
+        for row in agg.iter_rows(named=True):
+            account = row["account"] or "Unknown"
+            count = row["count"]
+            total = row["total"]
+            table.add_row(account, str(count), f"${total:,.2f}")
+
     def show_transactions(self) -> None:
         """Show individual transactions (drill-down view)."""
         table = self.query_one("#data-table", DataTable)
 
         table.add_column("Date", key="date", width=12)
-        table.add_column("Merchant", key="merchant", width=30)
-        table.add_column("Category", key="category", width=25)
+        table.add_column("Merchant", key="merchant", width=25)
+        table.add_column("Category", key="category", width=20)
+        table.add_column("Account", key="account", width=18)
         table.add_column("Amount", key="amount", width=12)
         table.add_column("", key="flags", width=3)
 
@@ -534,6 +580,8 @@ class MonarchTUI(App):
             txns = self.data_manager.filter_by_category(filtered_df, self.state.selected_category)
         elif self.state.selected_group:
             txns = self.data_manager.filter_by_group(filtered_df, self.state.selected_group)
+        elif self.state.selected_account:
+            txns = self.data_manager.filter_by_account(filtered_df, self.state.selected_account)
         else:
             # Ungrouped view - show all transactions
             txns = filtered_df
@@ -559,6 +607,7 @@ class MonarchTUI(App):
             date = str(row["date"])
             merchant = row["merchant"] or "Unknown"
             category = row["category"] or "Uncategorized"
+            account = row.get("account", "Unknown")
             amount = row["amount"]
             txn_id = row["id"]
 
@@ -571,7 +620,7 @@ class MonarchTUI(App):
             if txn_id in pending_txn_ids:
                 flags += "*"  # Has pending edit
 
-            table.add_row(date, merchant, category, f"${amount:,.2f}", flags)
+            table.add_row(date, merchant, category, account, f"${amount:,.2f}", flags)
 
     def update_breadcrumb(self) -> None:
         """Update breadcrumb navigation."""
@@ -597,11 +646,11 @@ class MonarchTUI(App):
         hints_widget = self.query_one("#action-hints", Static)
 
         if self.state.view_mode == ViewMode.MERCHANT:
-            hints = "[Enter] Drill down | [e] Edit merchant (bulk) | [←→] Change period"
-        elif self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP]:
-            hints = "[Enter] Drill down | [←→] Change period"
+            hints = "Enter=Drill down | e=Edit merchant (bulk) | ←/→=Change period"
+        elif self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
+            hints = "Enter=Drill down | ←/→=Change period"
         else:  # DETAIL (transactions)
-            hints = "[i] Details | [e] Edit | [r] Recategorize | [h] Hide/Unhide | [d] Delete | [Space] Select"
+            hints = "i=Details | e=Edit | r=Recategorize | h=Hide/Unhide | d=Delete | Space=Select"
 
         hints_widget.update(hints)
 
@@ -621,6 +670,7 @@ class MonarchTUI(App):
         self.state.selected_merchant = None
         self.state.selected_category = None
         self.state.selected_group = None
+        self.state.selected_account = None
         self.refresh_view()
 
     def action_view_categories(self) -> None:
@@ -629,6 +679,7 @@ class MonarchTUI(App):
         self.state.selected_merchant = None
         self.state.selected_category = None
         self.state.selected_group = None
+        self.state.selected_account = None
         self.refresh_view()
 
     def action_view_groups(self) -> None:
@@ -637,6 +688,16 @@ class MonarchTUI(App):
         self.state.selected_merchant = None
         self.state.selected_category = None
         self.state.selected_group = None
+        self.state.selected_account = None
+        self.refresh_view()
+
+    def action_view_accounts(self) -> None:
+        """Switch to account view."""
+        self.state.view_mode = ViewMode.ACCOUNT
+        self.state.selected_merchant = None
+        self.state.selected_category = None
+        self.state.selected_group = None
+        self.state.selected_account = None
         self.refresh_view()
 
     def action_view_ungrouped(self) -> None:
@@ -645,6 +706,7 @@ class MonarchTUI(App):
         self.state.selected_merchant = None
         self.state.selected_category = None
         self.state.selected_group = None
+        self.state.selected_account = None
         self.refresh_view()
         self.notify("Viewing all transactions (ungrouped)", timeout=1)
 
@@ -1495,7 +1557,7 @@ class MonarchTUI(App):
 
     async def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection (Enter key)."""
-        if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP]:
+        if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
             # Drill down
             table = self.query_one("#data-table", DataTable)
             row_key = event.row_key

@@ -15,6 +15,7 @@ class ViewMode(Enum):
     MERCHANT = "merchant"
     CATEGORY = "category"
     GROUP = "group"
+    ACCOUNT = "account"
     DETAIL = "detail"
 
 
@@ -79,6 +80,7 @@ class AppState:
     selected_merchant: Optional[str] = None
     selected_category: Optional[str] = None
     selected_group: Optional[str] = None
+    selected_account: Optional[str] = None
     selected_row: int = 0
 
     # Multi-select for bulk operations
@@ -241,6 +243,8 @@ class AppState:
                 df = df.filter(pl.col("category") == self.selected_category)
             elif self.selected_group:
                 df = df.filter(pl.col("group") == self.selected_group)
+            elif self.selected_account:
+                df = df.filter(pl.col("account") == self.selected_account)
 
         return df
 
@@ -259,6 +263,9 @@ class AppState:
         elif self.view_mode == ViewMode.GROUP:
             self.selected_group = item_name
             self.view_mode = ViewMode.DETAIL
+        elif self.view_mode == ViewMode.ACCOUNT:
+            self.selected_account = item_name
+            self.view_mode = ViewMode.DETAIL
 
     def go_back(self) -> bool:
         """Go back to previous view. Returns True if successful, False if already at root."""
@@ -267,6 +274,7 @@ class AppState:
             self.selected_merchant = None
             self.selected_category = None
             self.selected_group = None
+            self.selected_account = None
 
             # Pop from history if available
             if self.navigation_history:
@@ -288,6 +296,7 @@ class AppState:
             "selected_merchant": self.selected_merchant,
             "selected_category": self.selected_category,
             "selected_group": self.selected_group,
+            "selected_account": self.selected_account,
         }
 
     def restore_view_state(self, saved_state: dict) -> None:
@@ -296,6 +305,7 @@ class AppState:
         self.selected_merchant = saved_state["selected_merchant"]
         self.selected_category = saved_state["selected_category"]
         self.selected_group = saved_state["selected_group"]
+        self.selected_account = saved_state.get("selected_account")
 
     def get_breadcrumb(self) -> str:
         """Get breadcrumb string showing current navigation path."""
@@ -308,6 +318,8 @@ class AppState:
             parts.append("Categories")
         elif self.view_mode == ViewMode.GROUP:
             parts.append("Groups")
+        elif self.view_mode == ViewMode.ACCOUNT:
+            parts.append("Accounts")
         elif self.view_mode == ViewMode.DETAIL:
             # Show what we drilled down from
             if self.selected_merchant:
@@ -319,6 +331,9 @@ class AppState:
             elif self.selected_group:
                 parts.append("Groups")
                 parts.append(self.selected_group)
+            elif self.selected_account:
+                parts.append("Accounts")
+                parts.append(self.selected_account)
             else:
                 parts.append("Transactions")
 
