@@ -779,9 +779,31 @@ class MonarchTUI(App):
         self.push_screen(HelpScreen())
 
     def action_search(self) -> None:
-        """Show search input."""
-        # TODO: Implement search modal
-        self.notify("Search not yet implemented", timeout=2)
+        """Show search input with live filtering."""
+        self.run_worker(self._show_search(), exclusive=False)
+
+    async def _show_search(self) -> None:
+        """Show search modal and apply filter."""
+        from .screens.search_screen import SearchScreen
+
+        # Show search modal with current query
+        new_query = await self.push_screen(
+            SearchScreen(current_query=self.state.search_query),
+            wait_for_dismiss=True
+        )
+
+        if new_query is not None:  # None means cancelled
+            # Apply search
+            self.state.search_query = new_query
+            self.refresh_view()
+
+            if new_query:
+                # Get count of filtered results
+                filtered = self.state.get_filtered_df()
+                count = len(filtered) if filtered is not None else 0
+                self.notify(f"Search: '{new_query}' - {count} results", timeout=2)
+            else:
+                self.notify("Search cleared", timeout=1)
 
     def action_toggle_select(self) -> None:
         """Toggle selection of current row for bulk operations."""

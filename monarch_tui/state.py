@@ -337,4 +337,8 @@ class AppState:
             else:
                 parts.append(f"{self.start_date} to {self.end_date}")
 
+        # Add search indicator if active
+        if self.search_query:
+            parts.append(f"Search: '{self.search_query}'")
+
         return " > ".join(parts) if parts else "Home"
