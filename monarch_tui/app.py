@@ -59,6 +59,7 @@ class MonarchTUI(App):
         Binding("e", "edit_merchant", "Edit Merchant", show=False),
         Binding("r", "recategorize", "Recategorize", show=False),
         Binding("d", "delete_transaction", "Delete", show=False),
+        Binding("i", "show_transaction_details", "Details", show=False),
         Binding("space", "toggle_select", "Select", show=False),
         # Other actions
         Binding("f", "show_filters", "Filters", show=True),
@@ -478,7 +479,7 @@ class MonarchTUI(App):
         elif self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP]:
             hints = "[Enter] Drill down | [←→] Change period"
         else:  # DETAIL (transactions)
-            hints = "[e] Edit | [r] Recategorize | [d] Delete | [Space] Multi-select | [←→] Change period"
+            hints = "[i] Details | [e] Edit | [r] Recategorize | [d] Delete | [Space] Multi-select"
 
         hints_widget.update(hints)
 
@@ -995,6 +996,26 @@ class MonarchTUI(App):
                 self.refresh_view()
         else:
             self.notify("Recategorize only works in transaction detail view", timeout=2)
+
+    def action_show_transaction_details(self) -> None:
+        """Show detailed information about current transaction."""
+        if self.data_manager is None or self.state.view_mode != ViewMode.DETAIL:
+            self.notify("Details only available in transaction view", timeout=2)
+            return
+
+        if self.state.current_data is None:
+            return
+
+        table = self.query_one("#data-table", DataTable)
+        if table.cursor_row < 0:
+            return
+
+        # Get current transaction data
+        row_data = self.state.current_data.row(table.cursor_row, named=True)
+
+        # Show detail modal
+        from .screens.transaction_detail_screen import TransactionDetailScreen
+        self.push_screen(TransactionDetailScreen(dict(row_data)))
 
     def action_delete_transaction(self) -> None:
         """Delete current transaction with confirmation."""
