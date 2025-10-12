@@ -1503,7 +1503,7 @@ def main():
         nargs="?",
         const="",  # Use default location if flag given without path
         metavar="PATH",
-        help="Enable caching. Optionally specify cache directory (default: ~/.monarch_pui/cache/). Without this flag, always fetches fresh data.",
+        help="Enable caching. Optionally specify cache directory (default: ~/.finance_pui/cache/). Without this flag, always fetches fresh data.",
     )
     parser.add_argument(
         "--refresh",

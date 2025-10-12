@@ -7,7 +7,7 @@ modifying real data.
 
 from typing import Dict, List, Any, Optional
 from datetime import datetime, date
-from monarch_pui.backends.base import FinanceBackend
+from finance_pui.backends.base import FinanceBackend
 
 
 # Simulate the MonarchMoney API interface without importing the real one

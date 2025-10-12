@@ -5,7 +5,7 @@ Tests for state management, undo/redo, and change tracking.
 import pytest
 import polars as pl
 from datetime import date, datetime
-from monarch_pui.state import (
+from finance_pui.state import (
     AppState,
     ViewMode,
     SortMode,
@@ -731,7 +731,7 @@ class TestTimeFrameEdgeCases:
         """Test setting timeframe to THIS_MONTH handles December correctly."""
         # Mock today being in December
         from unittest.mock import patch
-        with patch('monarch_pui.state.date') as mock_date:
+        with patch('finance_pui.state.date') as mock_date:
             mock_date.today.return_value = date(2024, 12, 15)
             mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
 
@@ -743,7 +743,7 @@ class TestTimeFrameEdgeCases:
     def test_set_timeframe_this_month_february_leap_year(self, app_state):
         """Test THIS_MONTH handles February in a leap year."""
         from unittest.mock import patch
-        with patch('monarch_pui.state.date') as mock_date:
+        with patch('finance_pui.state.date') as mock_date:
             mock_date.today.return_value = date(2024, 2, 15)  # 2024 is leap year
             mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
 
@@ -755,7 +755,7 @@ class TestTimeFrameEdgeCases:
     def test_set_timeframe_this_month_february_non_leap_year(self, app_state):
         """Test THIS_MONTH handles February in a non-leap year."""
         from unittest.mock import patch
-        with patch('monarch_pui.state.date') as mock_date:
+        with patch('finance_pui.state.date') as mock_date:
             mock_date.today.return_value = date(2023, 2, 15)  # 2023 is not leap year
             mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
 

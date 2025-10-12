@@ -11,7 +11,7 @@ Tests the complete editing workflows including:
 import pytest
 from datetime import datetime
 import polars as pl
-from monarch_pui.state import AppState, ViewMode, TransactionEdit
+from finance_pui.state import AppState, ViewMode, TransactionEdit
 
 
 class TestBulkMerchantEdit:

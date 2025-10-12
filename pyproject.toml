@@ -1,7 +1,7 @@
 [project]
-name = "monarch-pui"
+name = "finance-pui"
 version = "0.1.0"
-description = "Power User Interface for Monarch Money transaction management"
+description = "Personal Finance Power User Interface"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -30,15 +30,15 @@ dependencies = [
 ]
 
 [project.scripts]
-monarch-pui = "monarch_pui.app:main"
-monarch-setup = "monarch_pui.credentials:setup_credentials_interactive"
+finance-pui = "finance_pui.app:main"
+finance-setup = "finance_pui.credentials:setup_credentials_interactive"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["monarch_pui"]
+packages = ["finance_pui"]
 
 [dependency-groups]
 dev = [

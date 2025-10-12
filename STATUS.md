@@ -6,7 +6,7 @@
 
 ## Project Renamed
 
-**monarch-tui → monarch-pui (Power User Interface)**
+**monarch-tui → finance-pui (Power User Interface)**
 
 Rationale: Allows for future non-terminal interfaces (web UI) while maintaining current terminal focus.
 
@@ -14,7 +14,7 @@ Rationale: Allows for future non-terminal interfaces (web UI) while maintaining 
 
 **Run safely without Monarch account or exposing personal data:**
 ```bash
-uv run python -m monarch_pui --demo
+uv run python -m finance_pui --demo
 ```
 
 ### What Demo Mode Provides
@@ -175,8 +175,8 @@ These are interactive UI components that would require Textual pilot tests or in
 ## Files Structure
 
 ```
-monarch-pui/
-├── monarch_tui/                  # Main package
+finance-pui/
+├── finance_pui/                  # Main package
 │   ├── app.py                    # Main application (723 lines)
 │   ├── state.py                  # State management (199 lines, 97% coverage)
 │   ├── data_manager.py           # Data layer (134 lines, 100% coverage)
@@ -297,7 +297,7 @@ When you return:
 3. Report any bugs you find (now have error traces with --dev flag)
 4. All 181 tests are passing and waiting for you!
 
-**Command to run**: `uv run python -m monarch_tui --year 2025`
-**Command with debug**: `uv run python -m monarch_tui --year 2025 --dev`
+**Command to run**: `uv run python -m finance_pui --year 2025`
+**Command with debug**: `uv run python -m finance_pui --year 2025 --dev`
 
 Project is ready for public release when you are!

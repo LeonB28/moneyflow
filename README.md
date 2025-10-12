@@ -7,11 +7,11 @@ Currently implements a Terminal UI (TUI). Future versions may include web-based 
 **Quick Start**:
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh  # Install uv
-git clone <repo-url> && cd monarch-pui             # Download
+git clone <repo-url> && cd finance-pui             # Download
 uv sync                                            # Install dependencies
-uv run python -m monarch_pui                       # Run with your account
+uv run python -m finance_pui                       # Run with your account
 # OR
-uv run python -m monarch_pui --demo                # Try demo mode (no account needed)
+uv run python -m finance_pui --demo                # Try demo mode (no account needed)
 ```
 
 ## Features
@@ -30,7 +30,7 @@ uv run python -m monarch_pui --demo                # Try demo mode (no account n
 Try the application without a Monarch Money account:
 
 ```bash
-uv run python -m monarch_pui --demo
+uv run python -m finance_pui --demo
 ```
 
 Demo mode provides:
@@ -55,8 +55,8 @@ Install uv (a Python package manager): https://docs.astral.sh/uv/getting-started
 
 **Clone the repository:**
 ```bash
-git clone https://github.com/yourusername/monarch-pui.git
-cd monarch-pui
+git clone https://github.com/yourusername/finance-pui.git
+cd finance-pui
 ```
 
 **Or download ZIP** from GitHub, extract, and navigate to the folder.
@@ -72,7 +72,7 @@ This installs Python 3.11+ (if needed) and all dependencies automatically.
 ### 4. Run the TUI
 
 ```bash
-uv run python -m monarch_pui
+uv run python -m finance_pui
 ```
 
 The first time you run it, you'll go through a one-time credential setup.
@@ -84,21 +84,21 @@ By default, the application fetches **all transactions** from your account. For 
 **Fetch only recent years:**
 ```bash
 # Only load transactions from 2025 onwards
-uv run python -m monarch_pui --year 2025
+uv run python -m finance_pui --year 2025
 
 # Only load transactions from 2024 onwards
-uv run python -m monarch_pui --year 2024
+uv run python -m finance_pui --year 2024
 ```
 
 **Fetch from a specific date:**
 ```bash
 # Load transactions from June 1, 2024 onwards
-uv run python -m monarch_pui --since 2024-06-01
+uv run python -m finance_pui --since 2024-06-01
 ```
 
 **View all options:**
 ```bash
-uv run python -m monarch_pui --help
+uv run python -m finance_pui --help
 ```
 
 **Note**: Limiting the date range makes initial load faster but you won't see older transactions in your analysis.
@@ -117,7 +117,7 @@ On first run, the TUI will walk you through credential setup:
 2. **Launch TUI** and enter when prompted:
    - Monarch Money email and password
    - Your 2FA secret key
-   - A new encryption password (for monarch-pui only)
+   - A new encryption password (for finance-pui only)
 
 3. **Done!** Next time you launch, just enter your encryption password.
 
@@ -153,7 +153,7 @@ Time period changes are applied instantly using client-side filtering.
 ### Example 1: Edit a Merchant Name
 
 ```
-1. Launch: uv run python -m monarch_pui
+1. Launch: uv run python -m finance_pui
 2. Press 'm' to view merchants
 3. Navigate to a merchant with arrow keys
 4. Press 'e' to edit all transactions for that merchant
@@ -237,7 +237,7 @@ Time period changes are applied instantly using client-side filtering.
 
 **Solution**: Run `uv sync` first to install all dependencies:
 ```bash
-cd monarch-pui
+cd finance-pui
 uv sync
 ```
 
@@ -257,7 +257,7 @@ source ~/.bashrc  # or ~/.zshrc
 **Problem**: The TUI says "Incorrect password" when trying to unlock credentials
 
 **Solutions**:
-1. Make sure you're entering the **encryption password** (the one you created for monarch-pui), not your Monarch Money password
+1. Make sure you're entering the **encryption password** (the one you created for finance-pui), not your Monarch Money password
 2. If you forgot it, click "Reset Credentials" and go through setup again
 3. If setup fails, you can manually delete: `rm -rf ~/.monarch_tui/`
 
@@ -306,16 +306,16 @@ To completely reset:
 rm -rf ~/.monarch_tui/
 
 # Reinstall dependencies
-cd monarch-pui
+cd finance-pui
 uv sync --reinstall
 
 # Run again
-uv run python -m monarch_pui
+uv run python -m finance_pui
 ```
 
 ## Getting Help
 
-- **Bug Reports**: [Open an issue on GitHub](https://github.com/yourusername/monarch-pui/issues)
+- **Bug Reports**: [Open an issue on GitHub](https://github.com/yourusername/finance-pui/issues)
 - **Questions**: Check existing issues or open a new one
 - **Development**: See [CLAUDE.md](CLAUDE.md) for development documentation
 

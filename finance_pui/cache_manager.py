@@ -24,12 +24,12 @@ class CacheManager:
         Initialize cache manager.
 
         Args:
-            cache_dir: Directory for cache files. Defaults to ~/.monarch_pui/cache/
+            cache_dir: Directory for cache files. Defaults to ~/.finance_pui/cache/
         """
         if cache_dir:
             self.cache_dir = Path(cache_dir).expanduser()
         else:
-            self.cache_dir = Path.home() / ".monarch_pui" / "cache"
+            self.cache_dir = Path.home() / ".finance_pui" / "cache"
 
         # Create cache directory if it doesn't exist
         self.cache_dir.mkdir(parents=True, exist_ok=True)

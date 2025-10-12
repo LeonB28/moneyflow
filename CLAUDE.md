@@ -21,7 +21,7 @@ uv sync
 # You MUST run this before running tests or the TUI for the first time
 
 # After sync, run the TUI
-uv run python -m monarch_pui
+uv run python -m finance_pui
 
 # Run tests (ALWAYS before committing)
 uv run pytest
@@ -60,11 +60,11 @@ uv run pytest --cov --cov-report=term-missing
 
 ### Project Structure
 
-**IMPORTANT**: All Python source code must be in the `monarch_pui/` package. No Python files should live at the top level except `monarch_tui.py` (the main entry point).
+**IMPORTANT**: All Python source code must be in the `finance_pui/` package. No Python files should live at the top level except `monarch_tui.py` (the main entry point).
 
 ```
-monarch-pui/
-├── monarch_pui/              # Main package (ALL code goes here)
+finance-pui/
+├── finance_pui/              # Main package (ALL code goes here)
 │   ├── monarchmoney.py       # GraphQL client (keep separate for upstream diffs)
 │   ├── app.py                # Main Textual application
 │   ├── data_manager.py       # Data layer with Polars
@@ -89,9 +89,9 @@ monarch-pui/
 ```
 
 **File Organization Rules**:
-- ✅ All business logic in `monarch_pui/` package
+- ✅ All business logic in `finance_pui/` package
 - ✅ All tests in `tests/` directory
-- ✅ Entry point via `python -m monarch_pui`
+- ✅ Entry point via `python -m finance_pui`
 - ❌ No `.py` files at top level except main entry point if needed
 - ❌ No duplicate files between top-level and package
 
