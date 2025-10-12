@@ -769,6 +769,9 @@ class MonarchTUI(App):
         if table.cursor_row < 0:
             return
 
+        # Save cursor position
+        saved_cursor_row = table.cursor_row
+
         # Get the transaction ID from current row
         row_data = self.state.current_data.row(table.cursor_row, named=True)
         txn_id = row_data.get("id")
@@ -778,6 +781,9 @@ class MonarchTUI(App):
             count = len(self.state.selected_ids)
             # Refresh view to show checkmark
             self.refresh_view()
+            # Restore cursor position
+            if saved_cursor_row < table.row_count:
+                table.move_cursor(row=saved_cursor_row)
             self.notify(f"Selected: {count} transaction(s)", timeout=1)
 
     def action_edit_merchant(self) -> None:
