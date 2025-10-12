@@ -209,6 +209,43 @@ class AppState:
         else:
             self.sort_by = SortMode.COUNT
 
+    def cycle_grouping(self) -> str:
+        """
+        Cycle through aggregation view modes.
+
+        Order: MERCHANT → CATEGORY → GROUP → ACCOUNT → MERCHANT
+
+        Only works in aggregation views, not DETAIL view.
+
+        Returns:
+            Name of the new view mode for notification
+        """
+        # Only cycle if in an aggregation view (not DETAIL)
+        if self.view_mode == ViewMode.DETAIL:
+            return ""
+
+        # Clear any drill-down selections when switching views
+        self.selected_merchant = None
+        self.selected_category = None
+        self.selected_group = None
+        self.selected_account = None
+
+        # Cycle through views
+        if self.view_mode == ViewMode.MERCHANT:
+            self.view_mode = ViewMode.CATEGORY
+            return "Categories"
+        elif self.view_mode == ViewMode.CATEGORY:
+            self.view_mode = ViewMode.GROUP
+            return "Groups"
+        elif self.view_mode == ViewMode.GROUP:
+            self.view_mode = ViewMode.ACCOUNT
+            return "Accounts"
+        elif self.view_mode == ViewMode.ACCOUNT:
+            self.view_mode = ViewMode.MERCHANT
+            return "Merchants"
+
+        return ""
+
     def get_filtered_df(self) -> Optional[pl.DataFrame]:
         """Get filtered DataFrame based on current state."""
         if self.transactions_df is None:

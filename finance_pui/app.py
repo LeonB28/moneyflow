@@ -31,12 +31,14 @@ class MonarchTUI(App):
 
     BINDINGS = [
         # View mode
-        Binding("m", "view_merchants", "Merchants", show=True),
-        Binding("c", "view_categories", "Categories", show=True),
-        Binding("g", "view_groups", "Groups", show=True),
-        Binding("A", "view_accounts", "Accounts", show=True, key_display="A"),
+        Binding("tab", "cycle_grouping", "Group By", show=True, key_display="Tab"),
         Binding("u", "view_ungrouped", "All Txns", show=True),
         Binding("D", "find_duplicates", "Duplicates", show=True, key_display="D"),
+        # Hidden direct access bindings (still available but not shown in footer)
+        Binding("m", "view_merchants", "Merchants", show=False),
+        Binding("c", "view_categories", "Categories", show=False),
+        Binding("g", "view_groups", "Groups", show=False),
+        Binding("A", "view_accounts", "Accounts", show=False, key_display="A"),
         # Time navigation
         Binding("y", "this_year", "Year", show=True),
         Binding("t", "this_month", "Month", show=True),
@@ -646,9 +648,9 @@ class MonarchTUI(App):
         hints_widget = self.query_one("#action-hints", Static)
 
         if self.state.view_mode == ViewMode.MERCHANT:
-            hints = "Enter=Drill down | e=Edit merchant (bulk) | ←/→=Change period"
+            hints = "Enter=Drill down | e=Edit merchant (bulk) | Tab=Change grouping | ←/→=Change period"
         elif self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
-            hints = "Enter=Drill down | ←/→=Change period"
+            hints = "Enter=Drill down | Tab=Change grouping | ←/→=Change period"
         else:  # DETAIL (transactions)
             hints = "i=Details | e=Edit | r=Recategorize | h=Hide/Unhide | d=Delete | Space=Select"
 
@@ -699,6 +701,13 @@ class MonarchTUI(App):
         self.state.selected_group = None
         self.state.selected_account = None
         self.refresh_view()
+
+    def action_cycle_grouping(self) -> None:
+        """Cycle through aggregation views (Merchant → Category → Group → Account)."""
+        view_name = self.state.cycle_grouping()
+        if view_name:
+            self.refresh_view()
+            self.notify(f"Viewing: {view_name}", timeout=1)
 
     def action_view_ungrouped(self) -> None:
         """Switch to ungrouped transactions view (all transactions in reverse chronological order)."""
