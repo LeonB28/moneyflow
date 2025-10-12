@@ -899,7 +899,8 @@ class MonarchTUI(App):
                     f"Queued {num_selected} edits. Press w to review and commit.",
                     timeout=3
                 )
-                self.update_action_hints()
+                # Refresh to update the * markers but stay in current view
+                self.refresh_view()
         else:
             # Edit single transaction - pass details for context
             txn_details = {
@@ -926,8 +927,8 @@ class MonarchTUI(App):
                 )
 
                 self.notify("Merchant changed. Press w to review and commit.", timeout=2)
-                # Don't refresh view - stay in detail view
-                self.update_action_hints()
+                # Refresh to show * marker, stays in detail view since view_mode unchanged
+                self.refresh_view()
 
     def action_recategorize(self) -> None:
         """Change category for current selection."""
@@ -984,8 +985,8 @@ class MonarchTUI(App):
                 )
 
                 self.notify("Category changed. Press w to review and commit.", timeout=2)
-                # Don't refresh - stay in detail view so user can continue editing
-                self.update_action_hints()
+                # Refresh to show * marker, stays in detail view since view_mode unchanged
+                self.refresh_view()
         else:
             self.notify("Recategorize only works in transaction detail view", timeout=2)
 
