@@ -605,11 +605,16 @@ class MonarchTUI(App):
         # Sort transactions based on sort_by field
         if not txns.is_empty():
             if self.state.sort_by == SortMode.DATE:
-                # Sort by date
                 descending = self.state.sort_direction == SortDirection.DESC
                 txns = txns.sort("date", descending=descending)
+            elif self.state.sort_by == SortMode.MERCHANT:
+                descending = self.state.sort_direction == SortDirection.DESC
+                txns = txns.sort("merchant", descending=descending)
+            elif self.state.sort_by == SortMode.CATEGORY:
+                descending = self.state.sort_direction == SortDirection.DESC
+                txns = txns.sort("category", descending=descending)
             elif self.state.sort_by == SortMode.AMOUNT:
-                # Sort by amount (invert for expenses like in aggregations)
+                # Amount sorting: invert direction so largest expenses (-1000) come first
                 descending = self.state.sort_direction == SortDirection.ASC
                 txns = txns.sort("amount", descending=descending)
 
@@ -668,7 +673,9 @@ class MonarchTUI(App):
         elif self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
             hints = "Enter=Drill down | g=Change grouping | ←/→=Change period"
         else:  # DETAIL (transactions)
-            hints = "i=Details | e=Edit | r=Recategorize | h=Hide/Unhide | d=Delete | Space=Select"
+            # Show current sort field in hints
+            sort_name = self.state.sort_by.value.capitalize()
+            hints = f"s=Sort({sort_name}) | i=Details | e=Edit | r=Recategorize | h=Hide/Unhide | d=Delete | Space=Select"
 
         hints_widget.update(hints)
 
@@ -923,13 +930,19 @@ class MonarchTUI(App):
         self.notify(f"Sort: {direction}", timeout=1)
 
     def action_toggle_sort_field(self) -> None:
-        """Toggle sorting field (count/amount in aggregate, date/amount in detail)."""
-        # In detail view, toggle between date and amount
+        """Toggle sorting field."""
+        # In detail view, cycle through: Date → Merchant → Category → Amount → Date
         if self.state.view_mode == ViewMode.DETAIL:
             if self.state.sort_by == SortMode.DATE:
+                self.state.sort_by = SortMode.MERCHANT
+                field = "Merchant"
+            elif self.state.sort_by == SortMode.MERCHANT:
+                self.state.sort_by = SortMode.CATEGORY
+                field = "Category"
+            elif self.state.sort_by == SortMode.CATEGORY:
                 self.state.sort_by = SortMode.AMOUNT
                 field = "Amount"
-            else:
+            else:  # AMOUNT or anything else
                 self.state.sort_by = SortMode.DATE
                 field = "Date"
         else:

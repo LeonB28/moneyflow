@@ -25,6 +25,8 @@ class SortMode(Enum):
     COUNT = "count"
     AMOUNT = "amount"
     DATE = "date"
+    MERCHANT = "merchant"
+    CATEGORY = "category"
 
 
 class SortDirection(Enum):
