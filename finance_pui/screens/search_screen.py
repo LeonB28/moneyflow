@@ -68,7 +68,7 @@ class SearchScreen(ModalScreen):
             )
 
             yield Static(
-                "Press Enter to apply filter, Esc to cancel, or Ctrl+C to clear search",
+                "Enter=Apply | Esc=Cancel | Ctrl+C=Clear",
                 id="search-stats"
             )
 

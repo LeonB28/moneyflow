@@ -103,7 +103,7 @@ class EditMerchantScreen(ModalScreen):
 
             yield Label("Current merchant: " + self.current_merchant, classes="edit-label")
 
-            yield Label("Type new name or ↓ to select existing:", classes="edit-label")
+            yield Label("Type new name or ↓=Select from list below:", classes="edit-label")
             yield Input(
                 placeholder="Type merchant name...",
                 value=self.current_merchant,
@@ -113,7 +113,7 @@ class EditMerchantScreen(ModalScreen):
 
             if self.all_merchants:
                 yield Static(
-                    "Existing merchants (↑↓ to navigate, Enter to select):",
+                    "Existing merchants - ↑/↓=Navigate | Enter=Select:",
                     id="suggestions-count"
                 )
                 yield OptionList(id="suggestions")
@@ -143,7 +143,7 @@ class EditMerchantScreen(ModalScreen):
             matches = [m for m in self.all_merchants if m and m != self.current_merchant]
 
         # Update count
-        count_widget.update(f"{len(matches)} matching merchants (↑↓ to navigate, Enter to select)")
+        count_widget.update(f"{len(matches)} matching merchants - ↑/↓=Navigate | Enter=Select")
 
         # Clear and rebuild
         option_list.clear_options()
@@ -244,7 +244,7 @@ class SelectCategoryScreen(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Container(id="category-dialog"):
-            yield Label("📋 Select Category (type to filter, ↑↓ navigate, Enter to select)", id="category-title")
+            yield Label("📋 Select Category - Type to filter | ↑/↓=Navigate | Enter=Select", id="category-title")
 
             # Show transaction details if available
             if self.transaction_details:

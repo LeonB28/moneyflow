@@ -116,7 +116,7 @@ class TransactionDetailScreen(ModalScreen):
                 recurring = self.transaction_data.get("isRecurring", False)
                 yield Static("Yes" if recurring else "No", classes="field-value")
 
-            yield Static("Press Esc or Enter to close", id="close-hint")
+            yield Static("Esc/Enter=Close", id="close-hint")
 
     def on_key(self, event: Key) -> None:
         """Handle keyboard shortcuts."""

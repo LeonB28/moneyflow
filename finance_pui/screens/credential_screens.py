@@ -477,7 +477,7 @@ class QuitConfirmationScreen(ModalScreen):
                 yield Static("Are you sure you want to quit?", id="quit-message")
 
             yield Static(
-                "Press Y to quit  |  N or Esc to cancel",
+                "y=Quit | n/Esc=Cancel",
                 id="quit-instructions"
             )
 
@@ -649,7 +649,7 @@ class CachePromptScreen(ModalScreen):
             yield Static(cache_message, id="cache-info")
 
             yield Static(
-                "Press Y to use cache  |  N to refresh from API  |  Esc to cancel",
+                "y=Use cache | n=Refresh | Esc=Cancel",
                 id="cache-instructions"
             )
 

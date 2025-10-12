@@ -81,7 +81,7 @@ class ReviewChangesScreen(Screen):
                     id="review-title"
                 )
                 yield Static(
-                    "Review changes below, then press C to commit or Esc to cancel",
+                    "Review changes below",
                     id="review-help"
                 )
 
@@ -89,7 +89,7 @@ class ReviewChangesScreen(Screen):
 
             with Container(id="review-footer"):
                 yield Static(
-                    "Press C to Commit  |  Esc to Cancel",
+                    "c=Commit | Esc=Cancel",
                     classes="footer-instructions"
                 )
                 with Container(id="button-container"):
