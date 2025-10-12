@@ -630,8 +630,15 @@ class MonarchTUI(App):
             self.action_this_year()
             return
 
-        # If in year view, go to previous year
-        if self.state.time_frame == TimeFrame.THIS_YEAR:
+        # Check if viewing full year (Jan 1 - Dec 31)
+        is_full_year = (
+            self.state.start_date.month == 1 and self.state.start_date.day == 1 and
+            self.state.end_date.month == 12 and self.state.end_date.day == 31 and
+            self.state.start_date.year == self.state.end_date.year
+        )
+
+        if is_full_year:
+            # Navigate to previous year
             new_year = self.state.start_date.year - 1
             self.state.set_timeframe(
                 TimeFrame.CUSTOM,
@@ -639,8 +646,8 @@ class MonarchTUI(App):
                 end_date=date_type(new_year, 12, 31)
             )
             self.notify(f"Viewing: Year {new_year}", timeout=1)
-        # If in month view, go to previous month
-        elif self.state.time_frame in [TimeFrame.THIS_MONTH, TimeFrame.CUSTOM]:
+        else:
+            # Navigate to previous month
             prev_month_start = self.state.start_date.replace(day=1) - relativedelta(months=1)
             last_day = calendar.monthrange(prev_month_start.year, prev_month_start.month)[1]
             prev_month_end = prev_month_start.replace(day=last_day)
@@ -666,8 +673,15 @@ class MonarchTUI(App):
             self.action_this_year()
             return
 
-        # If in year view, go to next year
-        if self.state.time_frame == TimeFrame.THIS_YEAR:
+        # Check if viewing full year (Jan 1 - Dec 31)
+        is_full_year = (
+            self.state.start_date.month == 1 and self.state.start_date.day == 1 and
+            self.state.end_date.month == 12 and self.state.end_date.day == 31 and
+            self.state.start_date.year == self.state.end_date.year
+        )
+
+        if is_full_year:
+            # Navigate to next year
             new_year = self.state.start_date.year + 1
             self.state.set_timeframe(
                 TimeFrame.CUSTOM,
@@ -675,8 +689,8 @@ class MonarchTUI(App):
                 end_date=date_type(new_year, 12, 31)
             )
             self.notify(f"Viewing: Year {new_year}", timeout=1)
-        # If in month view, go to next month
-        elif self.state.time_frame in [TimeFrame.THIS_MONTH, TimeFrame.CUSTOM]:
+        else:
+            # Navigate to next month
             next_month_start = self.state.start_date.replace(day=1) + relativedelta(months=1)
             last_day = calendar.monthrange(next_month_start.year, next_month_start.month)[1]
             next_month_end = next_month_start.replace(day=last_day)
