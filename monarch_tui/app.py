@@ -83,6 +83,7 @@ class MonarchTUI(App):
         self.loading = False
         self.start_year = start_year  # Optional year cutoff for data loading
         self.custom_start_date = custom_start_date  # Optional custom start date
+        self.stored_credentials: Optional[dict] = None  # Keep for session refresh
 
     def compose(self) -> ComposeResult:
         """Compose the main UI."""
@@ -169,6 +170,8 @@ class MonarchTUI(App):
                     save_session=True,
                     mfa_secret_key=creds["mfa_secret"],
                 )
+                # Store credentials for automatic session refresh if needed
+                self.stored_credentials = creds
                 loading_status.update("✅ Logged in successfully!")
             except (RequireMFAException, LoginFailedException) as e:
                 # Login failed - credentials may be invalid
@@ -1173,6 +1176,41 @@ class MonarchTUI(App):
         if self.state.go_back():
             self.refresh_view()
 
+    async def _refresh_session(self) -> bool:
+        """Refresh expired session by re-authenticating with stored credentials."""
+        if self.stored_credentials is None:
+            return False
+
+        try:
+            self.notify("Session expired, re-authenticating...", timeout=2)
+            await self.mm.login(
+                email=self.stored_credentials["email"],
+                password=self.stored_credentials["password"],
+                use_saved_session=False,
+                save_session=True,
+                mfa_secret_key=self.stored_credentials["mfa_secret"],
+            )
+            self.notify("Session refreshed successfully", severity="information", timeout=2)
+            return True
+        except Exception as e:
+            self.notify(f"Failed to refresh session: {e}", severity="error", timeout=5)
+            return False
+
+    async def _commit_with_retry(self, edits):
+        """Commit edits with automatic retry on session expiration."""
+        try:
+            return await self.data_manager.commit_pending_edits(edits)
+        except Exception as e:
+            # Check if it's an auth error (session expired)
+            error_msg = str(e).lower()
+            if "401" in error_msg or "unauthorized" in error_msg or "token" in error_msg:
+                # Try to refresh session and retry once
+                if await self._refresh_session():
+                    self.notify("Retrying commit with refreshed session...", timeout=2)
+                    return await self.data_manager.commit_pending_edits(edits)
+            # Re-raise if not auth error or retry failed
+            raise
+
     def action_review_and_commit(self) -> None:
         """Review pending changes and commit if confirmed."""
         if self.data_manager is None:
@@ -1204,7 +1242,7 @@ class MonarchTUI(App):
             self.notify(f"Committing {count} change(s) to Monarch Money...", timeout=2)
 
             try:
-                success_count, failure_count = await self.data_manager.commit_pending_edits(
+                success_count, failure_count = await self._commit_with_retry(
                     self.data_manager.pending_edits
                 )
                 if failure_count > 0:
