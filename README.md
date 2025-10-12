@@ -9,7 +9,7 @@ Currently implements a Terminal UI (TUI). Future versions may include web-based 
 curl -LsSf https://astral.sh/uv/install.sh | sh  # Install uv
 git clone <repo-url> && cd monarch-pui             # Download
 uv sync                                            # Install dependencies
-uv run python -m monarch_tui                       # Run
+uv run python -m monarch_pui                       # Run
 ```
 
 ## Features
@@ -50,7 +50,7 @@ This installs Python 3.11+ (if needed) and all dependencies automatically.
 ### 4. Run the TUI
 
 ```bash
-uv run python -m monarch_tui
+uv run python -m monarch_pui
 ```
 
 The first time you run it, you'll go through a one-time credential setup.
@@ -62,21 +62,21 @@ By default, the application fetches **all transactions** from your account. For 
 **Fetch only recent years:**
 ```bash
 # Only load transactions from 2025 onwards
-uv run python -m monarch_tui --year 2025
+uv run python -m monarch_pui --year 2025
 
 # Only load transactions from 2024 onwards
-uv run python -m monarch_tui --year 2024
+uv run python -m monarch_pui --year 2024
 ```
 
 **Fetch from a specific date:**
 ```bash
 # Load transactions from June 1, 2024 onwards
-uv run python -m monarch_tui --since 2024-06-01
+uv run python -m monarch_pui --since 2024-06-01
 ```
 
 **View all options:**
 ```bash
-uv run python -m monarch_tui --help
+uv run python -m monarch_pui --help
 ```
 
 **Note**: Limiting the date range makes initial load faster but you won't see older transactions in your analysis.
@@ -131,7 +131,7 @@ Time period changes are applied instantly using client-side filtering.
 ### Example 1: Edit a Merchant Name
 
 ```
-1. Launch: uv run python -m monarch_tui
+1. Launch: uv run python -m monarch_pui
 2. Press 'm' to view merchants
 3. Navigate to a merchant with arrow keys
 4. Press 'e' to edit all transactions for that merchant
@@ -288,7 +288,7 @@ cd monarch-pui
 uv sync --reinstall
 
 # Run again
-uv run python -m monarch_tui
+uv run python -m monarch_pui
 ```
 
 ## Getting Help

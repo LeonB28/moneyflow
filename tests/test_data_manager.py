@@ -4,7 +4,7 @@ Tests for DataManager operations including aggregation, filtering, and API integ
 
 import pytest
 import polars as pl
-from monarch_tui.data_manager import DataManager
+from monarch_pui.data_manager import DataManager
 
 
 class TestDataFetching:
@@ -147,7 +147,7 @@ class TestCommitEdits:
 
     async def test_commit_single_edit(self, data_manager, mock_mm):
         """Test committing a single edit."""
-        from monarch_tui.state import TransactionEdit
+        from monarch_pui.state import TransactionEdit
         from datetime import datetime
 
         edits = [
@@ -173,7 +173,7 @@ class TestCommitEdits:
 
     async def test_commit_multiple_edits(self, data_manager, mock_mm):
         """Test committing multiple edits."""
-        from monarch_tui.state import TransactionEdit
+        from monarch_pui.state import TransactionEdit
         from datetime import datetime
 
         edits = [
@@ -198,7 +198,7 @@ class TestCommitEdits:
 
     async def test_commit_merchant_rename(self, data_manager, mock_mm):
         """Test committing a merchant rename."""
-        from monarch_tui.state import TransactionEdit
+        from monarch_pui.state import TransactionEdit
         from datetime import datetime
 
         edits = [TransactionEdit("txn_1", "merchant", "Amazon.com", "Amazon", datetime.now())]
@@ -212,7 +212,7 @@ class TestCommitEdits:
 
     async def test_commit_category_change(self, data_manager, mock_mm):
         """Test committing a category change."""
-        from monarch_tui.state import TransactionEdit
+        from monarch_pui.state import TransactionEdit
         from datetime import datetime
 
         edits = [
@@ -228,7 +228,7 @@ class TestCommitEdits:
 
     async def test_commit_hide_toggle(self, data_manager, mock_mm):
         """Test committing hide from reports toggle."""
-        from monarch_tui.state import TransactionEdit
+        from monarch_pui.state import TransactionEdit
         from datetime import datetime
 
         edits = [TransactionEdit("txn_1", "hide_from_reports", False, True, datetime.now())]
@@ -512,7 +512,7 @@ class TestGetStats:
 
     async def test_get_stats_with_pending_edits(self, loaded_data_manager):
         """Test get_stats with pending edits."""
-        from monarch_tui.state import TransactionEdit
+        from monarch_pui.state import TransactionEdit
         from datetime import datetime
 
         dm, df, _, _ = loaded_data_manager
@@ -561,7 +561,7 @@ class TestCommitEditsAdvanced:
 
     async def test_commit_multiple_edits_same_transaction(self, data_manager, mock_mm):
         """Test committing multiple edits to same transaction."""
-        from monarch_tui.state import TransactionEdit
+        from monarch_pui.state import TransactionEdit
         from datetime import datetime
 
         # Multiple edits to the same transaction should be grouped
@@ -586,7 +586,7 @@ class TestCommitEditsAdvanced:
 
     async def test_commit_with_api_failure(self, data_manager, mock_mm):
         """Test commit_pending_edits handles API failures gracefully."""
-        from monarch_tui.state import TransactionEdit
+        from monarch_pui.state import TransactionEdit
         from datetime import datetime
 
         # Create a mock that raises an exception
@@ -613,7 +613,7 @@ class TestCommitEditsAdvanced:
 
     async def test_commit_mixed_edit_types(self, data_manager, mock_mm):
         """Test committing different types of edits together."""
-        from monarch_tui.state import TransactionEdit
+        from monarch_pui.state import TransactionEdit
         from datetime import datetime
 
         edits = [

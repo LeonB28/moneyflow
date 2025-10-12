@@ -10,7 +10,7 @@ import pytest
 from pathlib import Path
 from cryptography.fernet import InvalidToken
 
-from monarch_tui.credentials import CredentialManager
+from monarch_pui.credentials import CredentialManager
 
 
 @pytest.fixture
