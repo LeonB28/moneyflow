@@ -59,6 +59,7 @@ class MonarchTUI(App):
         Binding("e", "edit_merchant", "Edit Merchant", show=False),
         Binding("r", "recategorize", "Recategorize", show=False),
         Binding("d", "delete_transaction", "Delete", show=False),
+        Binding("h", "toggle_hide_from_reports", "Hide/Unhide", show=False),
         Binding("i", "show_transaction_details", "Details", show=False),
         Binding("space", "toggle_select", "Select", show=False),
         # Other actions
@@ -423,9 +424,16 @@ class MonarchTUI(App):
             # Ungrouped view - show all transactions
             txns = filtered_df
 
-        # Sort transactions by date (most recent first) if we have data
-        if not txns.is_empty() and "date" in txns.columns:
-            txns = txns.sort("date", descending=True)
+        # Sort transactions based on sort_by field
+        if not txns.is_empty():
+            if self.state.sort_by == SortMode.DATE:
+                # Sort by date
+                descending = self.state.sort_direction == SortDirection.DESC
+                txns = txns.sort("date", descending=descending)
+            elif self.state.sort_by == SortMode.AMOUNT:
+                # Sort by amount (invert for expenses like in aggregations)
+                descending = self.state.sort_direction == SortDirection.ASC
+                txns = txns.sort("amount", descending=descending)
 
         self.state.current_data = txns
 
@@ -479,7 +487,7 @@ class MonarchTUI(App):
         elif self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP]:
             hints = "[Enter] Drill down | [←→] Change period"
         else:  # DETAIL (transactions)
-            hints = "[i] Details | [e] Edit | [r] Recategorize | [d] Delete | [Space] Multi-select"
+            hints = "[i] Details | [e] Edit | [r] Recategorize | [h] Hide/Unhide | [d] Delete | [Space] Select"
 
         hints_widget.update(hints)
 
@@ -714,10 +722,21 @@ class MonarchTUI(App):
         self.notify(f"Sort: {direction}", timeout=1)
 
     def action_toggle_sort_field(self) -> None:
-        """Toggle between sorting by count and amount."""
-        self.state.toggle_sort_field()
+        """Toggle sorting field (count/amount in aggregate, date/amount in detail)."""
+        # In detail view, toggle between date and amount
+        if self.state.view_mode == ViewMode.DETAIL:
+            if self.state.sort_by == SortMode.DATE:
+                self.state.sort_by = SortMode.AMOUNT
+                field = "Amount"
+            else:
+                self.state.sort_by = SortMode.DATE
+                field = "Date"
+        else:
+            # In aggregate views, toggle between count and amount
+            self.state.toggle_sort_field()
+            field = "Count" if self.state.sort_by == SortMode.COUNT else "Amount"
+
         self.refresh_view()
-        field = "Count" if self.state.sort_by == SortMode.COUNT else "Amount"
         self.notify(f"Sorting by: {field}", timeout=1)
 
     def action_show_filters(self) -> None:
@@ -1033,6 +1052,61 @@ class MonarchTUI(App):
         else:
             self.notify("Recategorize only works in transaction detail view", timeout=2)
 
+    def action_toggle_hide_from_reports(self) -> None:
+        """Toggle hide from reports flag for current transaction(s)."""
+        if self.data_manager is None or self.state.view_mode != ViewMode.DETAIL:
+            self.notify("Hide/unhide only works in transaction view", timeout=2)
+            return
+
+        if self.state.current_data is None:
+            return
+
+        table = self.query_one("#data-table", DataTable)
+        if table.cursor_row < 0:
+            return
+
+        # Check if multi-select is active
+        if len(self.state.selected_ids) > 0:
+            # Toggle for all selected
+            num_selected = len(self.state.selected_ids)
+            for txn_id in self.state.selected_ids:
+                txn_rows = self.state.current_data.filter(pl.col("id") == txn_id)
+                if len(txn_rows) > 0:
+                    txn = txn_rows.row(0, named=True)
+                    current_hidden = txn.get("hideFromReports", False)
+                    self.data_manager.pending_edits.append(
+                        TransactionEdit(
+                            transaction_id=txn_id,
+                            field="hide_from_reports",
+                            old_value=current_hidden,
+                            new_value=not current_hidden,
+                            timestamp=datetime.now()
+                        )
+                    )
+
+            self.state.clear_selection()
+            self.notify(f"Toggled hide/unhide for {num_selected} transactions. Press w to commit.", timeout=3)
+            self.refresh_view()
+        else:
+            # Toggle single transaction
+            row_data = self.state.current_data.row(table.cursor_row, named=True)
+            txn_id = row_data["id"]
+            current_hidden = row_data.get("hideFromReports", False)
+
+            self.data_manager.pending_edits.append(
+                TransactionEdit(
+                    transaction_id=txn_id,
+                    field="hide_from_reports",
+                    old_value=current_hidden,
+                    new_value=not current_hidden,
+                    timestamp=datetime.now()
+                )
+            )
+
+            action = "Unhidden" if current_hidden else "Hidden"
+            self.notify(f"{action} from reports. Press w to commit.", timeout=2)
+            self.refresh_view()
+
     def action_show_transaction_details(self) -> None:
         """Show detailed information about current transaction."""
         if self.data_manager is None or self.state.view_mode != ViewMode.DETAIL:
@@ -1049,7 +1123,7 @@ class MonarchTUI(App):
         # Get current transaction data
         row_data = self.state.current_data.row(table.cursor_row, named=True)
 
-        # Show detail modal
+        # Show detail modal (doesn't change view state, just displays info)
         from .screens.transaction_detail_screen import TransactionDetailScreen
         self.push_screen(TransactionDetailScreen(dict(row_data)))
 

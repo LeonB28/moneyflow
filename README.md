@@ -25,22 +25,7 @@ uv run python -m monarch_tui                       # Run
 
 ### 1. Install uv
 
-`uv` is a fast Python package manager that handles everything (including Python itself).
-
-**macOS and Linux:**
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-**Windows (PowerShell):**
-```powershell
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-After installation, **restart your terminal** or run:
-```bash
-source ~/.bashrc  # or ~/.zshrc on macOS
-```
+Install uv (a Python package manager): https://docs.astral.sh/uv/getting-started/installation/
 
 ### 2. Download Monarch TUI
 
