@@ -9,7 +9,9 @@ Currently implements a Terminal UI (TUI). Future versions may include web-based 
 curl -LsSf https://astral.sh/uv/install.sh | sh  # Install uv
 git clone <repo-url> && cd monarch-pui             # Download
 uv sync                                            # Install dependencies
-uv run python -m monarch_pui                       # Run
+uv run python -m monarch_pui                       # Run with your account
+# OR
+uv run python -m monarch_pui --demo                # Try demo mode (no account needed)
 ```
 
 ## Features
@@ -22,6 +24,26 @@ uv run python -m monarch_pui                       # Run
 - **Time navigation**: Navigate between months and years with arrow keys
 - **Review before commit**: See all pending changes before saving to Monarch Money
 - **Encrypted credentials**: AES-128 encryption with PBKDF2 key derivation (100,000 iterations)
+
+## Demo Mode
+
+Try the application without a Monarch Money account:
+
+```bash
+uv run python -m monarch_pui --demo
+```
+
+Demo mode provides:
+- **No authentication required** - skips credential setup
+- **Realistic synthetic data** - ~1000 transactions for a dual-income household
+- **Safe exploration** - changes don't affect any real account
+- **All features enabled** - edit, search, categorize, filter, etc.
+
+Perfect for:
+- Testing before committing to Monarch Money
+- Learning the interface
+- Showcasing features
+- Development without affecting real data
 
 ## Installation
 
