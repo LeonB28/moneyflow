@@ -34,6 +34,7 @@ class MonarchTUI(App):
         Binding("m", "view_merchants", "Merchants", show=True),
         Binding("c", "view_categories", "Categories", show=True),
         Binding("g", "view_groups", "Groups", show=True),
+        Binding("u", "view_ungrouped", "All Txns", show=True),
         Binding("D", "find_duplicates", "Duplicates", show=True, key_display="D"),
         # Time navigation
         Binding("y", "this_year", "Year", show=True),
@@ -418,7 +419,12 @@ class MonarchTUI(App):
         elif self.state.selected_group:
             txns = self.data_manager.filter_by_group(filtered_df, self.state.selected_group)
         else:
+            # Ungrouped view - show all transactions
             txns = filtered_df
+
+        # Sort transactions by date (most recent first) if we have data
+        if not txns.is_empty() and "date" in txns.columns:
+            txns = txns.sort("date", descending=True)
 
         self.state.current_data = txns
 
@@ -506,6 +512,15 @@ class MonarchTUI(App):
         self.state.selected_category = None
         self.state.selected_group = None
         self.refresh_view()
+
+    def action_view_ungrouped(self) -> None:
+        """Switch to ungrouped transactions view (all transactions in reverse chronological order)."""
+        self.state.view_mode = ViewMode.DETAIL
+        self.state.selected_merchant = None
+        self.state.selected_category = None
+        self.state.selected_group = None
+        self.refresh_view()
+        self.notify("Viewing all transactions (ungrouped)", timeout=1)
 
     def action_find_duplicates(self) -> None:
         """Find and display duplicate transactions."""
@@ -878,6 +893,7 @@ class MonarchTUI(App):
                 )
 
                 self.notify("Merchant changed. Press w to review and commit.", timeout=2)
+                # Don't refresh view - stay in detail view
                 self.update_action_hints()
 
     def action_recategorize(self) -> None:
@@ -935,7 +951,8 @@ class MonarchTUI(App):
                 )
 
                 self.notify("Category changed. Press w to review and commit.", timeout=2)
-                self.refresh_view()
+                # Don't refresh - stay in detail view so user can continue editing
+                self.update_action_hints()
         else:
             self.notify("Recategorize only works in transaction detail view", timeout=2)
 
