@@ -6,9 +6,11 @@ A fast, keyboard-driven terminal interface for transaction management.
 
 import argparse
 import asyncio
+import os
 import sys
 import traceback
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional
 import polars as pl
 
@@ -27,7 +29,9 @@ from .widgets.help_screen import HelpScreen
 class MonarchTUI(App):
     """Monarch Money Power User TUI."""
 
-    CSS_PATH = "styles/monarch.tcss"
+    # Use Path object to properly resolve CSS file location
+    # __file__ is finance_pui/app.py, so parent/styles/monarch.tcss is correct
+    CSS_PATH = str(Path(__file__).parent / "styles" / "monarch.tcss")
 
     BINDINGS = [
         # View mode
@@ -70,7 +74,8 @@ class MonarchTUI(App):
         Binding("slash", "search", "Search", show=True, key_display="/"),
         Binding("escape", "go_back", "Back", show=False),
         Binding("w", "review_and_commit", "Commit", show=True),
-        Binding("q", "quit_app", "Quit", show=True),
+        # Binding("q", "quit_app", "Quit", show=True),  # TEMPORARILY DISABLED FOR DEBUGGING
+        Binding("ctrl+q", "quit_app", "Quit", show=True),  # Use Ctrl+Q instead temporarily
     ]
 
     # Reactive state
@@ -85,7 +90,14 @@ class MonarchTUI(App):
         cache_path: Optional[str] = None,
         force_refresh: bool = False,
     ):
-        super().__init__()
+        print("[INIT] MonarchTUI.__init__ called", file=sys.stderr, flush=True)
+        try:
+            super().__init__()
+            print("[INIT] super().__init__() completed", file=sys.stderr, flush=True)
+        except Exception as e:
+            print(f"[INIT ERROR] Exception in super().__init__: {e}", file=sys.stderr, flush=True)
+            traceback.print_exc(file=sys.stderr)
+            raise
         self.demo_mode = demo_mode
         self.start_year = start_year
         # Backend will be initialized in initialize_data() based on credentials
@@ -108,7 +120,9 @@ class MonarchTUI(App):
 
     def compose(self) -> ComposeResult:
         """Compose the main UI."""
+        print("[COMPOSE] compose() called", file=sys.stderr, flush=True)
         yield Header(show_clock=True)
+        print("[COMPOSE] Header yielded", file=sys.stderr, flush=True)
 
         with Container(id="app-body"):
             # Top status bar
@@ -127,10 +141,14 @@ class MonarchTUI(App):
                 yield Static("", id="action-hints")
                 yield Static("", id="pending-changes")
 
+        print("[COMPOSE] About to yield Footer", file=sys.stderr, flush=True)
         yield Footer()
+        print("[COMPOSE] compose() complete", file=sys.stderr, flush=True)
 
     async def on_mount(self) -> None:
         """Initialize the app after mounting."""
+        print("[STARTUP] on_mount called", file=sys.stderr, flush=True)
+
         # Set up data table
         table = self.query_one("#data-table", DataTable)
         table.cursor_type = "row"
@@ -140,24 +158,39 @@ class MonarchTUI(App):
         self.query_one("#loading", LoadingIndicator).display = False
         self.query_one("#loading-status", Static).display = False
 
+        print("[STARTUP] Starting initialize_data worker", file=sys.stderr, flush=True)
+
         # Attempt to use saved session or show login prompt
         # Must run in a worker to use push_screen with wait_for_dismiss
         self.run_worker(self.initialize_data(), exclusive=True)
 
     async def initialize_data(self) -> None:
         """Load data from Monarch API or cache."""
-        self.loading = True
-        self.query_one("#loading", LoadingIndicator).display = True
-        loading_status = self.query_one("#loading-status", Static)
-        loading_status.display = True
+        print("[INIT] initialize_data started", file=sys.stderr, flush=True)
+
+        try:
+            self.loading = True
+            self.query_one("#loading", LoadingIndicator).display = True
+            loading_status = self.query_one("#loading-status", Static)
+            loading_status.display = True
+            print("[INIT] UI initialized", file=sys.stderr, flush=True)
+        except Exception as e:
+            print(f"[INIT ERROR] Failed to initialize UI: {e}", file=sys.stderr, flush=True)
+            traceback.print_exc(file=sys.stderr)
+            raise
 
         if self.demo_mode:
+            print("[INIT] Demo mode enabled", file=sys.stderr, flush=True)
             loading_status.update("🎮 DEMO MODE - Loading sample data...")
         else:
+            print("[INIT] Production mode, connecting to Monarch", file=sys.stderr, flush=True)
             loading_status.update("🔄 Connecting to Monarch Money...")
 
         try:
+            print("[INIT] Entering main try block", file=sys.stderr, flush=True)
             if not self.demo_mode:
+                print("[INIT] Not demo mode, loading credentials", file=sys.stderr, flush=True)
+
                 # Try to use encrypted credentials first
                 from .credentials import CredentialManager
                 from .monarchmoney import RequireMFAException, LoginFailedException
@@ -168,8 +201,12 @@ class MonarchTUI(App):
                 )
                 from .backends import get_backend
 
+                print("[INIT] Imports successful", file=sys.stderr, flush=True)
+
                 cred_manager = CredentialManager()
                 creds = None
+
+                print(f"[INIT] Credentials exist: {cred_manager.credentials_exist()}", file=sys.stderr, flush=True)
 
                 if cred_manager.credentials_exist():
                     # Show unlock screen
@@ -215,8 +252,13 @@ class MonarchTUI(App):
 
                 # Login with credentials
                 loading_status.update(f"🔐 Logging in to {backend_type.capitalize()}...")
+                print(f"[LOGIN] About to call mm.login()", file=sys.stderr, flush=True)
+                print(f"[LOGIN] Backend type: {backend_type}", file=sys.stderr, flush=True)
+                print(f"[LOGIN] Email: {creds['email']}", file=sys.stderr, flush=True)
+                print(f"[LOGIN] Has MFA secret: {bool(creds.get('mfa_secret'))}", file=sys.stderr, flush=True)
 
                 try:
+                    print(f"[LOGIN] Calling await self.mm.login()...", file=sys.stderr, flush=True)
                     await self.mm.login(
                         email=creds["email"],
                         password=creds["password"],
@@ -224,14 +266,41 @@ class MonarchTUI(App):
                         save_session=True,
                         mfa_secret_key=creds["mfa_secret"],
                     )
+                    print(f"[LOGIN] mm.login() returned successfully!", file=sys.stderr, flush=True)
                     # Store credentials for automatic session refresh if needed
                     self.stored_credentials = creds
                     loading_status.update("✅ Logged in successfully!")
+                    print(f"[LOGIN] Updated status to 'Logged in successfully'", file=sys.stderr, flush=True)
                 except (RequireMFAException, LoginFailedException) as e:
                     # Login failed - credentials may be invalid
-                    loading_status.update(f"❌ Login failed: {e}")
-                    self.notify(f"Login failed: {e}", severity="error", timeout=10)
+                    error_msg = f"Login failed: {e}"
+                    loading_status.update(f"❌ {error_msg}")
+                    self.notify(error_msg, severity="error", timeout=10)
                     self.notify("Your credentials may be incorrect. Exiting...", timeout=10)
+                    # Print to stderr for visibility even when TUI crashes
+                    print(f"\n{'='*70}", file=sys.stderr)
+                    print("LOGIN FAILED", file=sys.stderr)
+                    print(f"{'='*70}", file=sys.stderr)
+                    print(f"Error: {e}", file=sys.stderr)
+                    print(f"Type: {type(e).__name__}", file=sys.stderr)
+                    print(f"{'='*70}\n", file=sys.stderr)
+                    traceback.print_exc(file=sys.stderr)
+                    self.exit()
+                    return
+                except Exception as e:
+                    # Catch ANY other exception during login (network errors, etc.)
+                    error_msg = f"Unexpected login error: {e}"
+                    loading_status.update(f"❌ {error_msg}")
+                    self.notify(error_msg, severity="error", timeout=10)
+                    # Print to stderr for visibility even when TUI crashes
+                    print(f"\n{'='*70}", file=sys.stderr)
+                    print("UNEXPECTED LOGIN ERROR", file=sys.stderr)
+                    print(f"{'='*70}", file=sys.stderr)
+                    print(f"Error: {e}", file=sys.stderr)
+                    print(f"Type: {type(e).__name__}", file=sys.stderr)
+                    print(f"{'='*70}", file=sys.stderr)
+                    traceback.print_exc(file=sys.stderr)
+                    print(f"{'='*70}\n", file=sys.stderr)
                     self.exit()
                     return
             else:
@@ -365,8 +434,18 @@ class MonarchTUI(App):
 
         except Exception as e:
             loading_status = self.query_one("#loading-status", Static)
-            loading_status.update(f"❌ Error: {e}")
-            self.notify(f"Failed to load data: {e}", severity="error", timeout=10)
+            error_msg = f"Failed to load data: {e}"
+            loading_status.update(f"❌ {error_msg}")
+            self.notify(error_msg, severity="error", timeout=10)
+            # Print detailed error to stderr for debugging
+            print(f"\n{'='*70}", file=sys.stderr)
+            print("DATA LOADING ERROR", file=sys.stderr)
+            print(f"{'='*70}", file=sys.stderr)
+            print(f"Error: {e}", file=sys.stderr)
+            print(f"Type: {type(e).__name__}", file=sys.stderr)
+            print(f"{'='*70}", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+            print(f"{'='*70}\n", file=sys.stderr)
 
         finally:
             self.loading = False
@@ -1681,6 +1760,8 @@ class MonarchTUI(App):
 
 def main():
     """Entry point for the TUI."""
+    print("[MAIN] Starting application", file=sys.stderr, flush=True)
+
     parser = argparse.ArgumentParser(
         description="Monarch Money Terminal UI - Fast transaction management"
     )
@@ -1737,6 +1818,8 @@ def main():
     cache_path = args.cache if hasattr(args, "cache") and args.cache is not None else None
 
     try:
+        print(f"[MAIN] Creating MonarchTUI instance (demo={args.demo})", file=sys.stderr, flush=True)
+
         app = MonarchTUI(
             start_year=start_year,
             custom_start_date=custom_start_date,
@@ -1745,12 +1828,41 @@ def main():
             force_refresh=args.refresh,
         )
 
+        print("[MAIN] Starting app.run()", file=sys.stderr, flush=True)
+        print(f"[MAIN] Terminal: TERM={os.environ.get('TERM', 'not set')}", file=sys.stderr, flush=True)
+        print(f"[MAIN] CSS_PATH set to: {app.CSS_PATH}", file=sys.stderr, flush=True)
+        if app.CSS_PATH:
+            print(f"[MAIN] CSS file exists: {os.path.exists(app.CSS_PATH)}", file=sys.stderr, flush=True)
+        else:
+            print(f"[MAIN] CSS_PATH is None (disabled)", file=sys.stderr, flush=True)
+
         # Enable dev mode if requested
         if args.dev:
-            # Textual will show detailed tracebacks in dev mode
-            app.run(headless=False)
+            # Textual will show detailed tracebacks in dev mode with console
+            print("[MAIN] Running in dev mode", file=sys.stderr, flush=True)
+            print("[MAIN] Enabling Textual devtools - run 'textual console' to see logs", file=sys.stderr, flush=True)
+            # Enable devtools to connect to textual console
+            os.environ["TEXTUAL_DEVTOOLS"] = "1"
+            try:
+                # Don't use inline parameter - let Textual decide
+                app.run()
+            except Exception as e:
+                print(f"[MAIN ERROR] Exception during app.run(): {e}", file=sys.stderr, flush=True)
+                traceback.print_exc(file=sys.stderr)
+                raise
+            except KeyboardInterrupt:
+                print(f"[MAIN] KeyboardInterrupt received", file=sys.stderr, flush=True)
+                raise
         else:
-            app.run()
+            print("[MAIN] Running in normal mode", file=sys.stderr, flush=True)
+            try:
+                app.run()
+            except Exception as e:
+                print(f"[MAIN ERROR] Exception during app.run(): {e}", file=sys.stderr, flush=True)
+                traceback.print_exc(file=sys.stderr)
+                raise
+
+        print("[MAIN] app.run() exited normally", file=sys.stderr, flush=True)
     except Exception as e:
         # Print full traceback to console
         print("\n" + "=" * 80, file=sys.stderr)

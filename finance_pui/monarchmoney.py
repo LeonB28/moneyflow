@@ -2836,26 +2836,51 @@ class MonarchMoney(object):
         """
         Performs the initial login to a Monarch Money account.
         """
-        data = {
-            "password": password,
-            "supports_mfa": True,
-            "trusted_device": False,
-            "username": email,
-        }
+        import sys
 
-        if mfa_secret_key:
-            data["totp"] = oathtool.generate_otp(mfa_secret_key)
+        try:
+            data = {
+                "password": password,
+                "supports_mfa": True,
+                "trusted_device": False,
+                "username": email,
+            }
 
-        async with ClientSession(headers=self._headers) as session:
-            async with session.post(MonarchMoneyEndpoints.getLoginEndpoint(), json=data) as resp:
-                if resp.status == 403:
-                    raise RequireMFAException("Multi-Factor Auth Required")
-                elif resp.status != 200:
-                    raise LoginFailedException(f"HTTP Code {resp.status}: {resp.reason}")
+            if mfa_secret_key:
+                data["totp"] = oathtool.generate_otp(mfa_secret_key)
 
-                response = await resp.json()
-                self.set_token(response["token"])
-                self._headers["Authorization"] = f"Token {self._token}"
+            print(f"[DEBUG] Attempting login to {MonarchMoneyEndpoints.getLoginEndpoint()}", file=sys.stderr)
+
+            async with ClientSession(headers=self._headers) as session:
+                async with session.post(MonarchMoneyEndpoints.getLoginEndpoint(), json=data) as resp:
+                    print(f"[DEBUG] Login response status: {resp.status}", file=sys.stderr)
+
+                    if resp.status == 403:
+                        raise RequireMFAException("Multi-Factor Auth Required")
+                    elif resp.status != 200:
+                        # Try to get response body for more details
+                        try:
+                            error_body = await resp.text()
+                            raise LoginFailedException(
+                                f"HTTP Code {resp.status}: {resp.reason}\nResponse: {error_body}"
+                            )
+                        except Exception:
+                            raise LoginFailedException(f"HTTP Code {resp.status}: {resp.reason}")
+
+                    response = await resp.json()
+                    print(f"[DEBUG] Login response received, setting token", file=sys.stderr)
+                    self.set_token(response["token"])
+                    self._headers["Authorization"] = f"Token {self._token}"
+                    print(f"[DEBUG] Login successful", file=sys.stderr)
+        except (RequireMFAException, LoginFailedException):
+            # Re-raise known exceptions as-is
+            raise
+        except Exception as e:
+            # Wrap any other exception with context
+            import traceback
+            print(f"\n[DEBUG] Exception during _login_user:", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+            raise LoginFailedException(f"Unexpected error during login: {type(e).__name__}: {e}") from e
 
     async def _multi_factor_authenticate(self, email: str, password: str, code: str) -> None:
         """

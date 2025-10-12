@@ -13,10 +13,18 @@ from .backends.base import FinanceBackend
 CATEGORY_GROUPS = {
     "Business": [
         "Accounting",
+        "Business",
         "Office Rent",
         "Business Electronics",
         "Business Software",
+        "Business Utilities & Communication",
+        "Office Supplies",
+        "Office Supplies & Expenses",
         "Postage & Shipping"
+    ],
+    "Cash & ATM": [
+        "Cash & ATM",
+        "ATM"
     ],
     "Food & Dining": [
         "Restaurants & Bars",
@@ -42,7 +50,7 @@ CATEGORY_GROUPS = {
         "Auto Payment",
         "Auto Maintenance",
     ],
-    "Services": ["Internet & Cable", "Streaming", "Laundry & Dry Cleaning", "Home Services", "Software"],
+    "Services": ["Internet & Cable", "Streaming", "Laundry & Dry Cleaning", "Home Services", "Software", "Child Care"],
     "Housing": [
         "Gas & Electric",
         "Mortgage",
@@ -55,22 +63,32 @@ CATEGORY_GROUPS = {
         "Shopping",
         "Clothing",
         "Electronics",
+        "Home Supplies",
         "Kitchen",
         "Furniture & Housewares",
         "Jewelry & Accessories",
         "Video Games",
         "Hobbies",
-        "Books"
+        "Books",
+        "Membership"
     ],
-    "Entertainment": ["Entertainment & Recreation"],
+    "Entertainment": [
+        "Entertainment & Recreation"
+    ],
+    "Education": [
+        "Education"
+    ],
     "Health & Fitness": [
         "Medical",
         "Dentist",
         "Fitness",
         "Pets",
+        "Pharmacy",
         "Eyecare",
+        "Hearing",
         "Supplements",
         "Workout Classes",
+        "Health & Wellness"
     ],
     "Gifts & Charity": ["Gifts", "Charity"],
     "Bills & Utilities": ["Phone", "Insurance"],
