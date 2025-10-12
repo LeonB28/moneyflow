@@ -86,21 +86,28 @@ class CredentialManager:
         return self.credentials_file.exists()
 
     def save_credentials(
-        self, email: str, password: str, mfa_secret: str, encryption_password: Optional[str] = None
+        self,
+        email: str,
+        password: str,
+        mfa_secret: str,
+        encryption_password: Optional[str] = None,
+        backend_type: str = "monarch"
     ) -> None:
         """
         Save encrypted credentials to disk.
 
         Args:
-            email: Monarch Money email
-            password: Monarch Money password
+            email: Backend account email
+            password: Backend account password
             mfa_secret: OTP/TOTP secret for 2FA
             encryption_password: Password to encrypt credentials.
                                 If None, will prompt user.
+            backend_type: Backend type (e.g., 'monarch', 'ynab').
+                         Defaults to 'monarch' for backward compatibility.
         """
         # Get encryption password
         if encryption_password is None:
-            print("Set a password to encrypt your Monarch credentials:")
+            print("Set a password to encrypt your credentials:")
             encryption_password = getpass("Encryption password: ")
             confirm = getpass("Confirm password: ")
 
@@ -114,8 +121,13 @@ class CredentialManager:
         key = self._derive_key(encryption_password, salt)
         fernet = Fernet(key)
 
-        # Prepare credentials
-        credentials = {"email": email, "password": password, "mfa_secret": mfa_secret}
+        # Prepare credentials (now includes backend_type)
+        credentials = {
+            "email": email,
+            "password": password,
+            "mfa_secret": mfa_secret,
+            "backend_type": backend_type
+        }
 
         # Encrypt and save
         encrypted = fernet.encrypt(json.dumps(credentials).encode())
@@ -137,7 +149,8 @@ class CredentialManager:
                                 If None, will prompt user.
 
         Returns:
-            Dictionary with 'email', 'password', and 'mfa_secret' keys
+            Dictionary with 'email', 'password', 'mfa_secret', and 'backend_type' keys.
+            For backward compatibility, 'backend_type' defaults to 'monarch' if not present.
 
         Raises:
             FileNotFoundError: If credentials file doesn't exist
@@ -167,6 +180,11 @@ class CredentialManager:
         try:
             decrypted = fernet.decrypt(encrypted)
             credentials = json.loads(decrypted.decode())
+
+            # Backward compatibility: add backend_type if not present
+            if "backend_type" not in credentials:
+                credentials["backend_type"] = "monarch"
+
             return credentials
         except InvalidToken:
             raise ValueError("Incorrect password!")
@@ -183,11 +201,30 @@ class CredentialManager:
 
 def setup_credentials_interactive() -> None:
     """
-    Interactive setup for storing Monarch credentials.
+    Interactive setup for storing finance backend credentials.
 
-    This walks the user through entering their credentials
-    and setting up encryption.
+    This walks the user through selecting a backend and entering their credentials
+    with encryption setup.
     """
+    print("=" * 70)
+    print("Finance Backend Credential Setup")
+    print("=" * 70)
+    print()
+
+    # Backend selection
+    print("Select your finance backend:")
+    print("  1. Monarch Money (currently supported)")
+    print()
+    print("More backends (YNAB, Lunch Money) coming soon!")
+    print()
+
+    backend_choice = input("Enter choice [1]: ").strip() or "1"
+    if backend_choice != "1":
+        print("❌ Invalid choice. Only Monarch Money is currently supported.")
+        return
+
+    backend_type = "monarch"
+    print()
     print("=" * 70)
     print("Monarch Money Credential Setup")
     print("=" * 70)
@@ -209,16 +246,16 @@ def setup_credentials_interactive() -> None:
     print("=" * 70)
     print()
 
-    # Get Monarch credentials
+    # Get credentials
     email = input("Monarch Money email: ")
     password = getpass("Monarch Money password: ")
 
     print()
     mfa_secret = getpass("2FA/TOTP Secret Key: ").strip().replace(" ", "").upper()
 
-    # Save credentials
+    # Save credentials with backend type
     manager = CredentialManager()
-    manager.save_credentials(email, password, mfa_secret)
+    manager.save_credentials(email, password, mfa_secret, backend_type=backend_type)
 
     print()
     print("=" * 70)
@@ -229,12 +266,12 @@ def setup_credentials_interactive() -> None:
     print(f"  {manager.credentials_file}")
     print()
     print("Next steps:")
-    print("  1. Run the TUI: uv run python -m monarch_tui")
+    print("  1. Run the TUI: uv run python -m finance_pui")
     print("  2. You'll only need to enter your encryption password")
     print()
     print("To reset credentials:")
     print(f"  rm {manager.credentials_file}")
-    print("  uv run monarch-setup")
+    print("  uv run python -m finance_pui")
     print()
     print("=" * 70)
 

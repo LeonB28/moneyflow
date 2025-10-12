@@ -203,6 +203,20 @@ class TestCredentialStorage:
         assert creds["email"] == "new@example.com"
         assert creds["password"] == "new_pass"
         assert creds["mfa_secret"] == "NEW_SECRET"
+        assert creds["backend_type"] == "monarch"  # Default
+
+    def test_save_credentials_with_custom_backend(self, credential_manager):
+        """Test saving credentials with a specific backend type."""
+        credential_manager.save_credentials(
+            email="test@example.com",
+            password="pass",
+            mfa_secret="SECRET",
+            encryption_password="enc_pass",
+            backend_type="ynab",  # Custom backend
+        )
+
+        creds = credential_manager.load_credentials(encryption_password="enc_pass")
+        assert creds["backend_type"] == "ynab"
 
 
 class TestCredentialLoading:
@@ -229,6 +243,73 @@ class TestCredentialLoading:
         assert loaded["email"] == email
         assert loaded["password"] == password
         assert loaded["mfa_secret"] == mfa_secret
+        # Should have default backend_type
+        assert loaded["backend_type"] == "monarch"
+
+    def test_load_credentials_with_backend_type(self, credential_manager):
+        """Test that credentials with backend_type can be saved and loaded."""
+        email = "test@example.com"
+        password = "monarch_password"
+        mfa_secret = "JBSWY3DPEHPK3PXP"
+        backend_type = "monarch"
+        encryption_password = "enc_pass"
+
+        # Save credentials with backend type
+        credential_manager.save_credentials(
+            email=email,
+            password=password,
+            mfa_secret=mfa_secret,
+            encryption_password=encryption_password,
+            backend_type=backend_type,
+        )
+
+        # Load credentials
+        loaded = credential_manager.load_credentials(encryption_password=encryption_password)
+
+        assert loaded["email"] == email
+        assert loaded["password"] == password
+        assert loaded["mfa_secret"] == mfa_secret
+        assert loaded["backend_type"] == backend_type
+
+    def test_load_legacy_credentials_without_backend_type(self, credential_manager):
+        """Test backward compatibility: loading old credentials without backend_type."""
+        # Manually create credentials without backend_type (simulate old format)
+        import json
+        from cryptography.fernet import Fernet
+
+        email = "test@example.com"
+        password = "old_password"
+        mfa_secret = "OLD_SECRET"
+        encryption_password = "enc_pass"
+
+        # Get or create salt
+        salt = credential_manager._get_or_create_salt()
+
+        # Derive key
+        key = credential_manager._derive_key(encryption_password, salt)
+        fernet = Fernet(key)
+
+        # Create old-format credentials (without backend_type)
+        old_creds = {
+            "email": email,
+            "password": password,
+            "mfa_secret": mfa_secret,
+            # Note: no backend_type field
+        }
+
+        # Encrypt and save
+        encrypted = fernet.encrypt(json.dumps(old_creds).encode())
+        with open(credential_manager.credentials_file, "wb") as f:
+            f.write(encrypted)
+
+        # Load credentials - should add default backend_type
+        loaded = credential_manager.load_credentials(encryption_password=encryption_password)
+
+        assert loaded["email"] == email
+        assert loaded["password"] == password
+        assert loaded["mfa_secret"] == mfa_secret
+        # Should default to "monarch" for backward compatibility
+        assert loaded["backend_type"] == "monarch"
 
     def test_load_with_wrong_password_raises_error(self, credential_manager):
         """Test that loading with wrong password raises ValueError."""

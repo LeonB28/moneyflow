@@ -7,6 +7,90 @@ from textual.containers import Container, Vertical
 from textual.widgets import Button, Input, Label, Static, Checkbox
 
 
+class BackendSelectionScreen(Screen):
+    """Backend selection screen for first-time setup."""
+
+    CSS = """
+    BackendSelectionScreen {
+        align: center middle;
+    }
+
+    #backend-container {
+        width: 60;
+        height: auto;
+        border: solid $accent;
+        background: $surface;
+        padding: 2 4;
+    }
+
+    #backend-title {
+        width: 100%;
+        text-align: center;
+        text-style: bold;
+        color: $accent;
+        margin-bottom: 1;
+    }
+
+    .backend-help {
+        color: $text-muted;
+        text-align: center;
+        margin-bottom: 2;
+    }
+
+    .backend-option {
+        width: 100%;
+        margin: 1 0;
+        height: 3;
+    }
+
+    #button-container {
+        layout: horizontal;
+        width: 100%;
+        height: auto;
+        align: center middle;
+        margin-top: 2;
+    }
+
+    #button-container Button {
+        margin: 0 1;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Container(id="backend-container"):
+            yield Label("💼 Select Finance Backend", id="backend-title")
+
+            yield Static(
+                "Choose which personal finance platform you want to connect to:",
+                classes="backend-help",
+            )
+
+            yield Button(
+                "🏦 Monarch Money",
+                variant="primary",
+                id="monarch-button",
+                classes="backend-option"
+            )
+
+            yield Static(
+                "Currently only Monarch Money is supported.\n"
+                "More backends (YNAB, Lunch Money) coming soon!",
+                classes="backend-help",
+            )
+
+            with Container(id="button-container"):
+                yield Button("Exit", variant="default", id="exit-button")
+
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "exit-button":
+            self.app.exit()
+            return
+
+        if event.button.id == "monarch-button":
+            # Return 'monarch' as the selected backend
+            self.dismiss("monarch")
+
+
 class CredentialSetupScreen(Screen):
     """First-time credential setup screen."""
 
@@ -64,6 +148,11 @@ class CredentialSetupScreen(Screen):
         margin-top: 1;
     }
     """
+
+    def __init__(self, backend_type: str = "monarch"):
+        """Initialize with selected backend type."""
+        super().__init__()
+        self.backend_type = backend_type
 
     def compose(self) -> ComposeResult:
         with Container(id="setup-container"):
@@ -162,12 +251,18 @@ class CredentialSetupScreen(Screen):
                 password=password,
                 mfa_secret=mfa_secret,
                 encryption_password=encrypt_pass,
+                backend_type=self.backend_type,
             )
 
             error_label.update("✅ Credentials saved! Loading app...")
 
-            # Dismiss this screen and pass credentials back
-            self.dismiss({"email": email, "password": password, "mfa_secret": mfa_secret})
+            # Dismiss this screen and pass credentials back (including backend type)
+            self.dismiss({
+                "email": email,
+                "password": password,
+                "mfa_secret": mfa_secret,
+                "backend_type": self.backend_type
+            })
 
         except Exception as e:
             error_label.update(f"❌ Error saving credentials: {e}")

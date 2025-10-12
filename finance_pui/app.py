@@ -85,16 +85,17 @@ class MonarchTUI(App):
     ):
         super().__init__()
         self.demo_mode = demo_mode
+        self.start_year = start_year
+        # Backend will be initialized in initialize_data() based on credentials
+        self.mm = None
         if demo_mode:
             self.mm = DemoBackend(year=start_year or 2025)
             self.title = "Finance PUI [DEMO MODE]"
         else:
-            self.mm = MonarchBackend()
             self.title = "Finance PUI"
         self.data_manager: Optional[DataManager] = None
         self.state = AppState()
         self.loading = False
-        self.start_year = start_year
         self.custom_start_date = custom_start_date
         self.stored_credentials: Optional[dict] = None
         self.cache_path = cache_path
@@ -155,7 +156,12 @@ class MonarchTUI(App):
                 # Try to use encrypted credentials first
                 from .credentials import CredentialManager
                 from .monarchmoney import RequireMFAException, LoginFailedException
-                from .screens.credential_screens import CredentialSetupScreen, CredentialUnlockScreen
+                from .screens.credential_screens import (
+                    BackendSelectionScreen,
+                    CredentialSetupScreen,
+                    CredentialUnlockScreen
+                )
+                from .backends import get_backend
 
                 cred_manager = CredentialManager()
                 creds = None
@@ -165,22 +171,43 @@ class MonarchTUI(App):
                     result = await self.push_screen(CredentialUnlockScreen(), wait_for_dismiss=True)
 
                     if result is None:
-                        # User chose to reset - show setup screen
-                        creds = await self.push_screen(CredentialSetupScreen(), wait_for_dismiss=True)
+                        # User chose to reset - show backend selection then setup screen
+                        backend_type = await self.push_screen(BackendSelectionScreen(), wait_for_dismiss=True)
+                        if not backend_type:
+                            self.exit()
+                            return
+
+                        creds = await self.push_screen(
+                            CredentialSetupScreen(backend_type=backend_type),
+                            wait_for_dismiss=True
+                        )
                         if not creds:
                             self.exit()
                             return
                     else:
                         creds = result
                 else:
-                    # No credentials - show setup screen
-                    creds = await self.push_screen(CredentialSetupScreen(), wait_for_dismiss=True)
+                    # No credentials - show backend selection first, then setup screen
+                    backend_type = await self.push_screen(BackendSelectionScreen(), wait_for_dismiss=True)
+                    if not backend_type:
+                        self.exit()
+                        return
+
+                    creds = await self.push_screen(
+                        CredentialSetupScreen(backend_type=backend_type),
+                        wait_for_dismiss=True
+                    )
                     if not creds:
                         self.exit()
                         return
 
+                # Initialize backend based on credentials
+                backend_type = creds.get("backend_type", "monarch")
+                loading_status.update(f"🔄 Initializing {backend_type} backend...")
+                self.mm = get_backend(backend_type)
+
                 # Login with credentials
-                loading_status.update("🔐 Logging in to Monarch Money...")
+                loading_status.update(f"🔐 Logging in to {backend_type.capitalize()}...")
 
                 try:
                     await self.mm.login(
