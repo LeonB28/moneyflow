@@ -437,13 +437,16 @@ class MonarchTUI(App):
             merchant = row["merchant"] or "Unknown"
             category = row["category"] or "Uncategorized"
             amount = row["amount"]
+            txn_id = row["id"]
 
-            # Build flags: H for hidden, * for pending edit
+            # Build flags: ✓ for selected, H for hidden, * for pending edit
             flags = ""
+            if txn_id in self.state.selected_ids:
+                flags += "✓"  # Selected for bulk operation
             if row.get("hideFromReports", False):
-                flags += "H"
-            if row["id"] in pending_txn_ids:
-                flags += "*"  # Mark transactions with pending edits
+                flags += "H"  # Hidden from reports
+            if txn_id in pending_txn_ids:
+                flags += "*"  # Has pending edit
 
             table.add_row(date, merchant, category, f"${amount:,.2f}", flags)
 
@@ -711,17 +714,28 @@ class MonarchTUI(App):
         from .screens.credential_screens import FilterScreen
 
         result = await self.push_screen(
-            FilterScreen(show_transfers=self.state.show_transfers),
+            FilterScreen(show_transfers=self.state.show_transfers, show_hidden=self.state.show_hidden),
             wait_for_dismiss=True
         )
 
         if result is not None:
             # Apply filters
             self.state.show_transfers = result["show_transfers"]
+            self.state.show_hidden = result["show_hidden"]
             self.refresh_view()
 
-            filter_status = "shown" if result["show_transfers"] else "hidden"
-            self.notify(f"Transfers {filter_status}", timeout=2)
+            # Build status message
+            statuses = []
+            if result["show_hidden"]:
+                statuses.append("hidden items shown")
+            else:
+                statuses.append("hidden items excluded")
+            if result["show_transfers"]:
+                statuses.append("transfers shown")
+            else:
+                statuses.append("transfers excluded")
+
+            self.notify(f"Filters: {', '.join(statuses)}", timeout=3)
 
     def action_help(self) -> None:
         """Show help screen."""
@@ -748,6 +762,8 @@ class MonarchTUI(App):
         if txn_id:
             self.state.toggle_selection(txn_id)
             count = len(self.state.selected_ids)
+            # Refresh view to show checkmark
+            self.refresh_view()
             self.notify(f"Selected: {count} transaction(s)", timeout=1)
 
     def action_edit_merchant(self) -> None:

@@ -445,23 +445,26 @@ class FilterScreen(ModalScreen):
     }
     """
 
-    def __init__(self, show_transfers: bool = False):
+    def __init__(self, show_transfers: bool = False, show_hidden: bool = True):
         super().__init__()
         self.show_transfers = show_transfers
+        self.show_hidden = show_hidden
 
     def compose(self) -> ComposeResult:
         with Container(id="filter-dialog"):
             yield Label("🔍 Filter Options", id="filter-title")
 
             yield Checkbox(
-                "Show Transfer transactions",
-                value=self.show_transfers,
-                id="show-transfers-checkbox",
+                "Show hidden from reports transactions",
+                value=self.show_hidden,
+                id="show-hidden-checkbox",
                 classes="filter-option"
             )
 
-            yield Static(
-                "More filter options coming soon...",
+            yield Checkbox(
+                "Show Transfer transactions",
+                value=self.show_transfers,
+                id="show-transfers-checkbox",
                 classes="filter-option"
             )
 
@@ -474,8 +477,9 @@ class FilterScreen(ModalScreen):
             self.dismiss(None)
         elif event.button.id == "apply-button":
             # Get checkbox values
+            show_hidden = self.query_one("#show-hidden-checkbox", Checkbox).value
             show_transfers = self.query_one("#show-transfers-checkbox", Checkbox).value
-            self.dismiss({"show_transfers": show_transfers})
+            self.dismiss({"show_hidden": show_hidden, "show_transfers": show_transfers})
 
     def on_key(self, event: Key) -> None:
         """Handle keyboard shortcuts."""

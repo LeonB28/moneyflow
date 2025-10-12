@@ -87,6 +87,7 @@ class AppState:
     # Search/filter
     search_query: str = ""
     show_transfers: bool = False  # Whether to show Transfer category transactions
+    show_hidden: bool = True  # Whether to show transactions hidden from reports
 
     # Change tracking
     pending_edits: List[TransactionEdit] = field(default_factory=list)
@@ -227,6 +228,10 @@ class AppState:
         # Apply group filter (hide Transfers unless enabled)
         if not self.show_transfers:
             df = df.filter(pl.col("group") != "Transfers")
+
+        # Apply hidden filter (hide transactions marked hideFromReports unless enabled)
+        if not self.show_hidden:
+            df = df.filter(pl.col("hideFromReports") == False)
 
         # Apply view-specific filters
         if self.view_mode == ViewMode.DETAIL:
