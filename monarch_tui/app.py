@@ -281,6 +281,11 @@ class MonarchTUI(App):
         # Get aggregated data
         agg = self.data_manager.aggregate_by_merchant(filtered_df)
 
+        # Check if we have any data
+        if agg.is_empty():
+            self.state.current_data = agg
+            return
+
         # Apply sorting
         sort_col = self.state.sort_by.value
         if sort_col == "amount":
@@ -319,6 +324,11 @@ class MonarchTUI(App):
 
         agg = self.data_manager.aggregate_by_category(filtered_df)
 
+        # Check if we have any data
+        if agg.is_empty():
+            self.state.current_data = agg
+            return
+
         # Apply sorting
         sort_col = self.state.sort_by.value
         if sort_col == "amount":
@@ -355,6 +365,11 @@ class MonarchTUI(App):
             return
 
         agg = self.data_manager.aggregate_by_group(filtered_df)
+
+        # Check if we have any data
+        if agg.is_empty():
+            self.state.current_data = agg
+            return
 
         # Apply sorting
         sort_col = self.state.sort_by.value
@@ -405,13 +420,22 @@ class MonarchTUI(App):
 
         self.state.current_data = txns
 
+        # Get set of transaction IDs with pending edits
+        pending_txn_ids = {edit.transaction_id for edit in self.data_manager.pending_edits}
+
         # Add rows
         for row in txns.iter_rows(named=True):
             date = str(row["date"])
             merchant = row["merchant"] or "Unknown"
             category = row["category"] or "Uncategorized"
             amount = row["amount"]
-            flags = "H" if row.get("hideFromReports", False) else ""
+
+            # Build flags: H for hidden, * for pending edit
+            flags = ""
+            if row.get("hideFromReports", False):
+                flags += "H"
+            if row["id"] in pending_txn_ids:
+                flags += "*"  # Mark transactions with pending edits
 
             table.add_row(date, merchant, category, f"${amount:,.2f}", flags)
 
