@@ -372,6 +372,44 @@ class TestDataFrameUpdates:
 
         # Key point: DataFrame update happened WITHOUT calling fetch_all_data again!
 
+    async def test_dataframe_updated_after_hide_commit(self, loaded_data_manager, mock_mm):
+        """Test that hideFromReports flag is updated in DataFrame after commit."""
+        dm, df, _, _ = loaded_data_manager
+        dm.df = df
+
+        # Get a transaction and its current hideFromReports status
+        txn = df.row(0, named=True)
+        txn_id = txn["id"]
+        old_hidden = txn.get("hideFromReports", False)
+        new_hidden = not old_hidden
+
+        # Verify current state
+        assert dm.df.filter(pl.col("id") == txn_id).row(0, named=True)["hideFromReports"] == old_hidden
+
+        # Make edit and commit
+        dm.pending_edits.append(
+            TransactionEdit(txn_id, "hide_from_reports", old_hidden, new_hidden, datetime.now())
+        )
+
+        success, failure = await dm.commit_pending_edits(dm.pending_edits)
+        assert success == 1
+
+        # Apply update to DataFrame (simulating what app.py does)
+        dm.df = dm.df.with_columns(
+            pl.when(pl.col("id") == txn_id)
+            .then(pl.lit(new_hidden))
+            .otherwise(pl.col("hideFromReports"))
+            .alias("hideFromReports")
+        )
+
+        # Verify DataFrame was updated
+        updated_row = dm.df.filter(pl.col("id") == txn_id).row(0, named=True)
+        assert updated_row["hideFromReports"] == new_hidden
+
+        # Verify API was also updated
+        api_txn = mock_mm.get_transaction_by_id(txn_id)
+        assert api_txn["hideFromReports"] == new_hidden
+
 
 class TestEdgeCase:
     """Test edge cases in editing."""

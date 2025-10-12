@@ -1327,6 +1327,22 @@ class MonarchTUI(App):
                                 .otherwise(pl.col("category"))
                                 .alias("category")
                             )
+                    elif edit.field == "hide_from_reports":
+                        # Update hideFromReports flag in DataFrame
+                        self.data_manager.df = self.data_manager.df.with_columns(
+                            pl.when(pl.col("id") == edit.transaction_id)
+                            .then(pl.lit(edit.new_value))
+                            .otherwise(pl.col("hideFromReports"))
+                            .alias("hideFromReports")
+                        )
+                        # Also update in state
+                        if self.state.transactions_df is not None:
+                            self.state.transactions_df = self.state.transactions_df.with_columns(
+                                pl.when(pl.col("id") == edit.transaction_id)
+                                .then(pl.lit(edit.new_value))
+                                .otherwise(pl.col("hideFromReports"))
+                                .alias("hideFromReports")
+                            )
 
                 # Clear pending edits on success
                 self.data_manager.pending_edits.clear()
