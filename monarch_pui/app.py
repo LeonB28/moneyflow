@@ -75,7 +75,14 @@ class MonarchTUI(App):
     status_message = reactive("Ready")
     pending_changes_count = reactive(0)
 
-    def __init__(self, start_year: Optional[int] = None, custom_start_date: Optional[str] = None, demo_mode: bool = False):
+    def __init__(
+        self,
+        start_year: Optional[int] = None,
+        custom_start_date: Optional[str] = None,
+        demo_mode: bool = False,
+        cache_path: Optional[str] = None,
+        force_refresh: bool = False
+    ):
         super().__init__()
         self.demo_mode = demo_mode
         if demo_mode:
@@ -91,6 +98,8 @@ class MonarchTUI(App):
         self.start_year = start_year
         self.custom_start_date = custom_start_date
         self.stored_credentials: Optional[dict] = None
+        self.cache_path = cache_path
+        self.force_refresh = force_refresh
 
     def compose(self) -> ComposeResult:
         """Compose the main UI."""
@@ -131,7 +140,7 @@ class MonarchTUI(App):
         self.run_worker(self.initialize_data(), exclusive=True)
 
     async def initialize_data(self) -> None:
-        """Load data from Monarch API."""
+        """Load data from Monarch API or cache."""
         self.loading = True
         self.query_one("#loading", LoadingIndicator).display = True
         loading_status = self.query_one("#loading-status", Static)
@@ -200,37 +209,97 @@ class MonarchTUI(App):
             # Initialize data manager
             self.data_manager = DataManager(self.mm)
 
+            # Initialize cache manager only if user requested caching
+            cache_mgr = None
+            if self.cache_path is not None:
+                from .cache_manager import CacheManager
+                cache_mgr = CacheManager(cache_dir=self.cache_path)
+
             # Determine date range based on CLI arguments
             if self.custom_start_date:
                 start_date = self.custom_start_date
                 end_date = datetime.now().strftime("%Y-%m-%d")
-                loading_status.update(
-                    f"📊 Fetching transactions from {self.custom_start_date} onwards..."
-                )
+                year_filter = None
+                since_filter = self.custom_start_date
             elif self.start_year:
                 start_date = f"{self.start_year}-01-01"
                 end_date = datetime.now().strftime("%Y-%m-%d")
-                loading_status.update(f"📊 Fetching transactions from {self.start_year} onwards...")
+                year_filter = self.start_year
+                since_filter = None
             else:
                 # Fetch ALL transactions (no date filter for offline-first approach)
                 start_date = None
                 end_date = None
-                loading_status.update("📊 Fetching ALL transaction data from Monarch Money...")
+                year_filter = None
+                since_filter = None
 
-            loading_status.update(
-                "⏳ This may take a minute for large accounts (10k+ transactions)..."
-            )
-            loading_status.update(
-                "💡 TIP: This is a one-time download. Future operations will be instant!"
-            )
+            # Check if we should use cache (only if --cache was passed)
+            use_cache = False
+            if cache_mgr and not self.force_refresh and cache_mgr.is_cache_valid(year=year_filter, since=since_filter):
+                # Cache is valid - show prompt
+                cache_info = cache_mgr.get_cache_info()
+                if cache_info:
+                    from .screens.credential_screens import CachePromptScreen
+                    use_cache = await self.push_screen(
+                        CachePromptScreen(
+                            age=cache_info["age"],
+                            transaction_count=cache_info["transaction_count"],
+                            filter_desc=cache_info["filter"]
+                        ),
+                        wait_for_dismiss=True
+                    )
 
-            def update_progress(msg: str) -> None:
-                """Update the loading status display."""
-                loading_status.update(f"📊 {msg}")
+            if use_cache:
+                # Load from cache
+                loading_status.update("📦 Loading from cache...")
+                result = cache_mgr.load_cache()
+                if result:
+                    df, categories, category_groups, metadata = result
+                    loading_status.update(f"✅ Loaded {len(df):,} transactions from cache!")
+                else:
+                    # Cache load failed, fall back to API
+                    loading_status.update("⚠ Cache load failed, fetching from API...")
+                    use_cache = False
 
-            df, categories, category_groups = await self.data_manager.fetch_all_data(
-                start_date=start_date, end_date=end_date, progress_callback=update_progress
-            )
+            if not use_cache:
+                # Fetch from API
+                if self.custom_start_date:
+                    loading_status.update(
+                        f"📊 Fetching transactions from {self.custom_start_date} onwards..."
+                    )
+                elif self.start_year:
+                    loading_status.update(f"📊 Fetching transactions from {self.start_year} onwards...")
+                else:
+                    loading_status.update("📊 Fetching ALL transaction data from Monarch Money...")
+
+                loading_status.update(
+                    "⏳ This may take a minute for large accounts (10k+ transactions)..."
+                )
+                loading_status.update(
+                    "💡 TIP: This is a one-time download. Future operations will be instant!"
+                )
+
+                def update_progress(msg: str) -> None:
+                    """Update the loading status display."""
+                    loading_status.update(f"📊 {msg}")
+
+                df, categories, category_groups = await self.data_manager.fetch_all_data(
+                    start_date=start_date, end_date=end_date, progress_callback=update_progress
+                )
+
+                # Save to cache for next time (only if --cache was passed)
+                if cache_mgr:
+                    loading_status.update("💾 Saving to cache...")
+                    cache_mgr.save_cache(
+                        transactions_df=df,
+                        categories=categories,
+                        category_groups=category_groups,
+                        year=year_filter,
+                        since=since_filter
+                    )
+                    loading_status.update(f"✅ Loaded {len(df):,} transactions and cached!")
+                else:
+                    loading_status.update(f"✅ Loaded {len(df):,} transactions!")
 
             # Store in data manager
             self.data_manager.df = df
@@ -246,7 +315,7 @@ class MonarchTUI(App):
             self.state.start_date = date_type(today.year, 1, 1)
             self.state.end_date = date_type(today.year, 12, 31)
 
-            loading_status.update(f"✅ Loaded {len(df):,} transactions! Preparing view...")
+            loading_status.update(f"✅ Ready! Showing {len(df):,} transactions")
 
             # Show initial view (merchants)
             self.refresh_view()
@@ -1430,6 +1499,19 @@ def main():
         help="Only load transactions from this date onwards (e.g., --since 2024-06-01). Overrides --year if both provided.",
     )
     parser.add_argument(
+        "--cache",
+        type=str,
+        nargs="?",
+        const="",  # Use default location if flag given without path
+        metavar="PATH",
+        help="Enable caching. Optionally specify cache directory (default: ~/.monarch_pui/cache/). Without this flag, always fetches fresh data.",
+    )
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Force refresh from API, skip cache even if valid cache exists",
+    )
+    parser.add_argument(
         "--demo",
         action="store_true",
         help="Run in demo mode with sample data (no authentication required)",
@@ -1451,8 +1533,19 @@ def main():
     elif args.year:
         start_year = args.year
 
+    # Handle cache path
+    # If --cache passed without path, use empty string (triggers default in CacheManager)
+    # If --cache not passed at all, args.cache is None (no caching)
+    cache_path = args.cache if hasattr(args, 'cache') and args.cache is not None else None
+
     try:
-        app = MonarchTUI(start_year=start_year, custom_start_date=custom_start_date, demo_mode=args.demo)
+        app = MonarchTUI(
+            start_year=start_year,
+            custom_start_date=custom_start_date,
+            demo_mode=args.demo,
+            cache_path=cache_path,
+            force_refresh=args.refresh
+        )
 
         # Enable dev mode if requested
         if args.dev:

@@ -485,3 +485,95 @@ class FilterScreen(ModalScreen):
         """Handle keyboard shortcuts."""
         if event.key == "escape":
             self.dismiss(None)
+
+
+class CachePromptScreen(ModalScreen):
+    """Prompt to use cached data or refresh from API."""
+
+    CSS = """
+    CachePromptScreen {
+        align: center middle;
+    }
+
+    #cache-dialog {
+        width: 60;
+        height: auto;
+        border: thick $primary;
+        background: $surface;
+        padding: 2 4;
+    }
+
+    #cache-title {
+        width: 100%;
+        text-align: center;
+        text-style: bold;
+        color: $accent;
+        margin-bottom: 1;
+    }
+
+    #cache-info {
+        text-align: center;
+        color: $text;
+        margin-bottom: 2;
+    }
+
+    #cache-instructions {
+        text-align: center;
+        color: $text-muted;
+        margin-bottom: 2;
+        text-style: italic;
+    }
+
+    #button-container {
+        layout: horizontal;
+        width: 100%;
+        height: auto;
+        align: center middle;
+    }
+
+    #button-container Button {
+        margin: 0 1;
+    }
+    """
+
+    def __init__(self, age: str, transaction_count: int, filter_desc: str):
+        super().__init__()
+        self.age = age
+        self.transaction_count = transaction_count
+        self.filter_desc = filter_desc
+
+    def compose(self) -> ComposeResult:
+        with Container(id="cache-dialog"):
+            yield Label("📦 Cached Data Available", id="cache-title")
+
+            cache_message = (
+                f"Found cached data from {self.age}\n"
+                f"{self.transaction_count:,} transactions ({self.filter_desc})\n\n"
+                f"Use cached data for faster load?"
+            )
+            yield Static(cache_message, id="cache-info")
+
+            yield Static(
+                "Press Y to use cache  |  N to refresh from API  |  Esc to cancel",
+                id="cache-instructions"
+            )
+
+            with Container(id="button-container"):
+                yield Button("Use Cache (Y)", variant="primary", id="cache-button")
+                yield Button("Refresh (N)", variant="default", id="refresh-button")
+
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "cache-button":
+            self.dismiss(True)  # Use cache
+        elif event.button.id == "refresh-button":
+            self.dismiss(False)  # Refresh from API
+
+    def on_key(self, event: Key) -> None:
+        """Handle keyboard shortcuts - Y to use cache, N to refresh, Esc to cancel."""
+        if event.key == "escape":
+            # Default to refresh if cancelled
+            self.dismiss(False)
+        elif event.key == "y":
+            self.dismiss(True)
+        elif event.key == "n":
+            self.dismiss(False)
