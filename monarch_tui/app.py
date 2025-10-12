@@ -1002,9 +1002,9 @@ class MonarchTUI(App):
         """Show review screen and commit if confirmed."""
         from .screens.review_screen import ReviewChangesScreen
 
-        # Show review screen
+        # Show review screen with category names for readable display
         should_commit = await self.push_screen(
-            ReviewChangesScreen(self.data_manager.pending_edits),
+            ReviewChangesScreen(self.data_manager.pending_edits, self.data_manager.categories),
             wait_for_dismiss=True
         )
 
