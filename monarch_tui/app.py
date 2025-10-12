@@ -471,11 +471,11 @@ class MonarchTUI(App):
         hints_widget = self.query_one("#action-hints", Static)
 
         if self.state.view_mode == ViewMode.MERCHANT:
-            hints = "[Enter] Drill down | [e] Edit merchant (bulk)"
+            hints = "[Enter] Drill down | [e] Edit merchant (bulk) | [←→] Change period"
         elif self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP]:
-            hints = "[Enter] Drill down"
+            hints = "[Enter] Drill down | [←→] Change period"
         else:  # DETAIL (transactions)
-            hints = "[e] Edit merchant | [r] Recategorize | [d] Delete | [Space] Multi-select"
+            hints = "[e] Edit | [r] Recategorize | [d] Delete | [Space] Multi-select | [←→] Change period"
 
         hints_widget.update(hints)
 
