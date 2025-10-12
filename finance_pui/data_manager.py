@@ -11,6 +11,11 @@ from .backends.base import FinanceBackend
 
 # Category group mapping (since not consistently available in API)
 CATEGORY_GROUPS = {
+    "Business": [
+        "Office Rent",
+        "Business Electronics",
+        "Business Software",
+    ],
     "Food & Dining": [
         "Restaurants & Bars",
         "Coffee Shops",
@@ -27,6 +32,7 @@ CATEGORY_GROUPS = {
         "Taxi & Ride Shares",
         "Public Transit",
         "Luggage",
+        "Travel Services",
     ],
     "Automotive": [
         "Gas",
@@ -48,12 +54,21 @@ CATEGORY_GROUPS = {
         "Shopping",
         "Clothing",
         "Electronics",
+        "Kitchen",
         "Furniture & Housewares",
         "Jewelry & Accessories",
         "Video Games",
     ],
     "Entertainment": ["Entertainment & Recreation"],
-    "Health & Fitness": ["Medical", "Dentist", "Fitness", "Pets"],
+    "Health & Fitness": [
+        "Medical",
+        "Dentist",
+        "Fitness",
+        "Pets",
+        "Eyecare",
+        "Supplements",
+        "Workout Classes",
+    ],
     "Personal": ["Personal", "Gifts", "Charity"],
     "Bills & Utilities": ["Phone", "Insurance"],
     "Financial": [
@@ -62,6 +77,7 @@ CATEGORY_GROUPS = {
         "Loan Repayment",
         "Student Loans",
     ],
+    "Personal Care": ["Chiropractic & Massage", "Hair"],
     "Income": ["Paychecks", "Interest", "Business Income", "Other Income"],
     "Transfers": ["Transfer", "Credit Card Payment", "Balance Adjustments"],
     "Uncategorized": ["Uncategorized", "Check", "Miscellaneous"],
@@ -143,6 +159,9 @@ class DataManager:
 
         df = self._transactions_to_dataframe(transactions, categories)
 
+        # Apply category grouping (done dynamically so CATEGORY_GROUPS changes take effect)
+        df = self.apply_category_groups(df)
+
         return df, categories, category_groups
 
     async def _fetch_all_transactions(
@@ -210,6 +229,10 @@ class DataManager:
     ) -> pl.DataFrame:
         """
         Convert raw transaction data to Polars DataFrame with enriched fields.
+
+        Note: Does NOT include 'group' field - groups are applied dynamically
+        via apply_category_groups() so changes to CATEGORY_GROUPS take effect
+        on cached data.
         """
         if not transactions:
             return pl.DataFrame()
@@ -224,9 +247,6 @@ class DataManager:
             category_id = category_obj.get("id", "")
             category_name = category_obj.get("name", "Uncategorized")
 
-            # Get group from our mapping
-            group = self.category_to_group.get(category_name, "Uncategorized")
-
             row = {
                 "id": str(txn.get("id", "")),
                 "date": str(txn.get("date", "")),
@@ -237,7 +257,7 @@ class DataManager:
                 "merchant_id": str(merchant_obj.get("id", "")),
                 "category": str(category_name if category_name else "Uncategorized"),
                 "category_id": str(category_id),
-                "group": str(group),
+                # Note: 'group' field NOT included here - added dynamically
                 "account": str(
                     account_obj.get("displayName", "") if account_obj.get("displayName") else ""
                 ),
@@ -254,6 +274,35 @@ class DataManager:
 
         # Convert date column to date type
         df = df.with_columns(pl.col("date").str.strptime(pl.Date, format="%Y-%m-%d"))
+
+        return df
+
+    def apply_category_groups(self, df: pl.DataFrame) -> pl.DataFrame:
+        """
+        Apply category-to-group mapping to a DataFrame.
+
+        This adds/updates the 'group' column based on CATEGORY_GROUPS mapping.
+        Called after loading data (from API or cache) so that changes to
+        CATEGORY_GROUPS always take effect.
+
+        Args:
+            df: DataFrame with 'category' column
+
+        Returns:
+            DataFrame with 'group' column added/updated
+        """
+        if df.is_empty():
+            return df
+
+        # Create a mapping expression for Polars
+        # For each category, map to its group (or "Uncategorized" if not mapped)
+        def get_group(category: str) -> str:
+            return self.category_to_group.get(category, "Uncategorized")
+
+        # Apply mapping - use Polars map_elements for efficient lookup
+        df = df.with_columns(
+            pl.col("category").map_elements(get_group, return_dtype=pl.String).alias("group")
+        )
 
         return df
 

@@ -291,6 +291,9 @@ class MonarchTUI(App):
                 result = cache_mgr.load_cache()
                 if result:
                     df, categories, category_groups, metadata = result
+                    # Apply category grouping dynamically (so CATEGORY_GROUPS changes take effect)
+                    loading_status.update("🔄 Applying category groupings...")
+                    df = self.data_manager.apply_category_groups(df)
                     loading_status.update(f"✅ Loaded {len(df):,} transactions from cache!")
                 else:
                     # Cache load failed, fall back to API

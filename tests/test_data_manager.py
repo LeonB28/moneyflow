@@ -252,9 +252,9 @@ class TestCategoryGroupMapping:
         """Test that Groceries maps to Food & Dining."""
         assert data_manager.category_to_group.get("Groceries") == "Food & Dining"
 
-    def test_gas_mapped_to_transportation(self, data_manager):
-        """Test that Gas maps to Transportation."""
-        assert data_manager.category_to_group.get("Gas") == "Transportation"
+    def test_gas_mapped_to_automotive(self, data_manager):
+        """Test that Gas maps to Automotive."""
+        assert data_manager.category_to_group.get("Gas") == "Automotive"
 
     async def test_transactions_have_groups(self, loaded_data_manager):
         """Test that loaded transactions have group field."""
@@ -338,6 +338,8 @@ class TestEdgeCases:
         ]
 
         df = data_manager._transactions_to_dataframe(transactions, {})
+        # Apply grouping (now done separately)
+        df = data_manager.apply_category_groups(df)
 
         assert len(df) == 1
         assert df["category"][0] == "Uncategorized"
@@ -471,6 +473,8 @@ class TestEdgeCases:
         ]
 
         df = data_manager._transactions_to_dataframe(transactions, {})
+        # Apply grouping (now done separately)
+        df = data_manager.apply_category_groups(df)
 
         assert len(df) == 1
         assert df["group"][0] == "Uncategorized"
