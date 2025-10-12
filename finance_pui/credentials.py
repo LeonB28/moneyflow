@@ -1,7 +1,7 @@
 """
 Secure credential management for Monarch Money.
 
-Stores encrypted credentials in ~/.monarch_tui/credentials.enc
+Stores encrypted credentials in ~/.finance_pui/credentials.enc
 Uses Fernet symmetric encryption with a user-provided password.
 """
 
@@ -21,7 +21,7 @@ class CredentialManager:
     """
     Manages encrypted Monarch Money credentials.
 
-    Credentials are stored in ~/.monarch_tui/credentials.enc
+    Credentials are stored in ~/.finance_pui/credentials.enc
     and encrypted with a user-provided password using Fernet.
     """
 
@@ -31,10 +31,10 @@ class CredentialManager:
 
         Args:
             config_dir: Optional custom config directory.
-                       Defaults to ~/.monarch_tui
+                       Defaults to ~/.finance_pui
         """
         if config_dir is None:
-            config_dir = Path.home() / ".monarch_tui"
+            config_dir = Path.home() / ".finance_pui"
 
         self.config_dir = config_dir
         self.credentials_file = config_dir / "credentials.enc"

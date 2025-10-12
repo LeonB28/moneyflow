@@ -44,9 +44,9 @@ class TestCredentialManagerInit:
         assert oct(stat_info.st_mode)[-3:] == "700"
 
     def test_uses_default_config_dir(self):
-        """Test that default config directory is ~/.monarch_tui."""
+        """Test that default config directory is ~/.finance_pui."""
         manager = CredentialManager()
-        expected = Path.home() / ".monarch_tui"
+        expected = Path.home() / ".finance_pui"
         assert manager.config_dir == expected
 
     def test_sets_credentials_file_path(self, credential_manager, temp_config_dir):

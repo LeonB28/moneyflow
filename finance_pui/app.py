@@ -87,10 +87,10 @@ class MonarchTUI(App):
         self.demo_mode = demo_mode
         if demo_mode:
             self.mm = DemoBackend(year=start_year or 2025)
-            self.title = "Monarch Money PUI [DEMO MODE]"
+            self.title = "Finance PUI [DEMO MODE]"
         else:
             self.mm = MonarchBackend()
-            self.title = "Monarch Money PUI"
+            self.title = "Finance PUI"
         self.data_manager: Optional[DataManager] = None
         self.state = AppState()
         self.loading = False

@@ -139,7 +139,7 @@ On first run with Monarch Money, the TUI will walk you through credential setup:
 
 3. **Done!** Next time you launch, just enter your encryption password.
 
-Your credentials are encrypted with AES-128 and stored in `~/.monarch_tui/credentials.enc`.
+Your credentials are encrypted with AES-128 and stored in `~/.finance_pui/credentials.enc`.
 
 **To reset credentials**: Click "Reset Credentials" on the unlock screen.
 
@@ -286,7 +286,7 @@ source ~/.bashrc  # or ~/.zshrc
 **Solutions**:
 1. Make sure you're entering the **encryption password** (the one you created for finance-pui), not your Monarch Money password
 2. If you forgot it, click "Reset Credentials" and go through setup again
-3. If setup fails, you can manually delete: `rm -rf ~/.monarch_tui/`
+3. If setup fails, you can manually delete: `rm -rf ~/.finance_pui/`
 
 ### 2FA/TOTP secret not working
 
@@ -323,14 +323,14 @@ uv sync --reinstall
 1. Check your internet connection
 2. Check the terminal size (make it larger)
 3. Wait 30 seconds for data to load
-4. Check for error messages in `~/.monarch_tui/logs` (if logging is enabled)
+4. Check for error messages in `~/.finance_pui/logs` (if logging is enabled)
 
 ### I want to start over completely
 
 To completely reset:
 ```bash
 # Delete all stored data
-rm -rf ~/.monarch_tui/
+rm -rf ~/.finance_pui/
 
 # Reinstall dependencies
 cd finance-pui
@@ -350,7 +350,7 @@ uv run python -m finance_pui
 
 - Credentials are encrypted with AES-128 using PBKDF2 (100,000 iterations)
 - Encryption password never leaves your machine
-- Stored in `~/.monarch_tui/credentials.enc` with 600 permissions (owner-only)
+- Stored in `~/.finance_pui/credentials.enc` with 600 permissions (owner-only)
 - See [SECURITY.md](SECURITY.md) for full security documentation
 
 ## Contributing
