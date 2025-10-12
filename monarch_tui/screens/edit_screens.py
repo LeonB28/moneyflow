@@ -65,11 +65,12 @@ class EditMerchantScreen(ModalScreen):
     }
     """
 
-    def __init__(self, current_merchant: str, transaction_count: int = 1, all_merchants: list = None):
+    def __init__(self, current_merchant: str, transaction_count: int = 1, all_merchants: list = None, transaction_details: dict = None):
         super().__init__()
         self.current_merchant = current_merchant
         self.transaction_count = transaction_count
         self.all_merchants = all_merchants or []
+        self.transaction_details = transaction_details
 
     def compose(self) -> ComposeResult:
         with Container(id="edit-dialog"):
@@ -81,7 +82,26 @@ class EditMerchantScreen(ModalScreen):
             else:
                 yield Label("✏️  Edit Merchant", id="edit-title")
 
-            yield Label("Current: " + self.current_merchant, classes="edit-label")
+            # Show transaction details or bulk edit summary
+            if self.transaction_details:
+                if self.transaction_count == 1:
+                    # Single transaction details
+                    details_text = (
+                        f"Transaction: {self.transaction_details.get('date', 'N/A')} | "
+                        f"${self.transaction_details.get('amount', 0):,.2f} | "
+                        f"{self.transaction_details.get('category', 'N/A')}"
+                    )
+                    yield Static(details_text, classes="edit-label")
+                else:
+                    # Bulk edit summary
+                    total = self.transaction_details.get('total_amount', 0)
+                    details_text = (
+                        f"Editing {self.transaction_count} transactions | "
+                        f"Total: ${total:,.2f}"
+                    )
+                    yield Static(details_text, classes="edit-label")
+
+            yield Label("Current merchant: " + self.current_merchant, classes="edit-label")
 
             yield Label("Type new name or ↓ to select existing:", classes="edit-label")
             yield Input(
@@ -215,15 +235,25 @@ class SelectCategoryScreen(ModalScreen):
     }
     """
 
-    def __init__(self, categories: dict, current_category_id: str = None):
+    def __init__(self, categories: dict, current_category_id: str = None, transaction_details: dict = None):
         super().__init__()
         self.categories = categories
         self.current_category_id = current_category_id
         self.category_map = {}  # Maps option index to category ID
+        self.transaction_details = transaction_details
 
     def compose(self) -> ComposeResult:
         with Container(id="category-dialog"):
             yield Label("📋 Select Category (type to filter, ↑↓ navigate, Enter to select)", id="category-title")
+
+            # Show transaction details if available
+            if self.transaction_details:
+                details_text = (
+                    f"Transaction: {self.transaction_details.get('date', 'N/A')} | "
+                    f"${self.transaction_details.get('amount', 0):,.2f} | "
+                    f"Merchant: {self.transaction_details.get('merchant', 'N/A')}"
+                )
+                yield Static(details_text, classes="edit-label")
 
             yield Input(
                 placeholder="Type to filter categories...",

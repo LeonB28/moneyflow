@@ -763,13 +763,19 @@ class MonarchTUI(App):
         if self.state.view_mode == ViewMode.MERCHANT:
             merchant_name = row_data["merchant"]
             transaction_count = row_data["count"]
+            total_amount = row_data["total"]
 
             # Get list of all merchants for suggestions
             all_merchants = self.data_manager.df["merchant"].unique().to_list()
 
+            # Pass aggregate summary for bulk edit
+            bulk_summary = {
+                "total_amount": total_amount,
+            }
+
             # Show edit modal
             new_merchant = await self.push_screen(
-                EditMerchantScreen(merchant_name, transaction_count, all_merchants),
+                EditMerchantScreen(merchant_name, transaction_count, all_merchants, bulk_summary),
                 wait_for_dismiss=True
             )
 
@@ -845,9 +851,15 @@ class MonarchTUI(App):
                 )
                 self.update_action_hints()
         else:
-            # Edit single transaction
+            # Edit single transaction - pass details for context
+            txn_details = {
+                "date": row_data.get("date"),
+                "amount": row_data.get("amount"),
+                "category": row_data.get("category"),
+            }
+
             new_merchant = await self.push_screen(
-                EditMerchantScreen(current_merchant, 1, all_merchants),
+                EditMerchantScreen(current_merchant, 1, all_merchants, txn_details),
                 wait_for_dismiss=True
             )
 
@@ -863,7 +875,7 @@ class MonarchTUI(App):
                     )
                 )
 
-                self.notify("Merchant changed. Press Ctrl+S to save.", timeout=2)
+                self.notify("Merchant changed. Press w to review and commit.", timeout=2)
                 self.update_action_hints()
 
     def action_recategorize(self) -> None:
@@ -885,16 +897,28 @@ class MonarchTUI(App):
         if table.cursor_row < 0:
             return
 
-        # Show category selection
-        new_category_id = await self.push_screen(
-            SelectCategoryScreen(self.data_manager.categories),
-            wait_for_dismiss=True
-        )
+        # In detail view, categorize current transaction
+        if self.state.view_mode == ViewMode.DETAIL:
+            row_data = self.state.current_data.row(table.cursor_row, named=True)
 
-        if new_category_id:
-            # In detail view, categorize current transaction
-            if self.state.view_mode == ViewMode.DETAIL:
-                row_data = self.state.current_data.row(table.cursor_row, named=True)
+            # Pass transaction details for context
+            txn_details = {
+                "date": row_data.get("date"),
+                "amount": row_data.get("amount"),
+                "merchant": row_data.get("merchant"),
+            }
+
+            # Show category selection
+            new_category_id = await self.push_screen(
+                SelectCategoryScreen(
+                    self.data_manager.categories,
+                    row_data["category_id"],
+                    txn_details
+                ),
+                wait_for_dismiss=True
+            )
+
+            if new_category_id:
                 txn_id = row_data["id"]
                 old_category_id = row_data["category_id"]
 
@@ -908,10 +932,10 @@ class MonarchTUI(App):
                     )
                 )
 
-                self.notify("Category changed. Press Ctrl+S to save.", timeout=2)
+                self.notify("Category changed. Press w to review and commit.", timeout=2)
                 self.refresh_view()
-            else:
-                self.notify("Recategorize only works in transaction detail view", timeout=2)
+        else:
+            self.notify("Recategorize only works in transaction detail view", timeout=2)
 
     def action_delete_transaction(self) -> None:
         """Delete current transaction with confirmation."""
