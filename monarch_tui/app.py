@@ -813,7 +813,7 @@ class MonarchTUI(App):
                         )
                     )
 
-                self.notify(f"Queued {len(merchant_txns)} edits. Press Ctrl+S to save.", timeout=3)
+                self.notify(f"Queued {len(merchant_txns)} edits. Press w to review and commit.", timeout=3)
                 self.refresh_view()
         else:
             self.notify("Edit merchant only works from Merchant view", timeout=2)
@@ -845,6 +845,9 @@ class MonarchTUI(App):
             )
 
             if new_merchant:
+                # Remember count before clearing
+                num_selected = len(self.state.selected_ids)
+
                 # Edit all selected transactions
                 for txn_id in self.state.selected_ids:
                     # Find the transaction in current view
@@ -863,7 +866,7 @@ class MonarchTUI(App):
 
                 self.state.clear_selection()
                 self.notify(
-                    f"Queued {len(self.state.selected_ids)} edits. Press Ctrl+S to save.",
+                    f"Queued {num_selected} edits. Press w to review and commit.",
                     timeout=3
                 )
                 self.update_action_hints()
