@@ -1,6 +1,13 @@
-# Monarch Money Power User Interface
+# Personal Finance Power User Interface
 
-A keyboard-driven terminal interface for power users to efficiently manage Monarch Money transactions.
+A keyboard-driven terminal interface for power users to efficiently manage personal finance transactions.
+
+**Currently Supported Platforms:**
+- ✅ **Monarch Money** (full support)
+- ✅ **Demo Mode** (synthetic data for testing)
+- 🚧 Other platforms (planned)
+
+**Disclaimer**: This is an independent open-source project and is **not affiliated with, endorsed by, or connected to Monarch Money, Inc.** Monarch Money is a trademark of Monarch Money, Inc.
 
 Currently implements a Terminal UI (TUI). Future versions may include web-based interfaces.
 
@@ -25,9 +32,20 @@ uv run python -m finance_pui --demo                # Try demo mode (no account n
 - **Review before commit**: See all pending changes before saving to Monarch Money
 - **Encrypted credentials**: AES-128 encryption with PBKDF2 key derivation (100,000 iterations)
 
-## Demo Mode
+## Supported Platforms
 
-Try the application without a Monarch Money account:
+### Monarch Money
+Full support for [Monarch Money](https://www.monarchmoney.com/) personal finance platform.
+
+Features:
+- Bulk transaction editing (merchant names, categories)
+- Multi-select operations
+- Search and filtering
+- Time-based analysis
+- Duplicate detection
+
+### Demo Mode
+Try the application without any account:
 
 ```bash
 uv run python -m finance_pui --demo
@@ -40,7 +58,7 @@ Demo mode provides:
 - **All features enabled** - edit, search, categorize, filter, etc.
 
 Perfect for:
-- Testing before committing to Monarch Money
+- Trying before signing up for a finance platform
 - Learning the interface
 - Showcasing features
 - Development without affecting real data
@@ -103,9 +121,9 @@ uv run python -m finance_pui --help
 
 **Note**: Limiting the date range makes initial load faster but you won't see older transactions in your analysis.
 
-### First Run Setup
+### First Run Setup (Monarch Money)
 
-On first run, the TUI will walk you through credential setup:
+On first run with Monarch Money, the TUI will walk you through credential setup:
 
 1. **Get your 2FA secret** (before you start):
    - Log into Monarch Money on the web
@@ -218,10 +236,19 @@ Time period changes are applied instantly using client-side filtering.
 
 ## Architecture
 
-- **Polars**: Data aggregation and filtering
+### Pluggable Backend System
+The application uses a backend abstraction layer, allowing support for multiple finance platforms:
+
+- **Backend Interface**: Abstract base class defines required methods
+- **Monarch Backend**: Implementation for Monarch Money GraphQL API
+- **Demo Backend**: Synthetic data for testing
+- **Future**: Easy to add YNAB, Lunch Money, or other platforms
+
+### Technology Stack
+- **Polars**: Fast data aggregation and filtering
 - **Textual**: Terminal UI framework
-- **MonarchMoney API**: GraphQL client
 - **Python 3.11+**: Required runtime
+- **Parquet**: Optional caching format (when --cache used)
 
 ## Performance
 
@@ -336,7 +363,10 @@ Contributions welcome! See [CLAUDE.md](CLAUDE.md) for:
 
 ## Acknowledgments
 
-This project includes code from the [monarchmoney](https://github.com/hammem/monarchmoney) Python client library by hammem, used under the MIT License. See [licenses/monarchmoney-LICENSE](licenses/monarchmoney-LICENSE) for details.
+### Monarch Money Integration
+This project's Monarch Money backend uses code derived from the [monarchmoney](https://github.com/hammem/monarchmoney) Python client library by hammem, used under the MIT License. See [licenses/monarchmoney-LICENSE](licenses/monarchmoney-LICENSE) for details.
+
+Monarch Money® is a trademark of Monarch Money, Inc. This project is an independent tool and is not affiliated with, endorsed by, or officially connected to Monarch Money, Inc.
 
 ## License
 

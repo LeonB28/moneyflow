@@ -1,4 +1,4 @@
-# Monarch Money PUI - Implementation Status
+# Personal Finance PUI - Implementation Status
 
 **Last Updated**: October 12, 2025
 **Total Tests**: 233 passing, 1 skipped

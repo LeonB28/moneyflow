@@ -1,8 +1,8 @@
-# Monarch Money PUI - Development Guide
+# Personal Finance PUI - Development Guide
 
 ## Project Overview
 
-Monarch Money PUI is a terminal-based UI for power users to manage Monarch Money transactions efficiently. Built with Python using Textual for the UI and Polars for data processing.
+Personal Finance PUI is a terminal-based UI for power users to manage Monarch Money transactions efficiently. Built with Python using Textual for the UI and Polars for data processing.
 
 ## Development Setup
 
