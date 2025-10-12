@@ -52,7 +52,7 @@ class MonarchTUI(App):
         Binding("8", "select_month_8", "Aug", show=False),
         Binding("9", "select_month_9", "Sep", show=False),
         # Sorting
-        Binding("s", "toggle_sort_field", "Count/Amount", show=True),
+        Binding("s", "toggle_sort_field", "Sort", show=True),
         Binding("v", "reverse_sort", "↕ Reverse", show=True),
         # Time navigation with arrows
         Binding("left", "prev_period", "← Prev", show=True),
@@ -406,10 +406,15 @@ class MonarchTUI(App):
         """Show merchant aggregation view."""
         table = self.query_one("#data-table", DataTable)
 
+        # Add sort arrows to column headers
+        arrow = "↓" if self.state.sort_direction == SortDirection.DESC else "↑"
+        count_header = "Count " + arrow if self.state.sort_by == SortMode.COUNT else "Count"
+        amount_header = "Total " + arrow if self.state.sort_by == SortMode.AMOUNT else "Total"
+
         # Add columns
         table.add_column("Merchant", key="merchant", width=40)
-        table.add_column("Count", key="count", width=10)
-        table.add_column("Total", key="total", width=15)
+        table.add_column(count_header, key="count", width=10)
+        table.add_column(amount_header, key="total", width=15)
 
         # Get filtered data based on time_frame
         filtered_df = self.state.get_filtered_df()
@@ -451,9 +456,14 @@ class MonarchTUI(App):
         """Show category aggregation view."""
         table = self.query_one("#data-table", DataTable)
 
+        # Add sort arrows to column headers
+        arrow = "↓" if self.state.sort_direction == SortDirection.DESC else "↑"
+        count_header = "Count " + arrow if self.state.sort_by == SortMode.COUNT else "Count"
+        amount_header = "Total " + arrow if self.state.sort_by == SortMode.AMOUNT else "Total"
+
         table.add_column("Category", key="category", width=40)
-        table.add_column("Count", key="count", width=10)
-        table.add_column("Total", key="total", width=15)
+        table.add_column(count_header, key="count", width=10)
+        table.add_column(amount_header, key="total", width=15)
 
         # Get filtered data based on time_frame
         filtered_df = self.state.get_filtered_df()
@@ -493,9 +503,14 @@ class MonarchTUI(App):
         """Show group aggregation view."""
         table = self.query_one("#data-table", DataTable)
 
+        # Add sort arrows to column headers
+        arrow = "↓" if self.state.sort_direction == SortDirection.DESC else "↑"
+        count_header = "Count " + arrow if self.state.sort_by == SortMode.COUNT else "Count"
+        amount_header = "Total " + arrow if self.state.sort_by == SortMode.AMOUNT else "Total"
+
         table.add_column("Group", key="group", width=40)
-        table.add_column("Count", key="count", width=10)
-        table.add_column("Total", key="total", width=15)
+        table.add_column(count_header, key="count", width=10)
+        table.add_column(amount_header, key="total", width=15)
 
         # Get filtered data based on time_frame
         filtered_df = self.state.get_filtered_df()
@@ -535,9 +550,14 @@ class MonarchTUI(App):
         """Show account aggregation view."""
         table = self.query_one("#data-table", DataTable)
 
+        # Add sort arrows to column headers
+        arrow = "↓" if self.state.sort_direction == SortDirection.DESC else "↑"
+        count_header = "Count " + arrow if self.state.sort_by == SortMode.COUNT else "Count"
+        amount_header = "Total " + arrow if self.state.sort_by == SortMode.AMOUNT else "Total"
+
         table.add_column("Account", key="account", width=40)
-        table.add_column("Count", key="count", width=10)
-        table.add_column("Total", key="total", width=15)
+        table.add_column(count_header, key="count", width=10)
+        table.add_column(amount_header, key="total", width=15)
 
         # Get filtered data based on time_frame
         filtered_df = self.state.get_filtered_df()
@@ -584,12 +604,13 @@ class MonarchTUI(App):
         date_header = "Date " + arrow if self.state.sort_by == SortMode.DATE else "Date"
         merchant_header = "Merchant " + arrow if self.state.sort_by == SortMode.MERCHANT else "Merchant"
         category_header = "Category " + arrow if self.state.sort_by == SortMode.CATEGORY else "Category"
+        account_header = "Account " + arrow if self.state.sort_by == SortMode.ACCOUNT else "Account"
         amount_header = "Amount " + arrow if self.state.sort_by == SortMode.AMOUNT else "Amount"
 
         table.add_column(date_header, key="date", width=12)
         table.add_column(merchant_header, key="merchant", width=25)
         table.add_column(category_header, key="category", width=20)
-        table.add_column("Account", key="account", width=18)
+        table.add_column(account_header, key="account", width=18)
         table.add_column(amount_header, key="amount", width=12)
         table.add_column("", key="flags", width=3)
 
@@ -622,6 +643,9 @@ class MonarchTUI(App):
             elif self.state.sort_by == SortMode.CATEGORY:
                 descending = self.state.sort_direction == SortDirection.DESC
                 txns = txns.sort("category", descending=descending)
+            elif self.state.sort_by == SortMode.ACCOUNT:
+                descending = self.state.sort_direction == SortDirection.DESC
+                txns = txns.sort("account", descending=descending)
             elif self.state.sort_by == SortMode.AMOUNT:
                 # Amount sorting: invert direction so largest expenses (-1000) come first
                 descending = self.state.sort_direction == SortDirection.ASC
@@ -676,11 +700,14 @@ class MonarchTUI(App):
         hints_widget = self.query_one("#action-hints", Static)
 
         if self.state.view_mode == ViewMode.MERCHANT:
+            # Show current sort field in aggregate views too
+            sort_name = self.state.sort_by.value.capitalize()
             hints = (
-                "Enter=Drill down | m=Edit merchant (bulk) | g=Change grouping | ←/→=Change period"
+                f"Enter=Drill down | m=Edit merchant (bulk) | s=Sort({sort_name}) | g=Change grouping | ←/→=Change period"
             )
         elif self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
-            hints = "Enter=Drill down | g=Change grouping | ←/→=Change period"
+            sort_name = self.state.sort_by.value.capitalize()
+            hints = f"Enter=Drill down | s=Sort({sort_name}) | g=Change grouping | ←/→=Change period"
         else:  # DETAIL (transactions)
             # Show current sort field in hints
             sort_name = self.state.sort_by.value.capitalize()
@@ -940,7 +967,7 @@ class MonarchTUI(App):
 
     def action_toggle_sort_field(self) -> None:
         """Toggle sorting field."""
-        # In detail view, cycle through: Date → Merchant → Category → Amount → Date
+        # In detail view, cycle through: Date → Merchant → Category → Account → Amount → Date
         if self.state.view_mode == ViewMode.DETAIL:
             if self.state.sort_by == SortMode.DATE:
                 self.state.sort_by = SortMode.MERCHANT
@@ -949,6 +976,9 @@ class MonarchTUI(App):
                 self.state.sort_by = SortMode.CATEGORY
                 field = "Category"
             elif self.state.sort_by == SortMode.CATEGORY:
+                self.state.sort_by = SortMode.ACCOUNT
+                field = "Account"
+            elif self.state.sort_by == SortMode.ACCOUNT:
                 self.state.sort_by = SortMode.AMOUNT
                 field = "Amount"
             else:  # AMOUNT or anything else

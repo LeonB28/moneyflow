@@ -27,6 +27,7 @@ class SortMode(Enum):
     DATE = "date"
     MERCHANT = "merchant"
     CATEGORY = "category"
+    ACCOUNT = "account"
 
 
 class SortDirection(Enum):
