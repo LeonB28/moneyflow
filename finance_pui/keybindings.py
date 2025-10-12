@@ -19,14 +19,14 @@ class KeyBinding:
 # All keyboard shortcuts organized by category
 KEYBINDINGS: List[KeyBinding] = [
     # View Navigation
-    KeyBinding("m", "view_merchants", "View merchant aggregation", "Views"),
-    KeyBinding("c", "view_categories", "View category aggregation", "Views"),
-    KeyBinding("g", "view_groups", "View category group aggregation", "Views"),
-    KeyBinding("A", "view_accounts", "View account aggregation", "Views"),
+    KeyBinding("g", "cycle_grouping", "Cycle grouping (Merchant→Category→Group→Account)", "Views"),
     KeyBinding("u", "view_ungrouped", "View all transactions", "Views"),
     KeyBinding("D", "find_duplicates", "Find duplicate transactions", "Views"),
+    KeyBinding("m", "view_merchants", "View merchant aggregation (direct)", "Views"),
+    KeyBinding("c", "view_categories", "View category aggregation (direct)", "Views"),
+    KeyBinding("A", "view_accounts", "View account aggregation (direct)", "Views"),
     KeyBinding("enter", "drill_down", "Drill down into selected item", "Views"),
-    KeyBinding("esc", "go_back", "Go back to previous view", "Views"),
+    KeyBinding("esc", "go_back", "Go back to previous view (restores cursor)", "Views"),
     # Time Navigation
     KeyBinding("y", "this_year", "View this year", "Time"),
     KeyBinding("t", "this_month", "View this month", "Time"),

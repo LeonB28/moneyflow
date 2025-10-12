@@ -31,13 +31,12 @@ class MonarchTUI(App):
 
     BINDINGS = [
         # View mode
-        Binding("tab", "cycle_grouping", "Group By", show=True, key_display="Tab"),
+        Binding("g", "cycle_grouping", "Group By", show=True),
         Binding("u", "view_ungrouped", "All Txns", show=True),
         Binding("D", "find_duplicates", "Duplicates", show=True, key_display="D"),
         # Hidden direct access bindings (still available but not shown in footer)
         Binding("m", "view_merchants", "Merchants", show=False),
         Binding("c", "view_categories", "Categories", show=False),
-        Binding("g", "view_groups", "Groups", show=False),
         Binding("A", "view_accounts", "Accounts", show=False, key_display="A"),
         # Time navigation
         Binding("y", "this_year", "Year", show=True),
@@ -648,9 +647,9 @@ class MonarchTUI(App):
         hints_widget = self.query_one("#action-hints", Static)
 
         if self.state.view_mode == ViewMode.MERCHANT:
-            hints = "Enter=Drill down | e=Edit merchant (bulk) | Tab=Change grouping | ←/→=Change period"
+            hints = "Enter=Drill down | e=Edit merchant (bulk) | g=Change grouping | ←/→=Change period"
         elif self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
-            hints = "Enter=Drill down | Tab=Change grouping | ←/→=Change period"
+            hints = "Enter=Drill down | g=Change grouping | ←/→=Change period"
         else:  # DETAIL (transactions)
             hints = "i=Details | e=Edit | r=Recategorize | h=Hide/Unhide | d=Delete | Space=Select"
 
