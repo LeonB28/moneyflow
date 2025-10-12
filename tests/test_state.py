@@ -501,50 +501,51 @@ class TestNavigation:
         """Test drilling down from merchant view to detail view."""
         app_state.view_mode = ViewMode.MERCHANT
 
-        app_state.drill_down("Starbucks")
+        app_state.drill_down("Starbucks", cursor_position=5)
 
         assert app_state.view_mode == ViewMode.DETAIL
         assert app_state.selected_merchant == "Starbucks"
         assert app_state.selected_category is None
         assert app_state.selected_group is None
         assert len(app_state.navigation_history) == 1
-        assert app_state.navigation_history[0] == (ViewMode.MERCHANT, None)
+        assert app_state.navigation_history[0] == (ViewMode.MERCHANT, 5)
 
     def test_drill_down_from_category_view(self, app_state):
         """Test drilling down from category view to detail view."""
         app_state.view_mode = ViewMode.CATEGORY
 
-        app_state.drill_down("Groceries")
+        app_state.drill_down("Groceries", cursor_position=3)
 
         assert app_state.view_mode == ViewMode.DETAIL
         assert app_state.selected_category == "Groceries"
         assert app_state.selected_merchant is None
         assert app_state.selected_group is None
         assert len(app_state.navigation_history) == 1
-        assert app_state.navigation_history[0] == (ViewMode.CATEGORY, None)
+        assert app_state.navigation_history[0] == (ViewMode.CATEGORY, 3)
 
     def test_drill_down_from_group_view(self, app_state):
         """Test drilling down from group view to detail view."""
         app_state.view_mode = ViewMode.GROUP
 
-        app_state.drill_down("Food & Dining")
+        app_state.drill_down("Food & Dining", cursor_position=10)
 
         assert app_state.view_mode == ViewMode.DETAIL
         assert app_state.selected_group == "Food & Dining"
         assert app_state.selected_merchant is None
         assert app_state.selected_category is None
         assert len(app_state.navigation_history) == 1
-        assert app_state.navigation_history[0] == (ViewMode.GROUP, None)
+        assert app_state.navigation_history[0] == (ViewMode.GROUP, 10)
 
     def test_go_back_from_detail_to_previous_view(self, app_state):
         """Test going back from detail view to previous view."""
         app_state.view_mode = ViewMode.MERCHANT
-        app_state.drill_down("Starbucks")
+        app_state.drill_down("Starbucks", cursor_position=7)
 
         # Now go back
-        result = app_state.go_back()
+        success, cursor_position = app_state.go_back()
 
-        assert result is True
+        assert success is True
+        assert cursor_position == 7
         assert app_state.view_mode == ViewMode.MERCHANT
         assert app_state.selected_merchant is None
         assert app_state.selected_category is None
@@ -557,9 +558,10 @@ class TestNavigation:
         app_state.view_mode = ViewMode.DETAIL
         app_state.selected_merchant = "Starbucks"
 
-        result = app_state.go_back()
+        success, cursor_position = app_state.go_back()
 
-        assert result is True
+        assert success is True
+        assert cursor_position == 0  # Default cursor position
         assert app_state.view_mode == ViewMode.MERCHANT  # Default back to MERCHANT
         assert app_state.selected_merchant is None
 
@@ -567,30 +569,35 @@ class TestNavigation:
         """Test that go_back returns False when already at top-level view."""
         app_state.view_mode = ViewMode.MERCHANT
 
-        result = app_state.go_back()
+        success, cursor_position = app_state.go_back()
 
-        assert result is False
+        assert success is False
+        assert cursor_position == 0
         assert app_state.view_mode == ViewMode.MERCHANT
 
     def test_multiple_drill_downs_and_backs(self, app_state):
         """Test multiple drill-downs and back navigations."""
         # Start at merchant view
         app_state.view_mode = ViewMode.MERCHANT
-        app_state.drill_down("Starbucks")
+        app_state.drill_down("Starbucks", cursor_position=2)
         assert app_state.view_mode == ViewMode.DETAIL
 
         # Go back to merchant
-        app_state.go_back()
+        success, cursor_pos = app_state.go_back()
+        assert success is True
+        assert cursor_pos == 2
         assert app_state.view_mode == ViewMode.MERCHANT
 
         # Switch to category view and drill down
         app_state.view_mode = ViewMode.CATEGORY
-        app_state.drill_down("Groceries")
+        app_state.drill_down("Groceries", cursor_position=8)
         assert app_state.view_mode == ViewMode.DETAIL
         assert app_state.selected_category == "Groceries"
 
         # Go back to category view
-        app_state.go_back()
+        success, cursor_pos = app_state.go_back()
+        assert success is True
+        assert cursor_pos == 8
         assert app_state.view_mode == ViewMode.CATEGORY
         assert app_state.selected_category is None
 

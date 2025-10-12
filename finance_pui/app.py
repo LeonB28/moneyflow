@@ -1367,9 +1367,14 @@ class MonarchTUI(App):
                 self.notify(f"Error deleting: {e}", severity="error", timeout=5)
 
     def action_go_back(self) -> None:
-        """Go back to previous view."""
-        if self.state.go_back():
+        """Go back to previous view and restore cursor position."""
+        success, cursor_position = self.state.go_back()
+        if success:
             self.refresh_view()
+            # Restore cursor position
+            table = self.query_one("#data-table", DataTable)
+            if cursor_position >= 0 and cursor_position < table.row_count:
+                table.move_cursor(row=cursor_position)
 
     async def _refresh_session(self) -> bool:
         """Refresh expired session by re-authenticating with stored credentials."""
@@ -1558,14 +1563,15 @@ class MonarchTUI(App):
     async def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection (Enter key)."""
         if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
-            # Drill down
+            # Drill down - save cursor position for restoration on go_back
             table = self.query_one("#data-table", DataTable)
+            cursor_position = table.cursor_row
             row_key = event.row_key
             row = table.get_row(row_key)
 
             # First column is the item name
             item_name = str(row[0])
-            self.state.drill_down(item_name)
+            self.state.drill_down(item_name, cursor_position)
             self.refresh_view()
 
 

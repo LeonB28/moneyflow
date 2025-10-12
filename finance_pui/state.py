@@ -105,7 +105,8 @@ class AppState:
     current_data: Optional[pl.DataFrame] = None
 
     # Navigation history for breadcrumb and back navigation
-    navigation_history: List[tuple[ViewMode, Optional[str]]] = field(default_factory=list)
+    # Stores (view_mode, cursor_position) for restoring state on go_back
+    navigation_history: List[tuple[ViewMode, int]] = field(default_factory=list)
 
     def add_edit(self, transaction_id: str, field: str, old_value: Any, new_value: Any):
         """Add a pending edit to the change tracker."""
@@ -248,10 +249,16 @@ class AppState:
 
         return df
 
-    def drill_down(self, item_name: str) -> None:
-        """Drill down into a specific item based on current view mode."""
-        # Save current state to history
-        self.navigation_history.append((self.view_mode, None))
+    def drill_down(self, item_name: str, cursor_position: int = 0) -> None:
+        """
+        Drill down into a specific item based on current view mode.
+
+        Args:
+            item_name: The item to drill down into
+            cursor_position: Current cursor position to save for restoration
+        """
+        # Save current state to history (view mode + cursor position)
+        self.navigation_history.append((self.view_mode, cursor_position))
 
         # Set the selected item based on current view
         if self.view_mode == ViewMode.MERCHANT:
@@ -267,8 +274,15 @@ class AppState:
             self.selected_account = item_name
             self.view_mode = ViewMode.DETAIL
 
-    def go_back(self) -> bool:
-        """Go back to previous view. Returns True if successful, False if already at root."""
+    def go_back(self) -> tuple[bool, int]:
+        """
+        Go back to previous view.
+
+        Returns:
+            Tuple of (success: bool, cursor_position: int)
+            success=True if went back, False if already at root
+            cursor_position=Row to restore cursor to (0 if none saved)
+        """
         if self.view_mode == ViewMode.DETAIL:
             # Clear drill-down selections
             self.selected_merchant = None
@@ -277,17 +291,18 @@ class AppState:
             self.selected_account = None
 
             # Pop from history if available
+            cursor_position = 0
             if self.navigation_history:
-                previous_view, _ = self.navigation_history.pop()
+                previous_view, cursor_position = self.navigation_history.pop()
                 self.view_mode = previous_view
             else:
                 # Default back to MERCHANT view
                 self.view_mode = ViewMode.MERCHANT
 
-            return True
+            return True, cursor_position
 
         # Already at a top-level view
-        return False
+        return False, 0
 
     def save_view_state(self) -> dict:
         """Save current view state for later restoration."""
