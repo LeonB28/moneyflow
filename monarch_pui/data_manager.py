@@ -6,7 +6,7 @@ import asyncio
 from datetime import datetime, date
 from typing import Dict, List, Optional, Any, Tuple
 import polars as pl
-from .monarchmoney import MonarchMoney
+from .backends.base import FinanceBackend
 
 
 # Category group mapping (since not consistently available in API)
@@ -58,7 +58,7 @@ class DataManager:
     local aggregations using Polars.
     """
 
-    def __init__(self, mm: MonarchMoney):
+    def __init__(self, mm: FinanceBackend):
         self.mm = mm
         self.category_to_group: Dict[str, str] = {}
         self._build_category_group_mapping()

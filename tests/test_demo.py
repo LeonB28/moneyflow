@@ -10,7 +10,7 @@ from datetime import date
 from typing import Dict, List, Any
 
 from monarch_pui.demo_data_generator import DemoDataGenerator, generate_demo_data
-from monarch_pui.demo_backend import DemoBackend
+from monarch_pui.backends import DemoBackend
 
 
 # ============================================================================

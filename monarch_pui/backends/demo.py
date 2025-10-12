@@ -6,14 +6,16 @@ of the TUI without a Monarch account or exposing personal finances.
 """
 
 from typing import Dict, List, Any, Optional
-from .demo_data_generator import generate_demo_data
+from .base import FinanceBackend
+from ..demo_data_generator import generate_demo_data
 
 
-class DemoBackend:
+class DemoBackend(FinanceBackend):
     """
     Demo backend that simulates MonarchMoney API with synthetic data.
 
     Similar to test MockMonarchMoney but designed for demo/showcase purposes.
+    Implements the FinanceBackend interface.
     """
 
     def __init__(self, year: int = 2025):

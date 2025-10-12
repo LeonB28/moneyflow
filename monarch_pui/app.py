@@ -18,7 +18,7 @@ from textual.containers import Container, Horizontal, Vertical
 from textual.widgets import Header, Footer, DataTable, Static, LoadingIndicator
 from textual.reactive import reactive
 
-from .monarchmoney import MonarchMoney
+from .backends import MonarchBackend, DemoBackend
 from .data_manager import DataManager
 from .state import AppState, ViewMode, SortMode, SortDirection, TimeFrame, TransactionEdit
 from .widgets.help_screen import HelpScreen
@@ -86,11 +86,10 @@ class MonarchTUI(App):
         super().__init__()
         self.demo_mode = demo_mode
         if demo_mode:
-            from .demo_backend import DemoBackend
             self.mm = DemoBackend(year=start_year or 2025)
             self.title = "Monarch Money PUI [DEMO MODE]"
         else:
-            self.mm = MonarchMoney()
+            self.mm = MonarchBackend()
             self.title = "Monarch Money PUI"
         self.data_manager: Optional[DataManager] = None
         self.state = AppState()

@@ -7,13 +7,14 @@ modifying real data.
 
 from typing import Dict, List, Any, Optional
 from datetime import datetime, date
+from monarch_pui.backends.base import FinanceBackend
 
 
 # Simulate the MonarchMoney API interface without importing the real one
 # This keeps tests isolated and prevents accidental API calls
 
 
-class MockMonarchMoney:
+class MockMonarchMoney(FinanceBackend):
     """
     Mock implementation of MonarchMoney client for testing.
 
@@ -231,6 +232,20 @@ class MockMonarchMoney:
             raise Exception(f"Transaction not found: {transaction_id}")
 
         return {"updateTransaction": {"transaction": {"id": transaction_id}}}
+
+    async def delete_transaction(self, transaction_id: str) -> bool:
+        """
+        Mock delete transaction.
+
+        Removes from mock data so deletion persists in test session.
+        """
+        original_count = len(self.transactions)
+        self.transactions = [t for t in self.transactions if t["id"] != transaction_id]
+
+        if len(self.transactions) == original_count:
+            raise Exception(f"Transaction not found: {transaction_id}")
+
+        return True
 
     def get_transaction_by_id(self, transaction_id: str) -> Optional[Dict[str, Any]]:
         """Helper to get a transaction by ID for testing."""
