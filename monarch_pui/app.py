@@ -75,15 +75,22 @@ class MonarchTUI(App):
     status_message = reactive("Ready")
     pending_changes_count = reactive(0)
 
-    def __init__(self, start_year: Optional[int] = None, custom_start_date: Optional[str] = None):
+    def __init__(self, start_year: Optional[int] = None, custom_start_date: Optional[str] = None, demo_mode: bool = False):
         super().__init__()
-        self.mm = MonarchMoney()
+        self.demo_mode = demo_mode
+        if demo_mode:
+            from .demo_backend import DemoBackend
+            self.mm = DemoBackend(year=start_year or 2025)
+            self.title = "Monarch Money PUI [DEMO MODE]"
+        else:
+            self.mm = MonarchMoney()
+            self.title = "Monarch Money PUI"
         self.data_manager: Optional[DataManager] = None
         self.state = AppState()
         self.loading = False
-        self.start_year = start_year  # Optional year cutoff for data loading
-        self.custom_start_date = custom_start_date  # Optional custom start date
-        self.stored_credentials: Optional[dict] = None  # Keep for session refresh
+        self.start_year = start_year
+        self.custom_start_date = custom_start_date
+        self.stored_credentials: Optional[dict] = None
 
     def compose(self) -> ComposeResult:
         """Compose the main UI."""
@@ -129,57 +136,66 @@ class MonarchTUI(App):
         self.query_one("#loading", LoadingIndicator).display = True
         loading_status = self.query_one("#loading-status", Static)
         loading_status.display = True
-        loading_status.update("🔄 Connecting to Monarch Money...")
+
+        if self.demo_mode:
+            loading_status.update("🎮 DEMO MODE - Loading sample data...")
+        else:
+            loading_status.update("🔄 Connecting to Monarch Money...")
 
         try:
-            # Try to use encrypted credentials first
-            from .credentials import CredentialManager
-            from .monarchmoney import RequireMFAException, LoginFailedException
-            from .screens.credential_screens import CredentialSetupScreen, CredentialUnlockScreen
+            if not self.demo_mode:
+                # Try to use encrypted credentials first
+                from .credentials import CredentialManager
+                from .monarchmoney import RequireMFAException, LoginFailedException
+                from .screens.credential_screens import CredentialSetupScreen, CredentialUnlockScreen
 
-            cred_manager = CredentialManager()
-            creds = None
+                cred_manager = CredentialManager()
+                creds = None
 
-            if cred_manager.credentials_exist():
-                # Show unlock screen
-                result = await self.push_screen(CredentialUnlockScreen(), wait_for_dismiss=True)
+                if cred_manager.credentials_exist():
+                    # Show unlock screen
+                    result = await self.push_screen(CredentialUnlockScreen(), wait_for_dismiss=True)
 
-                if result is None:
-                    # User chose to reset - show setup screen
+                    if result is None:
+                        # User chose to reset - show setup screen
+                        creds = await self.push_screen(CredentialSetupScreen(), wait_for_dismiss=True)
+                        if not creds:
+                            self.exit()
+                            return
+                    else:
+                        creds = result
+                else:
+                    # No credentials - show setup screen
                     creds = await self.push_screen(CredentialSetupScreen(), wait_for_dismiss=True)
                     if not creds:
                         self.exit()
                         return
-                else:
-                    creds = result
-            else:
-                # No credentials - show setup screen
-                creds = await self.push_screen(CredentialSetupScreen(), wait_for_dismiss=True)
-                if not creds:
+
+                # Login with credentials
+                loading_status.update("🔐 Logging in to Monarch Money...")
+
+                try:
+                    await self.mm.login(
+                        email=creds["email"],
+                        password=creds["password"],
+                        use_saved_session=False,
+                        save_session=True,
+                        mfa_secret_key=creds["mfa_secret"],
+                    )
+                    # Store credentials for automatic session refresh if needed
+                    self.stored_credentials = creds
+                    loading_status.update("✅ Logged in successfully!")
+                except (RequireMFAException, LoginFailedException) as e:
+                    # Login failed - credentials may be invalid
+                    loading_status.update(f"❌ Login failed: {e}")
+                    self.notify(f"Login failed: {e}", severity="error", timeout=10)
+                    self.notify("Your credentials may be incorrect. Exiting...", timeout=10)
                     self.exit()
                     return
-
-            # Login with credentials
-            loading_status.update("🔐 Logging in to Monarch Money...")
-
-            try:
-                await self.mm.login(
-                    email=creds["email"],
-                    password=creds["password"],
-                    use_saved_session=False,
-                    save_session=True,
-                    mfa_secret_key=creds["mfa_secret"],
-                )
-                # Store credentials for automatic session refresh if needed
-                self.stored_credentials = creds
-                loading_status.update("✅ Logged in successfully!")
-            except (RequireMFAException, LoginFailedException) as e:
-                # Login failed - credentials may be invalid
-                loading_status.update(f"❌ Login failed: {e}")
-                self.notify(f"Login failed: {e}", severity="error", timeout=10)
-                self.notify("Your credentials may be incorrect. Exiting...", timeout=10)
-                self.exit()
-                return
+            else:
+                # Demo mode - no authentication needed
+                loading_status.update("🎮 DEMO MODE - No authentication required")
+                await self.mm.login()  # No-op for DemoBackend
 
             # Initialize data manager
             self.data_manager = DataManager(self.mm)
@@ -1414,6 +1430,11 @@ def main():
         help="Only load transactions from this date onwards (e.g., --since 2024-06-01). Overrides --year if both provided.",
     )
     parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="Run in demo mode with sample data (no authentication required)",
+    )
+    parser.add_argument(
         "--dev",
         action="store_true",
         help="Enable dev mode with console logging and better error messages",
@@ -1431,7 +1452,7 @@ def main():
         start_year = args.year
 
     try:
-        app = MonarchTUI(start_year=start_year, custom_start_date=custom_start_date)
+        app = MonarchTUI(start_year=start_year, custom_start_date=custom_start_date, demo_mode=args.demo)
 
         # Enable dev mode if requested
         if args.dev:
