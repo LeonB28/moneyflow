@@ -240,8 +240,8 @@ class SelectCategoryScreen(ModalScreen):
     async def on_mount(self) -> None:
         """Initialize category list."""
         await self._update_category_list("")
-        # Don't focus input initially - let OptionList have focus for arrow keys
-        self.query_one("#category-list", OptionList).focus()
+        # Focus search input so user can immediately start typing
+        self.query_one("#search-input", Input).focus()
 
     async def _update_category_list(self, query: str) -> None:
         """Update the category list based on search query."""
@@ -288,6 +288,9 @@ class SelectCategoryScreen(ModalScreen):
         """Handle keyboard shortcuts."""
         if event.key == "escape":
             self.dismiss(None)
+        elif event.key == "down":
+            # Move focus from input to list
+            self.query_one("#category-list", OptionList).focus()
         elif event.key == "slash":
             # Focus search input when user presses /
             self.query_one("#search-input", Input).focus()
