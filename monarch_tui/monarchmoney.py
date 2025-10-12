@@ -1,3 +1,15 @@
+"""
+Monarch Money API Client
+
+This file is derived from the monarchmoney Python client library:
+https://github.com/hammem/monarchmoney
+
+Copyright (c) 2023 hammem
+Licensed under the MIT License
+
+See licenses/monarchmoney-LICENSE for the full license text.
+"""
+
 import asyncio
 import calendar
 import getpass

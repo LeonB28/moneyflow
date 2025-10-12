@@ -325,6 +325,10 @@ Contributions welcome! See [CLAUDE.md](CLAUDE.md) for:
 - Code style guidelines
 - How to run tests
 
+## Acknowledgments
+
+This project includes code from the [monarchmoney](https://github.com/hammem/monarchmoney) Python client library by hammem, used under the MIT License. See [licenses/monarchmoney-LICENSE](licenses/monarchmoney-LICENSE) for details.
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details
