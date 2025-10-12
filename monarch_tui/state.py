@@ -281,6 +281,22 @@ class AppState:
         # Already at a top-level view
         return False
 
+    def save_view_state(self) -> dict:
+        """Save current view state for later restoration."""
+        return {
+            "view_mode": self.view_mode,
+            "selected_merchant": self.selected_merchant,
+            "selected_category": self.selected_category,
+            "selected_group": self.selected_group,
+        }
+
+    def restore_view_state(self, saved_state: dict) -> None:
+        """Restore previously saved view state."""
+        self.view_mode = saved_state["view_mode"]
+        self.selected_merchant = saved_state["selected_merchant"]
+        self.selected_category = saved_state["selected_category"]
+        self.selected_group = saved_state["selected_group"]
+
     def get_breadcrumb(self) -> str:
         """Get breadcrumb string showing current navigation path."""
         parts = []

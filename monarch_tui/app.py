@@ -956,44 +956,80 @@ class MonarchTUI(App):
         if table.cursor_row < 0:
             return
 
-        # In detail view, categorize current transaction
+        # In detail view, categorize current transaction or selected transactions
         if self.state.view_mode == ViewMode.DETAIL:
             row_data = self.state.current_data.row(table.cursor_row, named=True)
 
-            # Pass transaction details for context
-            txn_details = {
-                "date": row_data.get("date"),
-                "amount": row_data.get("amount"),
-                "merchant": row_data.get("merchant"),
-            }
+            # Check if multi-select is active
+            if len(self.state.selected_ids) > 0:
+                # Multi-select recategorize
+                num_selected = len(self.state.selected_ids)
 
-            # Show category selection
-            new_category_id = await self.push_screen(
-                SelectCategoryScreen(
-                    self.data_manager.categories,
-                    row_data["category_id"],
-                    txn_details
-                ),
-                wait_for_dismiss=True
-            )
-
-            if new_category_id:
-                txn_id = row_data["id"]
-                old_category_id = row_data["category_id"]
-
-                self.data_manager.pending_edits.append(
-                    TransactionEdit(
-                        transaction_id=txn_id,
-                        field="category",
-                        old_value=old_category_id,
-                        new_value=new_category_id,
-                        timestamp=datetime.now()
-                    )
+                # Show category selection (no transaction details for bulk)
+                new_category_id = await self.push_screen(
+                    SelectCategoryScreen(
+                        self.data_manager.categories,
+                        row_data["category_id"],
+                        None  # No single transaction details for bulk operation
+                    ),
+                    wait_for_dismiss=True
                 )
 
-                self.notify("Category changed. Press w to review and commit.", timeout=2)
-                # Refresh to show * marker, stays in detail view since view_mode unchanged
-                self.refresh_view()
+                if new_category_id:
+                    # Apply to all selected transactions
+                    for txn_id in self.state.selected_ids:
+                        txn_rows = self.state.current_data.filter(pl.col("id") == txn_id)
+                        if len(txn_rows) > 0:
+                            txn = txn_rows.row(0, named=True)
+                            self.data_manager.pending_edits.append(
+                                TransactionEdit(
+                                    transaction_id=txn_id,
+                                    field="category",
+                                    old_value=txn["category_id"],
+                                    new_value=new_category_id,
+                                    timestamp=datetime.now()
+                                )
+                            )
+
+                    self.state.clear_selection()
+                    self.notify(f"Queued {num_selected} category changes. Press w to review and commit.", timeout=3)
+                    self.refresh_view()
+            else:
+                # Single transaction recategorize
+                # Pass transaction details for context
+                txn_details = {
+                    "date": row_data.get("date"),
+                    "amount": row_data.get("amount"),
+                    "merchant": row_data.get("merchant"),
+                }
+
+                # Show category selection
+                new_category_id = await self.push_screen(
+                    SelectCategoryScreen(
+                        self.data_manager.categories,
+                        row_data["category_id"],
+                        txn_details
+                    ),
+                    wait_for_dismiss=True
+                )
+
+                if new_category_id:
+                    txn_id = row_data["id"]
+                    old_category_id = row_data["category_id"]
+
+                    self.data_manager.pending_edits.append(
+                        TransactionEdit(
+                            transaction_id=txn_id,
+                            field="category",
+                            old_value=old_category_id,
+                            new_value=new_category_id,
+                            timestamp=datetime.now()
+                        )
+                    )
+
+                    self.notify("Category changed. Press w to review and commit.", timeout=2)
+                    # Refresh to show * marker, stays in detail view since view_mode unchanged
+                    self.refresh_view()
         else:
             self.notify("Recategorize only works in transaction detail view", timeout=2)
 
@@ -1080,6 +1116,9 @@ class MonarchTUI(App):
         """Show review screen and commit if confirmed."""
         from .screens.review_screen import ReviewChangesScreen
 
+        # Save view state before showing review screen
+        saved_state = self.state.save_view_state()
+
         # Show review screen with category names for readable display
         should_commit = await self.push_screen(
             ReviewChangesScreen(self.data_manager.pending_edits, self.data_manager.categories),
@@ -1155,25 +1194,21 @@ class MonarchTUI(App):
                                 .alias("category")
                             )
 
-                # Save view state before clearing and refreshing
-                saved_view_mode = self.state.view_mode
-                saved_merchant = self.state.selected_merchant
-                saved_category = self.state.selected_category
-                saved_group = self.state.selected_group
-
                 # Clear pending edits on success
                 self.data_manager.pending_edits.clear()
 
-                # Restore view state (in case it got cleared somehow)
-                self.state.view_mode = saved_view_mode
-                self.state.selected_merchant = saved_merchant
-                self.state.selected_category = saved_category
-                self.state.selected_group = saved_group
-
-                # Refresh view to show updated data
+                # Restore view state and refresh to show updated data in same view
+                self.state.restore_view_state(saved_state)
                 self.refresh_view()
             except Exception as e:
                 self.notify(f"❌ Error committing: {e}", severity="error", timeout=5)
+                # Restore view state even on error
+                self.state.restore_view_state(saved_state)
+                self.refresh_view()
+        else:
+            # User pressed Escape - restore view state and refresh to go back to where they were
+            self.state.restore_view_state(saved_state)
+            self.refresh_view()
 
     def action_quit_app(self) -> None:
         """Quit the application - show confirmation first."""
