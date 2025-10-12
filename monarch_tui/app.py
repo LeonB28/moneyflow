@@ -1080,9 +1080,32 @@ class MonarchTUI(App):
                         timeout=3
                     )
 
+                # Apply edits to local DataFrame for instant UI update
+                for edit in self.data_manager.pending_edits:
+                    if edit.field == "merchant":
+                        # Update merchant in DataFrame
+                        mask = self.data_manager.df["id"] == edit.transaction_id
+                        self.data_manager.df = self.data_manager.df.with_columns(
+                            pl.when(pl.col("id") == edit.transaction_id)
+                            .then(pl.lit(edit.new_value))
+                            .otherwise(pl.col("merchant"))
+                            .alias("merchant")
+                        )
+                        # Also update in state
+                        if self.state.transactions_df is not None:
+                            self.state.transactions_df = self.state.transactions_df.with_columns(
+                                pl.when(pl.col("id") == edit.transaction_id)
+                                .then(pl.lit(edit.new_value))
+                                .otherwise(pl.col("merchant"))
+                                .alias("merchant")
+                            )
+                    # Note: Category updates would need category name lookup from ID
+
                 # Clear pending edits on success
                 self.data_manager.pending_edits.clear()
-                self.update_action_hints()
+
+                # Refresh view to show updated data
+                self.refresh_view()
             except Exception as e:
                 self.notify(f"❌ Error committing: {e}", severity="error", timeout=5)
 
