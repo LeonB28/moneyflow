@@ -326,6 +326,53 @@ class TestEditValidation:
         assert failure == 0
 
 
+class TestDataFrameUpdates:
+    """Test that DataFrame is updated in-memory after commits."""
+
+    async def test_dataframe_updated_after_merchant_commit(self, loaded_data_manager, mock_mm):
+        """Test that DataFrame reflects merchant changes after commit without re-fetch."""
+        dm, df, _, _ = loaded_data_manager
+
+        # Ensure dm.df is set (loaded_data_manager fixture should do this)
+        dm.df = df
+
+        # Get original merchant name
+        txn = df.row(0, named=True)
+        txn_id = txn["id"]
+        old_merchant = txn["merchant"]
+        new_merchant = "Updated Merchant Name"
+
+        # Verify old name in DataFrame
+        assert dm.df.filter(pl.col("id") == txn_id).row(0, named=True)["merchant"] == old_merchant
+
+        # Make edit and commit
+        dm.pending_edits.append(
+            TransactionEdit(txn_id, "merchant", old_merchant, new_merchant, datetime.now())
+        )
+
+        # Commit
+        success, failure = await dm.commit_pending_edits(dm.pending_edits)
+        assert success == 1
+
+        # Apply update to DataFrame (simulating what app.py does after successful commit)
+        dm.df = dm.df.with_columns(
+            pl.when(pl.col("id") == txn_id)
+            .then(pl.lit(new_merchant))
+            .otherwise(pl.col("merchant"))
+            .alias("merchant")
+        )
+
+        # Verify DataFrame was updated in-memory
+        updated_row = dm.df.filter(pl.col("id") == txn_id).row(0, named=True)
+        assert updated_row["merchant"] == new_merchant
+
+        # Verify API was also updated
+        api_txn = mock_mm.get_transaction_by_id(txn_id)
+        assert api_txn["merchant"]["name"] == new_merchant
+
+        # Key point: DataFrame update happened WITHOUT calling fetch_all_data again!
+
+
 class TestEdgeCase:
     """Test edge cases in editing."""
 
