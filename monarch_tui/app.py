@@ -6,6 +6,8 @@ A fast, keyboard-driven terminal interface for transaction management.
 
 import argparse
 import asyncio
+import sys
+import traceback
 from datetime import datetime, timedelta
 from typing import Optional
 import polars as pl
@@ -1086,6 +1088,11 @@ def main():
         metavar="YYYY-MM-DD",
         help="Only load transactions from this date onwards (e.g., --since 2024-06-01). Overrides --year if both provided.",
     )
+    parser.add_argument(
+        "--dev",
+        action="store_true",
+        help="Enable dev mode with console logging and better error messages",
+    )
 
     args = parser.parse_args()
 
@@ -1098,8 +1105,25 @@ def main():
     elif args.year:
         start_year = args.year
 
-    app = MonarchTUI(start_year=start_year, custom_start_date=custom_start_date)
-    app.run()
+    try:
+        app = MonarchTUI(start_year=start_year, custom_start_date=custom_start_date)
+
+        # Enable dev mode if requested
+        if args.dev:
+            # Textual will show detailed tracebacks in dev mode
+            app.run(headless=False)
+        else:
+            app.run()
+    except Exception as e:
+        # Print full traceback to console
+        print("\n" + "="*80, file=sys.stderr)
+        print("FATAL ERROR - Monarch TUI crashed!", file=sys.stderr)
+        print("="*80, file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        print("\n" + "="*80, file=sys.stderr)
+        print("Please report this error with the traceback above.", file=sys.stderr)
+        print("="*80 + "\n", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
