@@ -1,11 +1,13 @@
-# Monarch TUI
+# Monarch Money Power User Interface
 
-A terminal UI for managing Monarch Money transactions.
+A keyboard-driven terminal interface for power users to efficiently manage Monarch Money transactions.
+
+Currently implements a Terminal UI (TUI). Future versions may include web-based interfaces.
 
 **Quick Start**:
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh  # Install uv
-git clone <repo-url> && cd monarch-tui             # Download
+git clone <repo-url> && cd monarch-pui             # Download
 uv sync                                            # Install dependencies
 uv run python -m monarch_tui                       # Run
 ```
@@ -27,12 +29,12 @@ uv run python -m monarch_tui                       # Run
 
 Install uv (a Python package manager): https://docs.astral.sh/uv/getting-started/installation/
 
-### 2. Download Monarch TUI
+### 2. Download Monarch PUI
 
 **Clone the repository:**
 ```bash
-git clone https://github.com/yourusername/monarch-tui.git
-cd monarch-tui
+git clone https://github.com/yourusername/monarch-pui.git
+cd monarch-pui
 ```
 
 **Or download ZIP** from GitHub, extract, and navigate to the folder.
@@ -55,7 +57,7 @@ The first time you run it, you'll go through a one-time credential setup.
 
 ## CLI Options
 
-By default, Monarch TUI fetches **all transactions** from your account. For very large accounts, you can limit the data range:
+By default, the application fetches **all transactions** from your account. For very large accounts, you can limit the data range:
 
 **Fetch only recent years:**
 ```bash
@@ -93,7 +95,7 @@ On first run, the TUI will walk you through credential setup:
 2. **Launch TUI** and enter when prompted:
    - Monarch Money email and password
    - Your 2FA secret key
-   - A new encryption password (for monarch-tui only)
+   - A new encryption password (for monarch-pui only)
 
 3. **Done!** Next time you launch, just enter your encryption password.
 
@@ -103,7 +105,7 @@ Your credentials are encrypted with AES-128 and stored in `~/.monarch_tui/creden
 
 ## Time Navigation
 
-Monarch TUI downloads all transactions once, then filters client-side for fast switching between time periods.
+Monarch Money PUI downloads all transactions once, then filters client-side for fast switching between time periods.
 
 **Keyboard shortcuts:**
 - `y` - View current year
@@ -213,7 +215,7 @@ Time period changes are applied instantly using client-side filtering.
 
 **Solution**: Run `uv sync` first to install all dependencies:
 ```bash
-cd monarch-tui
+cd monarch-pui
 uv sync
 ```
 
@@ -233,7 +235,7 @@ source ~/.bashrc  # or ~/.zshrc
 **Problem**: The TUI says "Incorrect password" when trying to unlock credentials
 
 **Solutions**:
-1. Make sure you're entering the **encryption password** (the one you created for monarch-tui), not your Monarch Money password
+1. Make sure you're entering the **encryption password** (the one you created for monarch-pui), not your Monarch Money password
 2. If you forgot it, click "Reset Credentials" and go through setup again
 3. If setup fails, you can manually delete: `rm -rf ~/.monarch_tui/`
 
@@ -282,7 +284,7 @@ To completely reset:
 rm -rf ~/.monarch_tui/
 
 # Reinstall dependencies
-cd monarch-tui
+cd monarch-pui
 uv sync --reinstall
 
 # Run again
@@ -291,7 +293,7 @@ uv run python -m monarch_tui
 
 ## Getting Help
 
-- **Bug Reports**: [Open an issue on GitHub](https://github.com/yourusername/monarch-tui/issues)
+- **Bug Reports**: [Open an issue on GitHub](https://github.com/yourusername/monarch-pui/issues)
 - **Questions**: Check existing issues or open a new one
 - **Development**: See [CLAUDE.md](CLAUDE.md) for development documentation
 

@@ -1,8 +1,8 @@
-# Monarch TUI - Development Guide
+# Monarch Money PUI - Development Guide
 
 ## Project Overview
 
-Monarch TUI is a terminal-based UI for power users to manage Monarch Money transactions efficiently. Built with Python using Textual for the UI and Polars for data processing.
+Monarch Money PUI is a terminal-based UI for power users to manage Monarch Money transactions efficiently. Built with Python using Textual for the UI and Polars for data processing.
 
 ## Development Setup
 
@@ -63,7 +63,7 @@ uv run pytest --cov --cov-report=term-missing
 **IMPORTANT**: All Python source code must be in the `monarch_tui/` package. No Python files should live at the top level except `monarch_tui.py` (the main entry point).
 
 ```
-monarch-tui/
+monarch-pui/
 ├── monarch_tui/              # Main package (ALL code goes here)
 │   ├── monarchmoney.py       # GraphQL client (keep separate for upstream diffs)
 │   ├── app.py                # Main Textual application
