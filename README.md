@@ -1,25 +1,25 @@
 # Monarch TUI
 
-A blazing-fast terminal UI for power users to manage Monarch Money transactions.
+A terminal UI for managing Monarch Money transactions.
 
 **Quick Start**:
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh  # Install uv
 git clone <repo-url> && cd monarch-tui             # Download
 uv sync                                            # Install dependencies
-uv run python -m monarch_tui                       # Run!
+uv run python -m monarch_tui                       # Run
 ```
 
 ## Features
 
-- **Lightning-fast navigation**: Vim-inspired keyboard shortcuts (`hjkl`, Enter to drill down, Esc to go back)
-- **Aggregated views**: View spending by Merchant, Category, or Category Group with counts and totals
-- **Bulk editing**: Multi-select transactions (Space) and batch update merchant names or categories
-- **Fuzzy search**: Quickly find and filter transactions with `/` search
-- **Offline-first**: Fetch all data once, edit locally with instant feedback, then batch commit to cloud
-- **Time-based filtering**: Quick jump to months (1-9), this year (y), or all time (a)
-- **Undo/Redo**: Full change tracking with undo (u) before committing - never lose work
-- **Secure credentials**: AES-128 encrypted credential storage with PBKDF2 key derivation
+- **Keyboard-driven**: Vim-inspired keyboard shortcuts (hjkl, Enter to drill down, Esc to go back)
+- **Aggregated views**: View spending by Merchant, Category, or Category Group
+- **Bulk editing**: Multi-select transactions with Space and batch update merchant names or categories
+- **Type-to-search**: Filter categories and merchants as you type
+- **Offline-first**: Fetch all data once, edit locally, then commit changes to API
+- **Time navigation**: Navigate between months and years with arrow keys
+- **Review before commit**: See all pending changes before saving to Monarch Money
+- **Encrypted credentials**: AES-128 encryption with PBKDF2 key derivation (100,000 iterations)
 
 ## Installation
 
@@ -116,118 +116,109 @@ Your credentials are encrypted with AES-128 and stored in `~/.monarch_tui/creden
 
 **To reset credentials**: Click "Reset Credentials" on the unlock screen.
 
-## Time Navigation (Key Feature!)
+## Time Navigation
 
-Monarch TUI downloads **all your transactions once**, then lets you instantly switch between different time periods:
+Monarch TUI downloads all transactions once, then filters client-side for fast switching between time periods.
 
-**Switch between views:**
-- Press `y` - View current year (2025)
-- Press `a` - View all time
-- Press `t` - View current month (October 2025)
-- Press `1` - View January 2025
-- Press `2` - View February 2025
-- ... press `9` for September, `0` for October
+**Keyboard shortcuts:**
+- `y` - View current year
+- `t` - View current month
+- `a` - View all time
+- `1-9` - View specific months (1=Jan, 2=Feb, etc.)
+- `←` / `→` - Navigate to previous/next period
 
-**Example workflow:**
+**Workflow:**
 ```
-1. Launch TUI (downloads all transactions once - may take 1-2 min for large accounts)
-2. Default view: Current year (2025)
-3. Press '10' (1 then 0) to see October 2025
-4. Press 'y' to go back to full year
-5. Press 'a' to see all time
-6. All switching is INSTANT (data already downloaded!)
+1. Launch TUI (downloads all transactions, may take 1-2 minutes for large accounts)
+2. Default view: Current year
+3. Press 't' to switch to current month
+4. Press '←' to view previous month
+5. Press 'y' to return to year view
+6. Press 'a' to view all time
 ```
 
-This is much faster than re-querying the Monarch API each time!
+Time period changes are applied instantly using client-side filtering.
 
 ## Usage Examples
 
-### Example 1: View and Edit a Merchant Name
+### Example 1: Edit a Merchant Name
 
 ```
-1. Launch the TUI: uv run python -m monarch_tui
+1. Launch: uv run python -m monarch_tui
 2. Press 'm' to view merchants
-3. Use arrow keys (or j/k) to navigate to a merchant
-4. Press Enter to drill down and see all transactions for that merchant
-5. Press 'e' to edit the merchant name
-6. Type the new name and press Enter
-7. Press Ctrl+S to save changes to Monarch Money
+3. Navigate to a merchant with arrow keys
+4. Press 'e' to edit all transactions for that merchant
+5. Type the new name and press Enter
+6. Press 'w' to review changes
+7. Press 'c' to commit to Monarch Money
 ```
 
-### Example 2: Bulk Categorize Transactions
+### Example 2: Bulk Recategorize Transactions
 
 ```
-1. Press 'm' to view merchants
-2. Press Enter on a merchant to see transactions
-3. Press Space to select multiple transactions
-4. Press 'r' (recategorize) to change category
-5. Select the new category
-6. Press Ctrl+S to save all changes at once
+1. Press 'u' to view all transactions
+2. Press Space to select multiple transactions (shows ✓)
+3. Press 'r' to recategorize
+4. Type to filter categories, press Enter to select
+5. Press 'w' to review changes
+6. Press 'c' to commit
 ```
 
-### Example 3: Find and Hide Duplicate Transactions
+### Example 3: Monthly Spending Review
 
 ```
-1. Press '/' to search
-2. Type "duplicate" or search for a specific merchant
-3. Navigate to suspicious transactions
-4. Press 'H' (capital H) to hide from reports
-5. Press Ctrl+S to save
-```
-
-### Example 4: Quick Monthly Review
-
-```
-1. Press '1' for January (or '2' for Feb, '3' for Mar, etc.)
-2. Press 'c' to view by category
-3. Use h/l (or arrows) to toggle between sort by count and sort by amount
-4. Press Enter on a category to drill down
-5. Review transactions and make edits as needed
+1. Press 't' to view current month
+2. Press 'c' to group by category
+3. Press Enter on a category to see transactions
+4. Review and edit as needed
+5. Press '←' to view previous month
 ```
 
 ## Keyboard Shortcuts
 
-### Navigation
-- `m` / `c` / `g`: Switch to Merchant/Category/Group view
-- `j` / `k` or `↓` / `↑`: Navigate rows
-- `h` / `l` or `←` / `→`: Toggle sort (amount ↔ date)
-- `Enter`: Drill down / Edit selected
-- `Esc`: Go back / Cancel
+### Views
+- `m`: Merchants
+- `c`: Categories
+- `g`: Groups
+- `u`: All transactions (ungrouped)
+- `D`: Find duplicates
 
-### Time Frames (Instant Switching!)
-- `y`: This year (e.g., all of 2025)
-- `t`: This month (e.g., October 2025)
-- `a`: All time (all downloaded transactions)
-- `1-9`: Quick select months (1=Jan, 2=Feb, ..., 9=Sep)
-- **Note**: All time switching is INSTANT since data is pre-loaded
+### Time Navigation
+- `y`: Current year
+- `t`: Current month
+- `a`: All time
+- `1-9`: Specific months (1=Jan, 2=Feb, etc.)
+- `←` / `→`: Previous/next period
 
-### Actions
-- `Space`: Multi-select for bulk edit
+### Editing (in detail view)
 - `e`: Edit merchant name
-- `c`: Change category
-- `h`: Toggle hide from reports
-- `/`: Fuzzy search/filter
-- `u`: Undo last change
-- `Ctrl+S`: Save pending changes
+- `r`: Recategorize
+- `d`: Delete transaction
+- `Space`: Multi-select
+- `i`: View transaction details
 
-### Commands (`:` vim-style)
-- `:save` or `:w`: Save pending changes
-- `:quit` or `:q`: Quit
-- `:wq`: Save and quit
-- `:refresh`: Re-fetch from API
+### Sorting
+- `s`: Toggle count/amount
+- `v`: Reverse order
+
+### Other
+- `f`: Filters (transfers, hidden items)
+- `w`: Review and commit changes
+- `q`: Quit
+- `?`: Help
 
 ## Architecture
 
-- **Polars**: High-performance data aggregation and filtering
-- **Textual**: Modern terminal UI framework
-- **MonarchMoney API**: GraphQL client for Monarch Money
-- **SQLite**: Decision persistence and change tracking
+- **Polars**: Data aggregation and filtering
+- **Textual**: Terminal UI framework
+- **MonarchMoney API**: GraphQL client
+- **Python 3.11+**: Required runtime
 
 ## Performance
 
-- Bulk fetch all transactions on startup (1000 per batch)
-- All aggregations done locally
-- Batch updates committed in parallel
+- Fetches all transactions on startup (1000 per batch)
+- Aggregations performed locally using Polars
+- Updates committed in parallel to Monarch API
 
 ## Troubleshooting
 
