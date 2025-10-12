@@ -51,7 +51,7 @@ class MonarchTUI(App):
         Binding("9", "select_month_9", "Sep", show=False),
         # Sorting
         Binding("s", "toggle_sort_field", "Count/Amount", show=True),
-        Binding("h", "reverse_sort", "Reverse", show=True),
+        Binding("v", "reverse_sort", "↕ Reverse", show=True),
         # Time navigation with arrows
         Binding("left", "prev_period", "← Prev", show=True),
         Binding("right", "next_period", "→ Next", show=True),
