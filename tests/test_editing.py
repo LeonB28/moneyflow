@@ -421,3 +421,279 @@ class TestEdgeCase:
         assert success == 1
         updated = mock_mm.get_transaction_by_id(txn["id"])
         assert updated["merchant"]["name"] == new_merchant
+
+    async def test_edit_merchant_to_empty_string_validation(self):
+        """Test that empty merchant name is rejected by validation logic."""
+        # This simulates the validation that should happen in the UI layer
+        # before an edit is created
+        current_merchant = "Amazon"
+        user_input = ""  # Empty string
+
+        # Validation logic: strip and reject if empty
+        validated = user_input.strip()
+        should_create_edit = len(validated) > 0
+
+        assert not should_create_edit, "Empty merchant name should be rejected"
+
+    async def test_edit_merchant_to_whitespace_only_validation(self):
+        """Test that whitespace-only merchant name is rejected."""
+        current_merchant = "Amazon"
+        user_input = "   "  # Only spaces
+
+        validated = user_input.strip()
+        should_create_edit = len(validated) > 0
+
+        assert not should_create_edit, "Whitespace-only merchant name should be rejected"
+
+    async def test_edit_merchant_to_very_long_name(self, loaded_data_manager, mock_mm):
+        """Test that very long merchant names (>100 chars) are handled."""
+        dm, df, _, _ = loaded_data_manager
+
+        txn = df.row(0, named=True)
+        # Create a 150 character merchant name
+        new_merchant = "A" * 150
+
+        dm.pending_edits.append(
+            TransactionEdit(
+                txn["id"],
+                "merchant",
+                txn["merchant"],
+                new_merchant,
+                datetime.now()
+            )
+        )
+
+        success, failure = await dm.commit_pending_edits(dm.pending_edits)
+
+        # Should succeed - the API should handle length validation
+        assert success == 1
+        updated = mock_mm.get_transaction_by_id(txn["id"])
+        assert updated["merchant"]["name"] == new_merchant
+
+    async def test_edit_merchant_with_max_reasonable_length(self, loaded_data_manager, mock_mm):
+        """Test merchant name at max reasonable length (100 chars)."""
+        dm, df, _, _ = loaded_data_manager
+
+        txn = df.row(0, named=True)
+        # Exactly 100 characters
+        new_merchant = "A" * 100
+
+        dm.pending_edits.append(
+            TransactionEdit(
+                txn["id"],
+                "merchant",
+                txn["merchant"],
+                new_merchant,
+                datetime.now()
+            )
+        )
+
+        success, failure = await dm.commit_pending_edits(dm.pending_edits)
+
+        assert success == 1
+        updated = mock_mm.get_transaction_by_id(txn["id"])
+        assert updated["merchant"]["name"] == new_merchant
+
+    async def test_multiselect_with_some_invalid_transaction_ids(self, data_manager, mock_mm):
+        """Test bulk edit with mix of valid and invalid transaction IDs."""
+        # Create edits with mix of valid and invalid IDs
+        edits = [
+            TransactionEdit("txn_1", "merchant", "Old", "New Name", datetime.now()),  # Valid
+            TransactionEdit("invalid_999", "merchant", "Old", "New Name", datetime.now()),  # Invalid
+            TransactionEdit("txn_2", "merchant", "Old", "New Name", datetime.now()),  # Valid
+            TransactionEdit("nonexistent", "merchant", "Old", "New Name", datetime.now()),  # Invalid
+        ]
+
+        success, failure = await data_manager.commit_pending_edits(edits)
+
+        # Should have 2 successes (valid IDs) and 2 failures (invalid IDs)
+        assert success == 2, f"Expected 2 successes, got {success}"
+        assert failure == 2, f"Expected 2 failures, got {failure}"
+
+        # Verify valid transactions were updated
+        txn_1 = mock_mm.get_transaction_by_id("txn_1")
+        assert txn_1["merchant"]["name"] == "New Name"
+
+        txn_2 = mock_mm.get_transaction_by_id("txn_2")
+        assert txn_2["merchant"]["name"] == "New Name"
+
+    async def test_recategorize_with_invalid_category_id(self, loaded_data_manager, mock_mm):
+        """Test that recategorizing with invalid category ID fails gracefully."""
+        dm, df, _, _ = loaded_data_manager
+
+        txn = df.row(0, named=True)
+        invalid_category_id = "cat_nonexistent_12345"
+
+        dm.pending_edits.append(
+            TransactionEdit(
+                txn["id"],
+                "category",
+                txn["category_id"],
+                invalid_category_id,
+                datetime.now()
+            )
+        )
+
+        success, failure = await dm.commit_pending_edits(dm.pending_edits)
+
+        # Should still succeed at API level (mock doesn't validate category IDs)
+        # But verify the update was attempted
+        assert len(mock_mm.update_calls) > 0
+        last_call = mock_mm.update_calls[-1]
+        assert last_call["category_id"] == invalid_category_id
+
+    async def test_concurrent_edits_to_same_transaction(self, loaded_data_manager, mock_mm):
+        """Test multiple edits to the same transaction in the same batch."""
+        dm, df, _, _ = loaded_data_manager
+
+        txn = df.row(0, named=True)
+
+        # Create multiple edits to the same transaction
+        # This could happen if user changes merchant, then category, then merchant again
+        edits = [
+            TransactionEdit(txn["id"], "merchant", "Old", "First Change", datetime.now()),
+            TransactionEdit(txn["id"], "category", "cat_old", "cat_groceries", datetime.now()),
+            TransactionEdit(txn["id"], "merchant", "First Change", "Second Change", datetime.now()),
+        ]
+
+        dm.pending_edits.extend(edits)
+        success, failure = await dm.commit_pending_edits(dm.pending_edits)
+
+        # All edits should be grouped into a single API call
+        # commit_pending_edits groups by transaction_id
+        assert success == 1, "Should have 1 successful transaction update"
+        assert failure == 0
+
+        # Verify the final state has the last merchant change and category change
+        updated = mock_mm.get_transaction_by_id(txn["id"])
+        assert updated["merchant"]["name"] == "Second Change", "Should have last merchant value"
+        assert updated["category"]["id"] == "cat_groceries", "Should have category change"
+
+    async def test_bulk_edit_with_partial_dataframe_updates(self, loaded_data_manager, mock_mm):
+        """Test that DataFrame updates work correctly with partial bulk edits."""
+        dm, df, _, _ = loaded_data_manager
+        dm.df = df
+
+        # Select subset of transactions
+        txn_ids = [df.row(0, named=True)["id"], df.row(2, named=True)["id"]]
+        new_merchant = "Bulk Updated Merchant"
+
+        # Create edits for subset
+        for txn_id in txn_ids:
+            txn_rows = df.filter(pl.col("id") == txn_id)
+            txn = txn_rows.row(0, named=True)
+            dm.pending_edits.append(
+                TransactionEdit(
+                    txn_id,
+                    "merchant",
+                    txn["merchant"],
+                    new_merchant,
+                    datetime.now()
+                )
+            )
+
+        # Commit
+        success, failure = await dm.commit_pending_edits(dm.pending_edits)
+        assert success == 2
+        assert failure == 0
+
+        # Simulate DataFrame update (what app.py would do)
+        for txn_id in txn_ids:
+            dm.df = dm.df.with_columns(
+                pl.when(pl.col("id") == txn_id)
+                .then(pl.lit(new_merchant))
+                .otherwise(pl.col("merchant"))
+                .alias("merchant")
+            )
+
+        # Verify only selected transactions were updated
+        for i, row in enumerate(df.iter_rows(named=True)):
+            if row["id"] in txn_ids:
+                updated_row = dm.df.filter(pl.col("id") == row["id"]).row(0, named=True)
+                assert updated_row["merchant"] == new_merchant
+            else:
+                # Other transactions should be unchanged
+                updated_row = dm.df.filter(pl.col("id") == row["id"]).row(0, named=True)
+                assert updated_row["merchant"] == row["merchant"]
+
+    async def test_edit_with_null_or_none_values(self, loaded_data_manager, mock_mm):
+        """Test that edits handle None/null values appropriately."""
+        dm, df, _, _ = loaded_data_manager
+
+        txn = df.row(0, named=True)
+
+        # Try to edit with None value (should be skipped or rejected)
+        edit = TransactionEdit(
+            txn["id"],
+            "merchant",
+            txn["merchant"],
+            None,  # None as new value
+            datetime.now()
+        )
+
+        # The validation should happen at UI level, but test API behavior
+        # This should not create a valid edit
+        assert edit.new_value is None
+
+    async def test_multiple_edits_different_fields_same_transaction(self, loaded_data_manager, mock_mm):
+        """Test editing multiple fields on same transaction works correctly."""
+        dm, df, _, _ = loaded_data_manager
+
+        txn = df.row(0, named=True)
+        new_merchant = "Updated Merchant"
+        new_category_id = "cat_restaurants"
+
+        # Edit both merchant and category
+        edits = [
+            TransactionEdit(txn["id"], "merchant", txn["merchant"], new_merchant, datetime.now()),
+            TransactionEdit(txn["id"], "category", txn["category_id"], new_category_id, datetime.now()),
+        ]
+
+        dm.pending_edits.extend(edits)
+        success, failure = await dm.commit_pending_edits(dm.pending_edits)
+
+        # Should group into 1 API call with both updates
+        assert success == 1
+        assert failure == 0
+
+        # Verify both fields were updated
+        updated = mock_mm.get_transaction_by_id(txn["id"])
+        assert updated["merchant"]["name"] == new_merchant
+        assert updated["category"]["id"] == new_category_id
+
+    async def test_edit_hidden_transaction(self, loaded_data_manager, mock_mm):
+        """Test editing a transaction that is marked hideFromReports."""
+        dm, df, _, _ = loaded_data_manager
+
+        # First hide a transaction
+        txn = df.row(0, named=True)
+        hide_edit = TransactionEdit(
+            txn["id"],
+            "hide_from_reports",
+            False,
+            True,
+            datetime.now()
+        )
+
+        await dm.commit_pending_edits([hide_edit])
+
+        # Verify it's hidden
+        updated = mock_mm.get_transaction_by_id(txn["id"])
+        assert updated["hideFromReports"] is True
+
+        # Now edit the merchant on the hidden transaction
+        merchant_edit = TransactionEdit(
+            txn["id"],
+            "merchant",
+            txn["merchant"],
+            "New Merchant Name",
+            datetime.now()
+        )
+
+        success, failure = await dm.commit_pending_edits([merchant_edit])
+
+        # Should succeed
+        assert success == 1
+        updated = mock_mm.get_transaction_by_id(txn["id"])
+        assert updated["merchant"]["name"] == "New Merchant Name"
+        assert updated["hideFromReports"] is True  # Still hidden

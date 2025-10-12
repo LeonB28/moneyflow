@@ -196,6 +196,7 @@ class MockMonarchMoney:
         Mock update transaction.
 
         Records the update call for testing and modifies the in-memory data.
+        Raises an exception if the transaction is not found.
         """
         # Record the update call
         self.update_calls.append(
@@ -209,8 +210,10 @@ class MockMonarchMoney:
         )
 
         # Find and update the transaction
+        found = False
         for txn in self.transactions:
             if txn["id"] == transaction_id:
+                found = True
                 if merchant_name is not None:
                     txn["merchant"]["name"] = merchant_name
                 if category_id is not None:
@@ -222,6 +225,10 @@ class MockMonarchMoney:
                 if hide_from_reports is not None:
                     txn["hideFromReports"] = hide_from_reports
                 break
+
+        # Raise exception if transaction not found (simulates API error)
+        if not found:
+            raise Exception(f"Transaction not found: {transaction_id}")
 
         return {"updateTransaction": {"transaction": {"id": transaction_id}}}
 

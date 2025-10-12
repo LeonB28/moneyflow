@@ -264,3 +264,476 @@ class TestCategoryGroupMapping:
         groups = df["group"].unique().to_list()
         assert len(groups) > 0
         assert all(g is not None for g in groups)
+
+
+class TestEdgeCases:
+    """Test edge cases and malformed data handling."""
+
+    async def test_transactions_to_dataframe_empty_list(self, data_manager):
+        """Test converting empty transaction list to DataFrame."""
+        df = data_manager._transactions_to_dataframe([], {})
+
+        assert df is not None
+        assert df.is_empty()
+
+    async def test_transactions_to_dataframe_none_merchant(self, data_manager):
+        """Test transaction with None merchant field."""
+        transactions = [
+            {
+                "id": "txn_1",
+                "date": "2024-10-01",
+                "amount": -50.00,
+                "merchant": None,  # None merchant
+                "category": {"id": "cat_1", "name": "Groceries"},
+                "account": {"id": "acc_1", "displayName": "Checking"},
+                "notes": "test",
+                "hideFromReports": False,
+                "pending": False,
+                "isRecurring": False,
+            }
+        ]
+
+        df = data_manager._transactions_to_dataframe(transactions, {})
+
+        assert len(df) == 1
+        assert df["merchant"][0] == "Unknown"
+
+    async def test_transactions_to_dataframe_empty_merchant_name(self, data_manager):
+        """Test transaction with empty merchant name."""
+        transactions = [
+            {
+                "id": "txn_1",
+                "date": "2024-10-01",
+                "amount": -50.00,
+                "merchant": {"id": "merch_1", "name": ""},  # Empty name
+                "category": {"id": "cat_1", "name": "Groceries"},
+                "account": {"id": "acc_1", "displayName": "Checking"},
+                "notes": None,
+                "hideFromReports": False,
+                "pending": False,
+                "isRecurring": False,
+            }
+        ]
+
+        df = data_manager._transactions_to_dataframe(transactions, {})
+
+        assert len(df) == 1
+        assert df["merchant"][0] == "Unknown"
+
+    async def test_transactions_to_dataframe_none_category(self, data_manager):
+        """Test transaction with None category field."""
+        transactions = [
+            {
+                "id": "txn_1",
+                "date": "2024-10-01",
+                "amount": -50.00,
+                "merchant": {"id": "merch_1", "name": "Store"},
+                "category": None,  # None category
+                "account": {"id": "acc_1", "displayName": "Checking"},
+                "notes": "",
+                "hideFromReports": False,
+                "pending": False,
+                "isRecurring": False,
+            }
+        ]
+
+        df = data_manager._transactions_to_dataframe(transactions, {})
+
+        assert len(df) == 1
+        assert df["category"][0] == "Uncategorized"
+        assert df["group"][0] == "Uncategorized"
+
+    async def test_transactions_to_dataframe_empty_category_name(self, data_manager):
+        """Test transaction with empty category name."""
+        transactions = [
+            {
+                "id": "txn_1",
+                "date": "2024-10-01",
+                "amount": -50.00,
+                "merchant": {"id": "merch_1", "name": "Store"},
+                "category": {"id": "cat_1", "name": ""},  # Empty name
+                "account": {"id": "acc_1", "displayName": "Checking"},
+                "notes": "",
+                "hideFromReports": False,
+                "pending": False,
+                "isRecurring": False,
+            }
+        ]
+
+        df = data_manager._transactions_to_dataframe(transactions, {})
+
+        assert len(df) == 1
+        assert df["category"][0] == "Uncategorized"
+
+    async def test_transactions_to_dataframe_none_account(self, data_manager):
+        """Test transaction with None account field."""
+        transactions = [
+            {
+                "id": "txn_1",
+                "date": "2024-10-01",
+                "amount": -50.00,
+                "merchant": {"id": "merch_1", "name": "Store"},
+                "category": {"id": "cat_1", "name": "Groceries"},
+                "account": None,  # None account
+                "notes": "",
+                "hideFromReports": False,
+                "pending": False,
+                "isRecurring": False,
+            }
+        ]
+
+        df = data_manager._transactions_to_dataframe(transactions, {})
+
+        assert len(df) == 1
+        assert df["account"][0] == ""
+
+    async def test_transactions_to_dataframe_empty_account_name(self, data_manager):
+        """Test transaction with empty account display name."""
+        transactions = [
+            {
+                "id": "txn_1",
+                "date": "2024-10-01",
+                "amount": -50.00,
+                "merchant": {"id": "merch_1", "name": "Store"},
+                "category": {"id": "cat_1", "name": "Groceries"},
+                "account": {"id": "acc_1", "displayName": ""},  # Empty name
+                "notes": "",
+                "hideFromReports": False,
+                "pending": False,
+                "isRecurring": False,
+            }
+        ]
+
+        df = data_manager._transactions_to_dataframe(transactions, {})
+
+        assert len(df) == 1
+        assert df["account"][0] == ""
+
+    async def test_transactions_to_dataframe_none_notes(self, data_manager):
+        """Test transaction with None notes field."""
+        transactions = [
+            {
+                "id": "txn_1",
+                "date": "2024-10-01",
+                "amount": -50.00,
+                "merchant": {"id": "merch_1", "name": "Store"},
+                "category": {"id": "cat_1", "name": "Groceries"},
+                "account": {"id": "acc_1", "displayName": "Checking"},
+                "notes": None,  # None notes
+                "hideFromReports": False,
+                "pending": False,
+                "isRecurring": False,
+            }
+        ]
+
+        df = data_manager._transactions_to_dataframe(transactions, {})
+
+        assert len(df) == 1
+        assert df["notes"][0] == ""
+
+    async def test_transactions_to_dataframe_missing_optional_fields(self, data_manager):
+        """Test transaction with missing optional fields."""
+        transactions = [
+            {
+                "id": "txn_1",
+                "date": "2024-10-01",
+                "amount": -50.00,
+                "merchant": {"id": "merch_1", "name": "Store"},
+                "category": {"id": "cat_1", "name": "Groceries"},
+                "account": {"id": "acc_1", "displayName": "Checking"},
+                # Missing notes, hideFromReports, pending, isRecurring
+            }
+        ]
+
+        df = data_manager._transactions_to_dataframe(transactions, {})
+
+        assert len(df) == 1
+        assert df["notes"][0] == ""
+        assert df["hideFromReports"][0] is False
+        assert df["pending"][0] is False
+        assert df["isRecurring"][0] is False
+
+    async def test_transactions_to_dataframe_unknown_category_group(self, data_manager):
+        """Test transaction with category not in group mapping."""
+        transactions = [
+            {
+                "id": "txn_1",
+                "date": "2024-10-01",
+                "amount": -50.00,
+                "merchant": {"id": "merch_1", "name": "Store"},
+                "category": {"id": "cat_unknown", "name": "Unknown Category XYZ"},
+                "account": {"id": "acc_1", "displayName": "Checking"},
+                "notes": "",
+                "hideFromReports": False,
+                "pending": False,
+                "isRecurring": False,
+            }
+        ]
+
+        df = data_manager._transactions_to_dataframe(transactions, {})
+
+        assert len(df) == 1
+        assert df["group"][0] == "Uncategorized"
+
+
+class TestGetStats:
+    """Test get_stats() method with various DataFrame states."""
+
+    async def test_get_stats_with_none_df(self, data_manager):
+        """Test get_stats when df is None."""
+        data_manager.df = None
+
+        stats = data_manager.get_stats()
+
+        assert stats["total_transactions"] == 0
+        assert stats["total_amount"] == 0.0
+        assert stats["pending_changes"] == 0
+
+    async def test_get_stats_with_empty_df(self, data_manager):
+        """Test get_stats with empty DataFrame."""
+        data_manager.df = pl.DataFrame()
+
+        stats = data_manager.get_stats()
+
+        assert stats["total_transactions"] == 0
+        assert stats["total_amount"] == 0.0
+        assert stats["pending_changes"] == 0
+
+    async def test_get_stats_with_data(self, loaded_data_manager):
+        """Test get_stats with actual data."""
+        dm, df, _, _ = loaded_data_manager
+        dm.df = df
+
+        stats = dm.get_stats()
+
+        assert stats["total_transactions"] == len(df)
+        assert stats["total_amount"] == float(df["amount"].sum())
+        assert stats["pending_changes"] == 0
+
+    async def test_get_stats_with_pending_edits(self, loaded_data_manager):
+        """Test get_stats with pending edits."""
+        from monarch_tui.state import TransactionEdit
+        from datetime import datetime
+
+        dm, df, _, _ = loaded_data_manager
+        dm.df = df
+        dm.pending_edits = [
+            TransactionEdit("txn_1", "merchant", "A", "B", datetime.now()),
+            TransactionEdit("txn_2", "category", "C", "D", datetime.now()),
+        ]
+
+        stats = dm.get_stats()
+
+        assert stats["total_transactions"] == len(df)
+        assert stats["pending_changes"] == 2
+
+
+class TestProgressCallbacks:
+    """Test progress callback functionality."""
+
+    async def test_fetch_all_data_with_progress_callback(self, data_manager):
+        """Test fetch_all_data calls progress callback."""
+        progress_messages = []
+
+        def progress_callback(msg: str):
+            progress_messages.append(msg)
+
+        await data_manager.fetch_all_data(progress_callback=progress_callback)
+
+        # Verify progress callbacks were made
+        assert len(progress_messages) > 0
+        assert any("Fetching categories" in msg for msg in progress_messages)
+        assert any("Fetching transactions" in msg for msg in progress_messages)
+        assert any("Processing transactions" in msg for msg in progress_messages)
+
+    async def test_fetch_all_data_without_progress_callback(self, data_manager):
+        """Test fetch_all_data works without progress callback."""
+        df, categories, category_groups = await data_manager.fetch_all_data()
+
+        assert df is not None
+        assert len(df) > 0
+        assert len(categories) > 0
+        assert len(category_groups) > 0
+
+
+class TestCommitEditsAdvanced:
+    """Advanced tests for commit_pending_edits."""
+
+    async def test_commit_multiple_edits_same_transaction(self, data_manager, mock_mm):
+        """Test committing multiple edits to same transaction."""
+        from monarch_tui.state import TransactionEdit
+        from datetime import datetime
+
+        # Multiple edits to the same transaction should be grouped
+        edits = [
+            TransactionEdit("txn_1", "merchant", "A", "B", datetime.now()),
+            TransactionEdit("txn_1", "category", "cat_old", "cat_new", datetime.now()),
+            TransactionEdit("txn_1", "hide_from_reports", False, True, datetime.now()),
+        ]
+
+        success, failure = await data_manager.commit_pending_edits(edits)
+
+        assert success == 1  # Only one transaction updated
+        assert failure == 0
+        assert len(mock_mm.update_calls) == 1
+
+        # Verify all three fields were updated in single call
+        call = mock_mm.update_calls[0]
+        assert call["transaction_id"] == "txn_1"
+        assert call["merchant_name"] == "B"
+        assert call["category_id"] == "cat_new"
+        assert call["hide_from_reports"] is True
+
+    async def test_commit_with_api_failure(self, data_manager, mock_mm):
+        """Test commit_pending_edits handles API failures gracefully."""
+        from monarch_tui.state import TransactionEdit
+        from datetime import datetime
+
+        # Create a mock that raises an exception
+        original_update = mock_mm.update_transaction
+
+        async def failing_update(*args, **kwargs):
+            if kwargs.get("transaction_id") == "txn_2":
+                raise Exception("API Error")
+            return await original_update(*args, **kwargs)
+
+        mock_mm.update_transaction = failing_update
+
+        edits = [
+            TransactionEdit("txn_1", "merchant", "A", "B", datetime.now()),
+            TransactionEdit("txn_2", "merchant", "C", "D", datetime.now()),
+            TransactionEdit("txn_3", "merchant", "E", "F", datetime.now()),
+        ]
+
+        success, failure = await data_manager.commit_pending_edits(edits)
+
+        # Should have 2 successes and 1 failure
+        assert success == 2
+        assert failure == 1
+
+    async def test_commit_mixed_edit_types(self, data_manager, mock_mm):
+        """Test committing different types of edits together."""
+        from monarch_tui.state import TransactionEdit
+        from datetime import datetime
+
+        edits = [
+            TransactionEdit("txn_1", "merchant", "Old", "New", datetime.now()),
+            TransactionEdit("txn_2", "category", "cat_1", "cat_2", datetime.now()),
+            TransactionEdit("txn_3", "hide_from_reports", False, True, datetime.now()),
+            TransactionEdit("txn_4", "merchant", "X", "Y", datetime.now()),
+        ]
+
+        success, failure = await data_manager.commit_pending_edits(edits)
+
+        assert success == 4
+        assert failure == 0
+        assert len(mock_mm.update_calls) == 4
+
+        # Verify each update has correct field
+        merchants = [c for c in mock_mm.update_calls if c["merchant_name"] is not None]
+        categories = [c for c in mock_mm.update_calls if c["category_id"] is not None]
+        hides = [c for c in mock_mm.update_calls if c["hide_from_reports"] is not None]
+
+        assert len(merchants) == 2
+        assert len(categories) == 1
+        assert len(hides) == 1
+
+
+class TestFetchTransactionsPagination:
+    """Test transaction fetching with pagination."""
+
+    async def test_fetch_all_transactions_single_batch(self, data_manager):
+        """Test fetching when all transactions fit in one batch."""
+        transactions = await data_manager._fetch_all_transactions()
+
+        assert len(transactions) > 0
+        # Mock backend has 6 transactions, all fit in default batch
+
+    async def test_fetch_with_progress_updates(self, data_manager):
+        """Test progress updates during transaction fetching."""
+        progress_messages = []
+
+        def progress_callback(msg: str):
+            progress_messages.append(msg)
+
+        transactions = await data_manager._fetch_all_transactions(
+            progress_callback=progress_callback
+        )
+
+        assert len(transactions) > 0
+        assert len(progress_messages) > 0
+        # Should see "Downloaded X transactions" messages
+        assert any("Downloaded" in msg for msg in progress_messages)
+
+    async def test_fetch_with_date_filters(self, data_manager):
+        """Test fetching with start and end date filters."""
+        transactions = await data_manager._fetch_all_transactions(
+            start_date="2024-10-02", end_date="2024-10-03"
+        )
+
+        assert len(transactions) > 0
+        # All transactions should be within date range
+        for txn in transactions:
+            assert "2024-10-02" <= txn["date"] <= "2024-10-03"
+
+    async def test_fetch_alternative_results_format(self, mock_mm):
+        """Test fetching with alternative results format (bare 'results' key)."""
+        # Temporarily change mock to return bare 'results' format
+        original_get_transactions = mock_mm.get_transactions
+
+        async def alternate_format_get_transactions(*args, **kwargs):
+            result = await original_get_transactions(*args, **kwargs)
+            # Return in alternate format: {"results": [...]} instead of {"allTransactions": {"results": [...]}}
+            if "allTransactions" in result:
+                return {"results": result["allTransactions"]["results"]}
+            return result
+
+        mock_mm.get_transactions = alternate_format_get_transactions
+
+        await mock_mm.login()
+        dm = DataManager(mock_mm)
+
+        transactions = await dm._fetch_all_transactions()
+
+        assert len(transactions) > 0
+        assert len(transactions) == 6  # All mock transactions
+
+    async def test_fetch_empty_results(self, mock_mm):
+        """Test fetching when API returns empty results."""
+        # Clear all transactions
+        mock_mm.transactions = []
+
+        await mock_mm.login()
+        dm = DataManager(mock_mm)
+
+        transactions = await dm._fetch_all_transactions()
+
+        assert len(transactions) == 0
+
+    async def test_fetch_progress_without_total_count(self, mock_mm):
+        """Test progress callback when total count is not available."""
+        # Modify mock to not include totalCount
+        original_get_transactions = mock_mm.get_transactions
+
+        async def no_total_count_get_transactions(*args, **kwargs):
+            result = await original_get_transactions(*args, **kwargs)
+            # Remove totalCount from response
+            if "allTransactions" in result:
+                result["allTransactions"].pop("totalCount", None)
+            return result
+
+        mock_mm.get_transactions = no_total_count_get_transactions
+
+        await mock_mm.login()
+        dm = DataManager(mock_mm)
+
+        progress_messages = []
+
+        def progress_callback(msg: str):
+            progress_messages.append(msg)
+
+        transactions = await dm._fetch_all_transactions(progress_callback=progress_callback)
+
+        assert len(transactions) > 0
+        # Should have progress messages without percentage
+        assert any("Downloaded" in msg and "%" not in msg for msg in progress_messages)
