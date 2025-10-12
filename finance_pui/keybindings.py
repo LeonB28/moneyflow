@@ -18,47 +18,38 @@ class KeyBinding:
 
 # All keyboard shortcuts organized by category
 KEYBINDINGS: List[KeyBinding] = [
-    # Navigation
-    KeyBinding("m", "view_merchants", "View merchant aggregation", "Navigation"),
-    KeyBinding("c", "view_categories", "View category aggregation", "Navigation"),
-    KeyBinding("g", "view_groups", "View category group aggregation", "Navigation"),
-    KeyBinding("↑/k", "up", "Move cursor up", "Navigation"),
-    KeyBinding("↓/j", "down", "Move cursor down", "Navigation"),
-    KeyBinding("←/h", "toggle_sort", "Toggle sort: amount ↔ date", "Navigation"),
-    KeyBinding("→/l", "toggle_sort", "Toggle sort: amount ↔ date", "Navigation"),
-    KeyBinding("enter", "drill_down", "Drill down / Edit selected", "Navigation"),
-    KeyBinding("esc", "go_back", "Go back / Cancel", "Navigation"),
-    KeyBinding("gg", "jump_top", "Jump to top (vim-style)", "Navigation"),
-    KeyBinding("G", "jump_bottom", "Jump to bottom (vim-style)", "Navigation"),
-    # Time Frames
-    KeyBinding("1-9", "select_month", "Select month (1=Jan, 2=Feb, etc.)", "Time"),
+    # View Navigation
+    KeyBinding("m", "view_merchants", "View merchant aggregation", "Views"),
+    KeyBinding("c", "view_categories", "View category aggregation", "Views"),
+    KeyBinding("g", "view_groups", "View category group aggregation", "Views"),
+    KeyBinding("A", "view_accounts", "View account aggregation", "Views"),
+    KeyBinding("u", "view_ungrouped", "View all transactions", "Views"),
+    KeyBinding("D", "find_duplicates", "Find duplicate transactions", "Views"),
+    KeyBinding("enter", "drill_down", "Drill down into selected item", "Views"),
+    KeyBinding("esc", "go_back", "Go back to previous view", "Views"),
+    # Time Navigation
     KeyBinding("y", "this_year", "View this year", "Time"),
+    KeyBinding("t", "this_month", "View this month", "Time"),
     KeyBinding("a", "all_time", "View all time", "Time"),
-    KeyBinding("<", "prev_period", "Previous period", "Time"),
-    KeyBinding(">", "next_period", "Next period", "Time"),
-    # Actions
-    KeyBinding("space", "toggle_select", "Multi-select for bulk edit", "Actions"),
+    KeyBinding("1-9", "select_month", "Select month (1=Jan...9=Sep)", "Time"),
+    KeyBinding("←", "prev_period", "Previous period", "Time"),
+    KeyBinding("→", "next_period", "Next period", "Time"),
+    # Sorting
+    KeyBinding("s", "toggle_sort_field", "Toggle sort field (count/amount/date)", "Sorting"),
+    KeyBinding("v", "reverse_sort", "Reverse sort direction", "Sorting"),
+    # Transaction Actions
+    KeyBinding("i", "show_details", "Show transaction details", "Actions"),
     KeyBinding("e", "edit_merchant", "Edit merchant name", "Actions"),
-    KeyBinding("r", "edit_category", "Change category (r=recategorize)", "Actions"),
-    KeyBinding("H", "toggle_hide", "Toggle hide from reports", "Actions"),
+    KeyBinding("r", "recategorize", "Change category", "Actions"),
+    KeyBinding("h", "toggle_hide", "Toggle hide from reports", "Actions"),
     KeyBinding("d", "delete", "Delete transaction (with confirmation)", "Actions"),
-    KeyBinding("/", "search", "Fuzzy search/filter", "Actions"),
-    KeyBinding("n", "next_match", "Next search result", "Actions"),
-    KeyBinding("N", "prev_match", "Previous search result", "Actions"),
-    # Bulk Operations
-    KeyBinding("E", "bulk_edit_merchant", "Bulk edit merchant name", "Bulk"),
-    KeyBinding("C", "bulk_categorize", "Bulk change category", "Bulk"),
-    KeyBinding("shift+H", "bulk_toggle_hide", "Bulk toggle hide from reports", "Bulk"),
-    KeyBinding("u", "undo", "Undo last change", "Bulk"),
-    KeyBinding("ctrl+r", "redo", "Redo", "Bulk"),
-    # System
-    KeyBinding("ctrl+s", "save", "Save pending changes", "System"),
-    KeyBinding(":w", "save", "Save pending changes (vim-style)", "System"),
-    KeyBinding("q", "quit", "Quit (warn if unsaved)", "System"),
-    KeyBinding(":q", "quit", "Quit (vim-style)", "System"),
-    KeyBinding(":wq", "save_quit", "Save and quit", "System"),
-    KeyBinding("ctrl+l", "refresh", "Refresh from API", "System"),
-    KeyBinding(":export", "export_csv", "Export to CSV", "System"),
+    KeyBinding("space", "toggle_select", "Multi-select for bulk operations", "Actions"),
+    # Filters & Search
+    KeyBinding("f", "show_filters", "Show filter options", "Filters"),
+    KeyBinding("/", "search", "Search transactions", "Filters"),
+    # Commit & System
+    KeyBinding("w", "review_and_commit", "Review and commit pending changes", "System"),
+    KeyBinding("q", "quit", "Quit application", "System"),
     KeyBinding("?", "help", "Show this help screen", "System"),
 ]
 

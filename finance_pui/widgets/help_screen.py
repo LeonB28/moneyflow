@@ -58,7 +58,7 @@ class HelpScreen(ModalScreen):
             yield Static("Monarch Money TUI - Help", id="help-title")
             with VerticalScroll(id="help-content"):
                 yield Static(get_help_text())
-            yield Static("Press ESC or click Close to return", id="help-footer")
+            yield Static("Esc=Close", id="help-footer")
             yield Button("Close", variant="primary", id="close-button")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
