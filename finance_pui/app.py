@@ -34,8 +34,8 @@ class MonarchTUI(App):
         Binding("g", "cycle_grouping", "Group By", show=True),
         Binding("u", "view_ungrouped", "All Txns", show=True),
         Binding("D", "find_duplicates", "Duplicates", show=True, key_display="D"),
-        # Hidden direct access bindings (still available but not shown in footer)
-        Binding("m", "view_merchants", "Merchants", show=False),
+        # Hidden direct access bindings (still available in aggregate views, not shown in footer)
+        # Note: 'm' conflicts with edit_merchant in detail view, so view_merchants removed
         Binding("c", "view_categories", "Categories", show=False),
         Binding("A", "view_accounts", "Accounts", show=False, key_display="A"),
         # Time navigation
@@ -58,11 +58,11 @@ class MonarchTUI(App):
         Binding("left", "prev_period", "← Prev", show=True),
         Binding("right", "next_period", "→ Next", show=True),
         # Editing
-        Binding("e", "edit_merchant", "Edit Merchant", show=False),
+        Binding("m", "edit_merchant", "Edit Merchant", show=False),
         Binding("r", "recategorize", "Recategorize", show=False),
         Binding("d", "delete_transaction", "Delete", show=False),
         Binding("h", "toggle_hide_from_reports", "Hide/Unhide", show=False),
-        Binding("i", "show_transaction_details", "Details", show=False),
+        Binding("i", "show_transaction_details", "Info", show=False),
         Binding("space", "toggle_select", "Select", show=False),
         # Other actions
         Binding("f", "show_filters", "Filters", show=True),
@@ -577,11 +577,20 @@ class MonarchTUI(App):
         """Show individual transactions (drill-down view)."""
         table = self.query_one("#data-table", DataTable)
 
-        table.add_column("Date", key="date", width=12)
-        table.add_column("Merchant", key="merchant", width=25)
-        table.add_column("Category", key="category", width=20)
+        # Determine sort arrow based on current sort field and direction
+        arrow = "↓" if self.state.sort_direction == SortDirection.DESC else "↑"
+
+        # Add arrows to the sorted column header
+        date_header = "Date " + arrow if self.state.sort_by == SortMode.DATE else "Date"
+        merchant_header = "Merchant " + arrow if self.state.sort_by == SortMode.MERCHANT else "Merchant"
+        category_header = "Category " + arrow if self.state.sort_by == SortMode.CATEGORY else "Category"
+        amount_header = "Amount " + arrow if self.state.sort_by == SortMode.AMOUNT else "Amount"
+
+        table.add_column(date_header, key="date", width=12)
+        table.add_column(merchant_header, key="merchant", width=25)
+        table.add_column(category_header, key="category", width=20)
         table.add_column("Account", key="account", width=18)
-        table.add_column("Amount", key="amount", width=12)
+        table.add_column(amount_header, key="amount", width=12)
         table.add_column("", key="flags", width=3)
 
         # Start with filtered data based on time_frame
@@ -668,14 +677,14 @@ class MonarchTUI(App):
 
         if self.state.view_mode == ViewMode.MERCHANT:
             hints = (
-                "Enter=Drill down | e=Edit merchant (bulk) | g=Change grouping | ←/→=Change period"
+                "Enter=Drill down | m=Edit merchant (bulk) | g=Change grouping | ←/→=Change period"
             )
         elif self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
             hints = "Enter=Drill down | g=Change grouping | ←/→=Change period"
         else:  # DETAIL (transactions)
             # Show current sort field in hints
             sort_name = self.state.sort_by.value.capitalize()
-            hints = f"s=Sort({sort_name}) | i=Details | e=Edit | r=Recategorize | h=Hide/Unhide | d=Delete | Space=Select"
+            hints = f"s=Sort({sort_name}) | i=Info | m=Edit Merchant | r=Recategorize | h=Hide/Unhide | d=Delete | Space=Select"
 
         hints_widget.update(hints)
 

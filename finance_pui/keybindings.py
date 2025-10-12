@@ -38,8 +38,8 @@ KEYBINDINGS: List[KeyBinding] = [
     KeyBinding("s", "toggle_sort_field", "Toggle sort field (count/amount/date)", "Sorting"),
     KeyBinding("v", "reverse_sort", "Reverse sort direction", "Sorting"),
     # Transaction Actions
-    KeyBinding("i", "show_details", "Show transaction details", "Actions"),
-    KeyBinding("e", "edit_merchant", "Edit merchant name", "Actions"),
+    KeyBinding("i", "show_info", "Show transaction info/details", "Actions"),
+    KeyBinding("m", "edit_merchant", "Edit merchant name", "Actions"),
     KeyBinding("r", "recategorize", "Change category", "Actions"),
     KeyBinding("h", "toggle_hide", "Toggle hide from reports", "Actions"),
     KeyBinding("d", "delete", "Delete transaction (with confirmation)", "Actions"),
