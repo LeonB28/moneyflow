@@ -416,10 +416,17 @@ class AppState:
 
     def save_view_state(self) -> dict:
         """
-        Save current view state for later restoration.
+        Save complete view state for later restoration.
 
-        Used during commit review workflow to preserve the user's view
-        (including sort settings) and return to it after commit.
+        Saves everything that defines the current view including:
+        - View mode and drill-down selections
+        - Sort settings (column and direction)
+        - Time filtering (time_frame and date range)
+        - Search query
+        - Filter settings (show_transfers, show_hidden)
+
+        Used during commit review workflow to preserve the exact user context
+        and return to it seamlessly after commit or cancel.
         """
         return {
             "view_mode": self.view_mode,
@@ -429,10 +436,16 @@ class AppState:
             "selected_account": self.selected_account,
             "sort_by": self.sort_by,
             "sort_direction": self.sort_direction,
+            "time_frame": self.time_frame,
+            "start_date": self.start_date,
+            "end_date": self.end_date,
+            "search_query": self.search_query,
+            "show_transfers": self.show_transfers,
+            "show_hidden": self.show_hidden,
         }
 
     def restore_view_state(self, saved_state: dict) -> None:
-        """Restore previously saved view state including sort settings."""
+        """Restore complete view state including all filters and sort settings."""
         self.view_mode = saved_state["view_mode"]
         self.selected_merchant = saved_state["selected_merchant"]
         self.selected_category = saved_state["selected_category"]
@@ -440,6 +453,12 @@ class AppState:
         self.selected_account = saved_state.get("selected_account")
         self.sort_by = saved_state.get("sort_by", self.sort_by)
         self.sort_direction = saved_state.get("sort_direction", self.sort_direction)
+        self.time_frame = saved_state.get("time_frame", self.time_frame)
+        self.start_date = saved_state.get("start_date", self.start_date)
+        self.end_date = saved_state.get("end_date", self.end_date)
+        self.search_query = saved_state.get("search_query", self.search_query)
+        self.show_transfers = saved_state.get("show_transfers", self.show_transfers)
+        self.show_hidden = saved_state.get("show_hidden", self.show_hidden)
 
     def get_breadcrumb(self) -> str:
         """Get breadcrumb string showing current navigation path."""
