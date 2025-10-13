@@ -1,7 +1,7 @@
 """
 Secure credential management for Monarch Money.
 
-Stores encrypted credentials in ~/.finance_pui/credentials.enc
+Stores encrypted credentials in ~/.moneyflow/credentials.enc
 Uses Fernet symmetric encryption with a user-provided password.
 """
 
@@ -21,7 +21,7 @@ class CredentialManager:
     """
     Manages encrypted Monarch Money credentials.
 
-    Credentials are stored in ~/.finance_pui/credentials.enc
+    Credentials are stored in ~/.moneyflow/credentials.enc
     and encrypted with a user-provided password using Fernet.
     """
 
@@ -31,10 +31,10 @@ class CredentialManager:
 
         Args:
             config_dir: Optional custom config directory.
-                       Defaults to ~/.finance_pui
+                       Defaults to ~/.moneyflow
         """
         if config_dir is None:
-            config_dir = Path.home() / ".finance_pui"
+            config_dir = Path.home() / ".moneyflow"
 
         self.config_dir = config_dir
         self.credentials_file = config_dir / "credentials.enc"
@@ -266,12 +266,12 @@ def setup_credentials_interactive() -> None:
     print(f"  {manager.credentials_file}")
     print()
     print("Next steps:")
-    print("  1. Run the TUI: uv run python -m finance_pui")
+    print("  1. Run the TUI: uv run moneyflow")
     print("  2. You'll only need to enter your encryption password")
     print()
     print("To reset credentials:")
     print(f"  rm {manager.credentials_file}")
-    print("  uv run python -m finance_pui")
+    print("  uv run moneyflow")
     print()
     print("=" * 70)
 

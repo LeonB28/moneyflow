@@ -4,7 +4,7 @@ Tests for DataManager operations including aggregation, filtering, and API integ
 
 import pytest
 import polars as pl
-from finance_pui.data_manager import DataManager
+from moneyflow.data_manager import DataManager
 
 
 class TestDataFetching:
@@ -147,7 +147,7 @@ class TestCommitEdits:
 
     async def test_commit_single_edit(self, data_manager, mock_mm):
         """Test committing a single edit."""
-        from finance_pui.state import TransactionEdit
+        from moneyflow.state import TransactionEdit
         from datetime import datetime
 
         edits = [
@@ -173,7 +173,7 @@ class TestCommitEdits:
 
     async def test_commit_multiple_edits(self, data_manager, mock_mm):
         """Test committing multiple edits."""
-        from finance_pui.state import TransactionEdit
+        from moneyflow.state import TransactionEdit
         from datetime import datetime
 
         edits = [
@@ -198,7 +198,7 @@ class TestCommitEdits:
 
     async def test_commit_merchant_rename(self, data_manager, mock_mm):
         """Test committing a merchant rename."""
-        from finance_pui.state import TransactionEdit
+        from moneyflow.state import TransactionEdit
         from datetime import datetime
 
         edits = [TransactionEdit("txn_1", "merchant", "Amazon.com", "Amazon", datetime.now())]
@@ -212,7 +212,7 @@ class TestCommitEdits:
 
     async def test_commit_category_change(self, data_manager, mock_mm):
         """Test committing a category change."""
-        from finance_pui.state import TransactionEdit
+        from moneyflow.state import TransactionEdit
         from datetime import datetime
 
         edits = [
@@ -228,7 +228,7 @@ class TestCommitEdits:
 
     async def test_commit_hide_toggle(self, data_manager, mock_mm):
         """Test committing hide from reports toggle."""
-        from finance_pui.state import TransactionEdit
+        from moneyflow.state import TransactionEdit
         from datetime import datetime
 
         edits = [TransactionEdit("txn_1", "hide_from_reports", False, True, datetime.now())]
@@ -490,7 +490,9 @@ class TestGetStats:
         stats = data_manager.get_stats()
 
         assert stats["total_transactions"] == 0
-        assert stats["total_amount"] == 0.0
+        assert stats["total_income"] == 0.0
+        assert stats["total_expenses"] == 0.0
+        assert stats["net_savings"] == 0.0
         assert stats["pending_changes"] == 0
 
     async def test_get_stats_with_empty_df(self, data_manager):
@@ -500,7 +502,9 @@ class TestGetStats:
         stats = data_manager.get_stats()
 
         assert stats["total_transactions"] == 0
-        assert stats["total_amount"] == 0.0
+        assert stats["total_income"] == 0.0
+        assert stats["total_expenses"] == 0.0
+        assert stats["net_savings"] == 0.0
         assert stats["pending_changes"] == 0
 
     async def test_get_stats_with_data(self, loaded_data_manager):
@@ -511,12 +515,15 @@ class TestGetStats:
         stats = dm.get_stats()
 
         assert stats["total_transactions"] == len(df)
-        assert stats["total_amount"] == float(df["amount"].sum())
+        # Stats now return income/expenses/savings breakdown
+        assert "total_income" in stats
+        assert "total_expenses" in stats
+        assert "net_savings" in stats
         assert stats["pending_changes"] == 0
 
     async def test_get_stats_with_pending_edits(self, loaded_data_manager):
         """Test get_stats with pending edits."""
-        from finance_pui.state import TransactionEdit
+        from moneyflow.state import TransactionEdit
         from datetime import datetime
 
         dm, df, _, _ = loaded_data_manager
@@ -565,7 +572,7 @@ class TestCommitEditsAdvanced:
 
     async def test_commit_multiple_edits_same_transaction(self, data_manager, mock_mm):
         """Test committing multiple edits to same transaction."""
-        from finance_pui.state import TransactionEdit
+        from moneyflow.state import TransactionEdit
         from datetime import datetime
 
         # Multiple edits to the same transaction should be grouped
@@ -590,7 +597,7 @@ class TestCommitEditsAdvanced:
 
     async def test_commit_with_api_failure(self, data_manager, mock_mm):
         """Test commit_pending_edits handles API failures gracefully."""
-        from finance_pui.state import TransactionEdit
+        from moneyflow.state import TransactionEdit
         from datetime import datetime
 
         # Create a mock that raises an exception
@@ -617,7 +624,7 @@ class TestCommitEditsAdvanced:
 
     async def test_commit_mixed_edit_types(self, data_manager, mock_mm):
         """Test committing different types of edits together."""
-        from finance_pui.state import TransactionEdit
+        from moneyflow.state import TransactionEdit
         from datetime import datetime
 
         edits = [

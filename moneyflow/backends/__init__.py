@@ -6,7 +6,7 @@ with different finance platforms (Monarch Money, YNAB, etc.) through a
 common interface.
 
 Usage:
-    from finance_pui.backends import get_backend, MonarchBackend, DemoBackend
+    from moneyflow.backends import get_backend, MonarchBackend, DemoBackend
 
     # Get a backend by name
     backend = get_backend('monarch')

@@ -1,24 +1,49 @@
-# Personal Finance Power User Interface
+# moneyflow
 
-A keyboard-driven terminal interface for power users to efficiently manage personal finance transactions.
+**Track your moneyflow from the terminal.**
+
+A blazing-fast, keyboard-driven TUI for managing personal finance transactions. Built for power users who want speed and efficiency.
 
 **Currently Supported Platforms:**
 - ✅ **Monarch Money** (full support)
 - ✅ **Demo Mode** (synthetic data for testing)
-- 🚧 Other platforms (planned)
+- 🚧 Other platforms (YNAB, Lunch Money - planned)
 
 **Disclaimer**: This is an independent open-source project and is **not affiliated with, endorsed by, or connected to Monarch Money, Inc.** Monarch Money is a trademark of Monarch Money, Inc.
 
-Currently implements a Terminal UI (TUI). Future versions may include web-based interfaces.
+## Installation
 
-**Quick Start**:
+### From PyPI (recommended)
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh  # Install uv
-git clone <repo-url> && cd finance-pui             # Download
-uv sync                                            # Install dependencies
-uv run python -m finance_pui                       # Run with your account
-# OR
-uv run python -m finance_pui --demo                # Try demo mode (no account needed)
+# Install globally
+pip install moneyflow
+
+# Or use with uvx (no installation needed!)
+uvx moneyflow
+
+# Or use with pipx
+pipx install moneyflow
+```
+
+### From Source
+```bash
+git clone https://github.com/wesm/moneyflow.git
+cd moneyflow
+uv sync
+uv run moneyflow
+```
+
+## Quick Start
+
+```bash
+# Run with your Monarch Money account
+moneyflow
+
+# Try demo mode (no account needed)
+moneyflow --demo
+
+# Load only recent data
+moneyflow --year 2025
 ```
 
 ## Features
@@ -48,7 +73,7 @@ Features:
 Try the application without any account:
 
 ```bash
-uv run python -m finance_pui --demo
+moneyflow --demo
 ```
 
 Demo mode provides:
@@ -63,60 +88,56 @@ Perfect for:
 - Showcasing features
 - Development without affecting real data
 
-## Installation
+## Development Setup
 
-### 1. Install uv
-
-Install uv (a Python package manager): https://docs.astral.sh/uv/getting-started/installation/
-
-### 2. Download Monarch PUI
-
-**Clone the repository:**
-```bash
-git clone https://github.com/yourusername/finance-pui.git
-cd finance-pui
-```
-
-**Or download ZIP** from GitHub, extract, and navigate to the folder.
-
-### 3. Install Dependencies
+If you want to contribute or modify the code:
 
 ```bash
+# Clone the repository
+git clone https://github.com/wesm/moneyflow.git
+cd moneyflow
+
+# Install dependencies
 uv sync
+
+# Run from source
+uv run moneyflow
+
+# Run tests
+uv run pytest
 ```
-
-This installs Python 3.11+ (if needed) and all dependencies automatically.
-
-### 4. Run the TUI
-
-```bash
-uv run python -m finance_pui
-```
-
-The first time you run it, you'll go through a one-time credential setup.
 
 ## CLI Options
 
-By default, the application fetches **all transactions** from your account. For very large accounts, you can limit the data range:
+By default, moneyflow fetches **all transactions** from your account. For very large accounts, you can limit the data range:
 
 **Fetch only recent years:**
 ```bash
 # Only load transactions from 2025 onwards
-uv run python -m finance_pui --year 2025
+moneyflow --year 2025
 
 # Only load transactions from 2024 onwards
-uv run python -m finance_pui --year 2024
+moneyflow --year 2024
 ```
 
 **Fetch from a specific date:**
 ```bash
 # Load transactions from June 1, 2024 onwards
-uv run python -m finance_pui --since 2024-06-01
+moneyflow --since 2024-06-01
+```
+
+**Enable caching for faster startup:**
+```bash
+# Cache data to avoid re-downloading
+moneyflow --cache
+
+# Force refresh (skip cache)
+moneyflow --refresh
 ```
 
 **View all options:**
 ```bash
-uv run python -m finance_pui --help
+moneyflow --help
 ```
 
 **Note**: Limiting the date range makes initial load faster but you won't see older transactions in your analysis.
@@ -132,20 +153,20 @@ On first run with Monarch Money, the TUI will walk you through credential setup:
    - Click "Can't scan?" to view the secret key
    - Copy the BASE32 secret (e.g., `JBSWY3DPEHPK3PXP`)
 
-2. **Launch TUI** and enter when prompted:
+2. **Launch moneyflow** and enter when prompted:
    - Monarch Money email and password
    - Your 2FA secret key
-   - A new encryption password (for finance-pui only)
+   - A new encryption password (for moneyflow only)
 
 3. **Done!** Next time you launch, just enter your encryption password.
 
-Your credentials are encrypted with AES-128 and stored in `~/.finance_pui/credentials.enc`.
+Your credentials are encrypted with AES-128 and stored in `~/.moneyflow/credentials.enc`.
 
 **To reset credentials**: Click "Reset Credentials" on the unlock screen.
 
 ## Time Navigation
 
-Monarch Money PUI downloads all transactions once, then filters client-side for fast switching between time periods.
+moneyflow downloads all transactions once, then filters client-side for fast switching between time periods.
 
 **Keyboard shortcuts:**
 - `y` - View current year
@@ -171,8 +192,8 @@ Time period changes are applied instantly using client-side filtering.
 ### Example 1: Edit a Merchant Name
 
 ```
-1. Launch: uv run python -m finance_pui
-2. Press 'm' to view merchants
+1. Launch: moneyflow
+2. Press 'g' to cycle to merchants view
 3. Navigate to a merchant with arrow keys
 4. Press 'e' to edit all transactions for that merchant
 5. Type the new name and press Enter
@@ -204,11 +225,11 @@ Time period changes are applied instantly using client-side filtering.
 ## Keyboard Shortcuts
 
 ### Views
-- `m`: Merchants
-- `c`: Categories
-- `g`: Groups
+- `g`: Cycle grouping (Merchant → Category → Group → Account)
 - `u`: All transactions (ungrouped)
 - `D`: Find duplicates
+- `c`: Categories (direct)
+- `A`: Accounts (direct)
 
 ### Time Navigation
 - `y`: Current year
@@ -218,8 +239,9 @@ Time period changes are applied instantly using client-side filtering.
 - `←` / `→`: Previous/next period
 
 ### Editing (in detail view)
-- `e`: Edit merchant name
+- `m`: Edit merchant name
 - `r`: Recategorize
+- `h`: Hide/unhide from reports
 - `d`: Delete transaction
 - `Space`: Multi-select
 - `i`: View transaction details
@@ -262,9 +284,14 @@ The application uses a backend abstraction layer, allowing support for multiple 
 
 **Problem**: You see errors like `ModuleNotFoundError: No module named 'textual'`
 
-**Solution**: Run `uv sync` first to install all dependencies:
+**Solution**: Reinstall moneyflow:
 ```bash
-cd finance-pui
+pip install --upgrade moneyflow
+```
+
+Or if running from source:
+```bash
+cd moneyflow
 uv sync
 ```
 
@@ -284,9 +311,9 @@ source ~/.bashrc  # or ~/.zshrc
 **Problem**: The TUI says "Incorrect password" when trying to unlock credentials
 
 **Solutions**:
-1. Make sure you're entering the **encryption password** (the one you created for finance-pui), not your Monarch Money password
+1. Make sure you're entering the **encryption password** (the one you created for moneyflow), not your Monarch Money password
 2. If you forgot it, click "Reset Credentials" and go through setup again
-3. If setup fails, you can manually delete: `rm -rf ~/.finance_pui/`
+3. If setup fails, you can manually delete: `rm -rf ~/.moneyflow/`
 
 ### 2FA/TOTP secret not working
 
@@ -323,26 +350,28 @@ uv sync --reinstall
 1. Check your internet connection
 2. Check the terminal size (make it larger)
 3. Wait 30 seconds for data to load
-4. Check for error messages in `~/.finance_pui/logs` (if logging is enabled)
+4. Run with `--dev` flag to see error messages: `moneyflow --dev`
 
 ### I want to start over completely
 
 To completely reset:
 ```bash
 # Delete all stored data
-rm -rf ~/.finance_pui/
+rm -rf ~/.moneyflow/
 
-# Reinstall dependencies
-cd finance-pui
-uv sync --reinstall
+# Delete session
+rm -rf .mm/
+
+# Reinstall (if installed from PyPI)
+pip install --upgrade --force-reinstall moneyflow
 
 # Run again
-uv run python -m finance_pui
+moneyflow
 ```
 
 ## Getting Help
 
-- **Bug Reports**: [Open an issue on GitHub](https://github.com/yourusername/finance-pui/issues)
+- **Bug Reports**: [Open an issue on GitHub](https://github.com/wesm/moneyflow/issues)
 - **Questions**: Check existing issues or open a new one
 - **Development**: See [CLAUDE.md](CLAUDE.md) for development documentation
 
@@ -350,7 +379,7 @@ uv run python -m finance_pui
 
 - Credentials are encrypted with AES-128 using PBKDF2 (100,000 iterations)
 - Encryption password never leaves your machine
-- Stored in `~/.finance_pui/credentials.enc` with 600 permissions (owner-only)
+- Stored in `~/.moneyflow/credentials.enc` with 600 permissions (owner-only)
 - See [SECURITY.md](SECURITY.md) for full security documentation
 
 ## Contributing

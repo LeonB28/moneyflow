@@ -1,22 +1,25 @@
 [project]
-name = "finance-pui"
+name = "moneyflow"
 version = "0.1.0"
-description = "Personal Finance Power User Interface"
+description = "Track your moneyflow - A powerful terminal UI for Monarch Money"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
     {name = "Wes McKinney"},
 ]
-keywords = ["monarch-money", "pui", "tui", "terminal", "finance", "transactions"]
+keywords = ["monarch-money", "finance", "tui", "terminal", "transactions", "budget", "cashflow"]
 classifiers = [
     "Development Status :: 3 - Alpha",
+    "Environment :: Console",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Office/Business :: Financial",
+    "Topic :: Terminals",
 ]
 
 dependencies = [
@@ -29,16 +32,21 @@ dependencies = [
     "python-dateutil>=2.8.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/wesm/moneyflow"
+Repository = "https://github.com/wesm/moneyflow"
+Issues = "https://github.com/wesm/moneyflow/issues"
+
 [project.scripts]
-finance-pui = "finance_pui.app:main"
-finance-setup = "finance_pui.credentials:setup_credentials_interactive"
+moneyflow = "moneyflow.app:main"
+moneyflow-setup = "moneyflow.credentials:setup_credentials_interactive"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["finance_pui"]
+packages = ["moneyflow"]
 
 [dependency-groups]
 dev = [

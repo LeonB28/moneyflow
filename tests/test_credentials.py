@@ -10,7 +10,7 @@ import pytest
 from pathlib import Path
 from cryptography.fernet import InvalidToken
 
-from finance_pui.credentials import CredentialManager
+from moneyflow.credentials import CredentialManager
 
 
 @pytest.fixture
@@ -44,9 +44,9 @@ class TestCredentialManagerInit:
         assert oct(stat_info.st_mode)[-3:] == "700"
 
     def test_uses_default_config_dir(self):
-        """Test that default config directory is ~/.finance_pui."""
+        """Test that default config directory is ~/.moneyflow."""
         manager = CredentialManager()
-        expected = Path.home() / ".finance_pui"
+        expected = Path.home() / ".moneyflow"
         assert manager.config_dir == expected
 
     def test_sets_credentials_file_path(self, credential_manager, temp_config_dir):

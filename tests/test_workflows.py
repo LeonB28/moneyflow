@@ -11,8 +11,8 @@ These tests verify that the full chain of operations works correctly:
 import pytest
 from datetime import datetime
 import polars as pl
-from finance_pui.state import AppState
-from finance_pui.data_manager import DataManager
+from moneyflow.state import AppState
+from moneyflow.data_manager import DataManager
 
 
 class TestMerchantEditWorkflow:
@@ -206,7 +206,7 @@ class TestErrorHandling:
 
     async def test_commit_with_invalid_transaction_id(self, data_manager, app_state):
         """Test that commits handle invalid transaction IDs gracefully."""
-        from finance_pui.state import TransactionEdit
+        from moneyflow.state import TransactionEdit
 
         # Add edit with non-existent transaction ID
         edits = [

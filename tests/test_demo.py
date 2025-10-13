@@ -9,8 +9,8 @@ import pytest
 from datetime import date
 from typing import Dict, List, Any
 
-from finance_pui.demo_data_generator import DemoDataGenerator, generate_demo_data
-from finance_pui.backends import DemoBackend
+from moneyflow.demo_data_generator import DemoDataGenerator, generate_demo_data
+from moneyflow.backends import DemoBackend
 
 
 # ============================================================================

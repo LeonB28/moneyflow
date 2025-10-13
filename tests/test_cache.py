@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
 import polars as pl
 
-from finance_pui.cache_manager import CacheManager
+from moneyflow.cache_manager import CacheManager
 
 
 @pytest.fixture
@@ -88,7 +88,7 @@ class TestCacheInitialization:
         """Test initialization with default cache directory."""
         cm = CacheManager()
 
-        expected_dir = Path.home() / ".finance_pui" / "cache"
+        expected_dir = Path.home() / ".moneyflow" / "cache"
         assert cm.cache_dir == expected_dir
         assert cm.cache_dir.exists()
 

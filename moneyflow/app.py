@@ -30,7 +30,7 @@ class MonarchTUI(App):
     """Monarch Money Power User TUI."""
 
     # Use Path object to properly resolve CSS file location
-    # __file__ is finance_pui/app.py, so parent/styles/monarch.tcss is correct
+    # __file__ is moneyflow/app.py, so parent/styles/monarch.tcss is correct
     CSS_PATH = str(Path(__file__).parent / "styles" / "monarch.tcss")
 
     BINDINGS = [
@@ -1899,7 +1899,7 @@ def main():
         nargs="?",
         const="",  # Use default location if flag given without path
         metavar="PATH",
-        help="Enable caching. Optionally specify cache directory (default: ~/.finance_pui/cache/). Without this flag, always fetches fresh data.",
+        help="Enable caching. Optionally specify cache directory (default: ~/.moneyflow/cache/). Without this flag, always fetches fresh data.",
     )
     parser.add_argument(
         "--refresh",

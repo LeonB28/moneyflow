@@ -1,8 +1,8 @@
-# Personal Finance PUI - Development Guide
+# moneyflow - Development Guide
 
 ## Project Overview
 
-Personal Finance PUI is a terminal-based UI for power users to manage Monarch Money transactions efficiently. Built with Python using Textual for the UI and Polars for data processing.
+moneyflow is a terminal-based UI for power users to manage Monarch Money transactions efficiently. Built with Python using Textual for the UI and Polars for data processing.
 
 ## Development Setup
 
@@ -21,7 +21,7 @@ uv sync
 # You MUST run this before running tests or the TUI for the first time
 
 # After sync, run the TUI
-uv run python -m finance_pui
+uv run moneyflow
 
 # Run tests (ALWAYS before committing)
 uv run pytest
@@ -60,20 +60,20 @@ uv run pytest --cov --cov-report=term-missing
 
 ### Project Structure
 
-**IMPORTANT**: All Python source code must be in the `finance_pui/` package. No Python files should live at the top level except `monarch_tui.py` (the main entry point).
+**IMPORTANT**: All Python source code must be in the `moneyflow/` package. No Python files should live at the top level.
 
 ```
-finance-pui/
-├── finance_pui/              # Main package (ALL code goes here)
+moneyflow/
+├── moneyflow/                # Main package (ALL code goes here)
 │   ├── monarchmoney.py       # GraphQL client (keep separate for upstream diffs)
 │   ├── app.py                # Main Textual application
 │   ├── data_manager.py       # Data layer with Polars
 │   ├── state.py              # App state with undo/redo
 │   ├── credentials.py        # Encrypted credential storage
-│   ├── keybindings.py        # Keyboard shortcuts
 │   ├── duplicate_detector.py # Duplicate detection
+│   ├── backends/             # Backend implementations
+│   ├── screens/              # UI screens and modals
 │   ├── widgets/              # Custom UI widgets
-│   ├── views/                # View components
 │   └── styles/               # Textual CSS
 ├── tests/                    # Test suite
 │   ├── conftest.py           # Pytest fixtures
@@ -81,18 +81,16 @@ finance-pui/
 │   ├── test_state.py         # State management tests
 │   ├── test_data_manager.py  # Data operations tests
 │   └── test_workflows.py     # Edit workflow tests
-├── monarch_tui.py            # Main entry point (imports from package)
 ├── pyproject.toml            # Project metadata and dependencies
-├── pytest.ini                # Pytest configuration
 ├── README.md                 # User documentation
 └── CLAUDE.md                 # This file - development guide
 ```
 
 **File Organization Rules**:
-- ✅ All business logic in `finance_pui/` package
+- ✅ All business logic in `moneyflow/` package
 - ✅ All tests in `tests/` directory
-- ✅ Entry point via `python -m finance_pui`
-- ❌ No `.py` files at top level except main entry point if needed
+- ✅ Entry point via `moneyflow` command (configured in pyproject.toml)
+- ❌ No `.py` files at top level
 - ❌ No duplicate files between top-level and package
 
 ## Testing Strategy
@@ -181,7 +179,7 @@ The `monarchmoney.py` file is kept separate to make it easy to generate diffs fo
 
 ```bash
 # Generate a diff against the original
-cd monarch_tui
+cd moneyflow
 diff monarchmoney.py /path/to/original/monarchmoney.py > my_changes.patch
 ```
 
@@ -189,6 +187,7 @@ diff monarchmoney.py /path/to/original/monarchmoney.py > my_changes.patch
 
 - Credentials are encrypted with Fernet (AES-128)
 - Never commit `.mm/` directory (session data)
+- Never commit `~/.moneyflow/` directory (encrypted credentials)
 - Never commit test data with real credentials
 - See SECURITY.md for full security documentation
 

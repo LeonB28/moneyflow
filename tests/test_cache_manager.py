@@ -6,7 +6,7 @@ from pathlib import Path
 import json
 import time
 from datetime import datetime, timedelta
-from finance_pui.cache_manager import CacheManager
+from moneyflow.cache_manager import CacheManager
 
 
 @pytest.fixture
@@ -59,7 +59,7 @@ class TestCacheManagerInit:
     def test_uses_default_cache_dir(self):
         """Test that default cache directory is used."""
         cache_mgr = CacheManager()
-        assert cache_mgr.cache_dir == Path.home() / ".finance_pui" / "cache"
+        assert cache_mgr.cache_dir == Path.home() / ".moneyflow" / "cache"
 
     def test_sets_file_paths(self, temp_cache_dir):
         """Test that file paths are set correctly."""

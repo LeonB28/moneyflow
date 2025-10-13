@@ -7,7 +7,7 @@ Critical to test thoroughly since deletion is potentially destructive.
 import pytest
 from datetime import date
 import polars as pl
-from finance_pui.duplicate_detector import DuplicateDetector
+from moneyflow.duplicate_detector import DuplicateDetector
 
 
 class TestDuplicateDetection:
