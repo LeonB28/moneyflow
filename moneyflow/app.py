@@ -1528,20 +1528,10 @@ class MoneyflowTUI(App):
 
     def action_go_back(self) -> None:
         """
-        Go back to previous view or clear active search.
+        Go back to previous view and restore cursor position.
 
-        Behavior:
-        - If search is active: Clear search (stay in current view)
-        - Otherwise: Go back to previous view and restore cursor position
+        To clear search: Press / then Enter with empty search box.
         """
-        # If search is active, clear it first (don't navigate away)
-        if self.state.search_query:
-            self.state.search_query = ""
-            self.refresh_view()
-            self.notify("Search cleared", timeout=1)
-            return
-
-        # No active search - proceed with normal go_back behavior
         success, cursor_position = self.state.go_back()
         if success:
             self.refresh_view()

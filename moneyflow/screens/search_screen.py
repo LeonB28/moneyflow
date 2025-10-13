@@ -57,12 +57,14 @@ class SearchScreen(ModalScreen):
             yield Label("🔍 Search Transactions", id="search-title")
 
             yield Static(
-                "Type to search merchant or category names (case-insensitive)", id="search-help"
+                "Type to search merchant or category names\n"
+                "Press Enter with empty search to clear filter",
+                id="search-help"
             )
 
-            yield Input(placeholder="Search...", value=self.current_query, id="search-input")
+            yield Input(placeholder="Search... (Enter to apply, Esc to cancel)", value=self.current_query, id="search-input")
 
-            yield Static("Enter=Apply | Esc=Cancel | Ctrl+C=Clear", id="search-stats")
+            yield Static("", id="search-stats")
 
     async def on_mount(self) -> None:
         """Focus search input on load."""
@@ -71,13 +73,12 @@ class SearchScreen(ModalScreen):
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle Enter key - apply search."""
         query = event.value.strip()
-        self.dismiss(query)
+        event.stop()  # Prevent propagation
+        self.dismiss(query)  # Empty string clears the search
 
     def on_key(self, event: Key) -> None:
         """Handle keyboard shortcuts."""
         if event.key == "escape":
+            event.stop()  # Prevent propagation
             # Cancel - return None to indicate no change
             self.dismiss(None)
-        elif event.key == "ctrl+c":
-            # Clear search - return empty string
-            self.dismiss("")
