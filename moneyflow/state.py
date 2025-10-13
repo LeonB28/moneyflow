@@ -409,6 +409,13 @@ class AppState:
                 # Default back to MERCHANT view
                 self.view_mode = ViewMode.MERCHANT
 
+            # Reset sort to valid field for aggregate views
+            # (Detail views can have DATE, MERCHANT, CATEGORY, ACCOUNT, AMOUNT)
+            # (Aggregate views only have COUNT, AMOUNT)
+            if self.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
+                self.sort_by = SortMode.AMOUNT
+                self.sort_direction = SortDirection.DESC
+
             return True, cursor_position
 
         # Already at a top-level view
