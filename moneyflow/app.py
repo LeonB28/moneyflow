@@ -488,7 +488,7 @@ class MoneyflowTUI(App):
                     use_cache = False
 
             if not use_cache:
-                # Fetch from API
+                # Fetch from API (with retry on session expiration)
                 if self.custom_start_date:
                     loading_status.update(
                         f"📊 Fetching transactions from {self.custom_start_date} onwards..."
@@ -511,9 +511,36 @@ class MoneyflowTUI(App):
                     """Update the loading status display."""
                     loading_status.update(f"📊 {msg}")
 
-                df, categories, category_groups = await self.data_manager.fetch_all_data(
-                    start_date=start_date, end_date=end_date, progress_callback=update_progress
-                )
+                # Fetch with retry on session expiration
+                try:
+                    df, categories, category_groups = await self.data_manager.fetch_all_data(
+                        start_date=start_date, end_date=end_date, progress_callback=update_progress
+                    )
+                except Exception as fetch_error:
+                    # Check if it's a session expiration error
+                    fetch_error_str = str(fetch_error).lower()
+                    if ("401" in fetch_error_str or "unauthorized" in fetch_error_str) and self.stored_credentials and self.mm:
+                        # Try to recover by re-logging in
+                        loading_status.update("🔄 Session expired during fetch. Re-authenticating...")
+                        try:
+                            await self.mm.login(
+                                email=self.stored_credentials["email"],
+                                password=self.stored_credentials["password"],
+                                use_saved_session=False,
+                                save_session=True,
+                                mfa_secret_key=self.stored_credentials["mfa_secret"],
+                            )
+                            loading_status.update("✅ Re-authenticated. Retrying data fetch...")
+                            # Retry the fetch once after successful re-login
+                            df, categories, category_groups = await self.data_manager.fetch_all_data(
+                                start_date=start_date, end_date=end_date, progress_callback=update_progress
+                            )
+                        except Exception as retry_error:
+                            # Re-login or retry failed - give up and re-raise
+                            raise retry_error
+                    else:
+                        # Not a session error or can't recover - re-raise
+                        raise fetch_error
 
                 # Save to cache for next time (only if --cache was passed)
                 if self.cache_manager:
@@ -554,30 +581,23 @@ class MoneyflowTUI(App):
 
             # Check if it's a 401/unauthorized error
             if "401" in error_str or "unauthorized" in error_str:
-                print(f"[ERROR] 401/Unauthorized detected - attempting to recover", file=sys.stderr, flush=True)
-                # Delete the bad session automatically
+                print(f"[ERROR] 401/Unauthorized in outer handler - recovery already attempted", file=sys.stderr, flush=True)
+                # If we get here, session recovery already failed in the fetch block above
+                # Delete the bad session
                 try:
                     if self.mm:
                         self.mm.delete_session()
-                        print(f"[ERROR] Session deleted successfully", file=sys.stderr, flush=True)
+                        print(f"[ERROR] Session deleted", file=sys.stderr, flush=True)
                 except Exception as del_err:
                     print(f"[ERROR] Failed to delete session: {del_err}", file=sys.stderr, flush=True)
 
-                # Session is expired - show helpful message
-                # Don't try to auto-recover here as it can cause loops
-                if self.stored_credentials:
-                    loading_status.update(
-                        f"❌ Session expired.\n\n"
-                        f"Your saved session is no longer valid.\n"
-                        f"Please restart the app to login fresh.\n\n"
-                        f"Press 'q' to quit"
-                    )
-                else:
-                    loading_status.update(
-                        f"❌ Session expired.\n\n"
-                        f"Please restart the app to login fresh.\n\n"
-                        f"Press 'q' to quit"
-                    )
+                # Show helpful error
+                loading_status.update(
+                    f"❌ Session error.\n\n"
+                    f"Could not authenticate with backend.\n"
+                    f"Please restart the app to login fresh.\n\n"
+                    f"Press 'q' to quit"
+                )
             else:
                 error_msg = f"Failed to load data: {e}"
                 loading_status.update(f"❌ {error_msg}\n\nPress 'q' to quit")
