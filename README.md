@@ -36,13 +36,13 @@ uv run moneyflow
 ## Quick Start
 
 ```bash
-# Run with your Monarch Money account
-moneyflow
-
-# Try demo mode (no account needed)
+# Try demo mode first (no account needed!)
 moneyflow --demo
 
-# Load only recent data
+# Connect your finance account (currently supports Monarch Money)
+moneyflow
+
+# Load only recent data for faster startup
 moneyflow --year 2025
 ```
 
@@ -52,22 +52,43 @@ moneyflow --year 2025
 - **Aggregated views**: View spending by Merchant, Category, or Category Group
 - **Bulk editing**: Multi-select transactions with Space and batch update merchant names or categories
 - **Type-to-search**: Filter categories and merchants as you type
-- **Offline-first**: Fetch all data once, edit locally, then commit changes to API
+- **Offline-first**: Fetch all data once, edit locally, then commit changes back
 - **Time navigation**: Navigate between months and years with arrow keys
-- **Review before commit**: See all pending changes before saving to Monarch Money
+- **Review before commit**: See all pending changes before syncing to your account
 - **Encrypted credentials**: AES-128 encryption with PBKDF2 key derivation (100,000 iterations)
+- **Pluggable backends**: Extensible architecture supports multiple finance platforms
 
 ## Supported Platforms
 
-### Monarch Money
-Full support for [Monarch Money](https://www.monarchmoney.com/) personal finance platform.
+### Monarch Money (Fully Supported ✅)
 
-Features:
-- Bulk transaction editing (merchant names, categories)
-- Multi-select operations
-- Search and filtering
-- Time-based analysis
-- Duplicate detection
+**[Monarch Money](https://www.monarchmoney.com/)** is a modern personal finance platform with powerful features and beautiful design. moneyflow provides full integration with Monarch Money's API.
+
+**Why Monarch Money + moneyflow is perfect:**
+- **Best of both worlds**: Monarch's excellent web/mobile app + moneyflow's keyboard-driven power-user workflows
+- **Bulk operations**: Fix dozens of merchant names or recategorize hundreds of transactions in seconds
+- **Offline speed**: Download once, work locally, commit when ready
+- **All features supported**: Full transaction editing, categories, merchant names, hiding from reports
+
+**Features supported:**
+- ✅ Bulk transaction editing (merchant names, categories)
+- ✅ Multi-select operations
+- ✅ Advanced search and filtering
+- ✅ Time-based navigation and analysis
+- ✅ Duplicate transaction detection
+- ✅ Hide from reports
+
+> **New to Monarch Money?** [Sign up here](https://www.monarchmoney.com/) and experience the best personal finance platform for power users.
+
+### Other Platforms (Coming Soon)
+
+moneyflow uses a pluggable backend architecture. Support for additional platforms is planned:
+
+- 🚧 **YNAB** (You Need A Budget) - planned
+- 🚧 **Lunch Money** - planned
+- 🚧 **Custom backends** - contribute your own!
+
+Want to help add support for your platform? See [CLAUDE.md](CLAUDE.md) for development docs.
 
 ### Demo Mode
 Try the application without any account:
@@ -189,16 +210,16 @@ Time period changes are applied instantly using client-side filtering.
 
 ## Usage Examples
 
-### Example 1: Edit a Merchant Name
+### Example 1: Clean Up Merchant Names
 
 ```
 1. Launch: moneyflow
 2. Press 'g' to cycle to merchants view
-3. Navigate to a merchant with arrow keys
+3. Navigate to a merchant with arrow keys (e.g., "AMZN*ABC123")
 4. Press 'e' to edit all transactions for that merchant
-5. Type the new name and press Enter
+5. Type the clean name (e.g., "Amazon") and press Enter
 6. Press 'w' to review changes
-7. Press 'c' to commit to Monarch Money
+7. Press 'c' to commit changes
 ```
 
 ### Example 2: Bulk Recategorize Transactions
@@ -208,8 +229,8 @@ Time period changes are applied instantly using client-side filtering.
 2. Press Space to select multiple transactions (shows ✓)
 3. Press 'r' to recategorize
 4. Type to filter categories, press Enter to select
-5. Press 'w' to review changes
-6. Press 'c' to commit
+5. Press 'w' to review all pending changes
+6. Press 'c' to save to your account
 ```
 
 ### Example 3: Monthly Spending Review
@@ -275,8 +296,8 @@ The application uses a backend abstraction layer, allowing support for multiple 
 ## Performance
 
 - Fetches all transactions on startup (1000 per batch)
-- Aggregations performed locally using Polars
-- Updates committed in parallel to Monarch API
+- Aggregations performed locally using Polars (instant filtering and grouping)
+- Updates committed in parallel to backend API for speed
 
 ## Troubleshooting
 
