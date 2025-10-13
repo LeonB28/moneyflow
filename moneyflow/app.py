@@ -554,7 +554,7 @@ class MoneyflowTUI(App):
 
             # Check if it's a 401/unauthorized error
             if "401" in error_str or "unauthorized" in error_str:
-                print(f"[ERROR] 401/Unauthorized detected - clearing bad session", file=sys.stderr, flush=True)
+                print(f"[ERROR] 401/Unauthorized detected - attempting to recover", file=sys.stderr, flush=True)
                 # Delete the bad session automatically
                 try:
                     if self.mm:
@@ -562,7 +562,33 @@ class MoneyflowTUI(App):
                         print(f"[ERROR] Session deleted successfully", file=sys.stderr, flush=True)
                 except Exception as del_err:
                     print(f"[ERROR] Failed to delete session: {del_err}", file=sys.stderr, flush=True)
-                loading_status.update(f"❌ Session expired. Cleared bad session automatically.\n\nPlease restart the app to login fresh.\n\nPress 'q' to quit")
+
+                # Try to recover with stored credentials (if we have them)
+                if self.stored_credentials and self.mm:
+                    loading_status.update("🔄 Session expired. Logging in again...")
+                    print(f"[ERROR] Attempting to re-login with stored credentials", file=sys.stderr, flush=True)
+                    try:
+                        # Re-login with fresh session
+                        await self.mm.login(
+                            email=self.stored_credentials["email"],
+                            password=self.stored_credentials["password"],
+                            use_saved_session=False,  # Force fresh login
+                            save_session=True,
+                            mfa_secret_key=self.stored_credentials["mfa_secret"],
+                        )
+                        loading_status.update("✅ Re-authenticated successfully! Retrying data load...")
+                        print(f"[ERROR] Re-login succeeded, retrying data fetch", file=sys.stderr, flush=True)
+
+                        # Retry the data fetch that failed
+                        # Re-run initialize_data from the data fetch point
+                        await self.initialize_data()
+                        return  # Success - exit the exception handler
+                    except Exception as retry_error:
+                        print(f"[ERROR] Re-login failed: {retry_error}", file=sys.stderr, flush=True)
+                        loading_status.update(f"❌ Could not recover session.\n\nPlease restart the app.\n\nPress 'q' to quit")
+                else:
+                    # No stored credentials - can't auto-recover
+                    loading_status.update(f"❌ Session expired.\n\nPlease restart the app to login fresh.\n\nPress 'q' to quit")
             else:
                 error_msg = f"Failed to load data: {e}"
                 loading_status.update(f"❌ {error_msg}\n\nPress 'q' to quit")
