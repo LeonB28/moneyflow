@@ -811,9 +811,17 @@ class MonarchTUI(App):
         stats_widget = self.query_one("#stats", Static)
 
         txn_count = stats["total_transactions"]
-        total_amount = stats["total_amount"]
+        income = stats["total_income"]
+        expenses = stats["total_expenses"]
+        savings = stats["net_savings"]
 
-        stats_text = f"{txn_count:,} transactions | ${total_amount:,.2f} total"
+        # Format: "N txns | Income: $X | Expenses: $Y | Savings: $Z"
+        stats_text = (
+            f"{txn_count:,} txns | "
+            f"Income: ${income:,.2f} | "
+            f"Expenses: ${expenses:,.2f} | "
+            f"Savings: ${savings:,.2f}"
+        )
         stats_widget.update(stats_text)
 
     def update_action_hints(self) -> None:

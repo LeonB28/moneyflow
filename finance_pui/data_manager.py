@@ -452,12 +452,30 @@ class DataManager:
         if self.df is None or self.df.is_empty():
             return {
                 "total_transactions": 0,
-                "total_amount": 0.0,
+                "total_income": 0.0,
+                "total_expenses": 0.0,
+                "net_savings": 0.0,
                 "pending_changes": len(self.pending_edits),
             }
 
+        # Calculate income (from Income group, excluding Transfers)
+        income_df = self.df.filter(pl.col("group") == "Income")
+        total_income = float(income_df["amount"].sum()) if not income_df.is_empty() else 0.0
+
+        # Calculate expenses (all non-Income, non-Transfer transactions)
+        # Expenses are negative, so this sum will be negative
+        expense_df = self.df.filter(
+            (pl.col("group") != "Income") & (pl.col("group") != "Transfers")
+        )
+        total_expenses = float(expense_df["amount"].sum()) if not expense_df.is_empty() else 0.0
+
+        # Net savings = Income + Expenses (expenses are negative)
+        net_savings = total_income + total_expenses
+
         return {
             "total_transactions": len(self.df),
-            "total_amount": float(self.df["amount"].sum()),
+            "total_income": total_income,
+            "total_expenses": total_expenses,
+            "net_savings": net_savings,
             "pending_changes": len(self.pending_edits),
         }
