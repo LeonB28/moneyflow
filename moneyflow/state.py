@@ -54,13 +54,18 @@ class TimeFrame(Enum):
 
 @dataclass
 class TransactionEdit:
-    """Represents a pending transaction edit."""
+    """
+    Represents a pending transaction edit.
+
+    Tracks a single change to a transaction (merchant, category, or hide flag)
+    before it's committed to the backend API.
+    """
 
     transaction_id: str
     field: str  # 'merchant', 'category', 'hide_from_reports'
     old_value: Any
     new_value: Any
-    timestamp: datetime = dataclass_field(default_factory=datetime.now)
+    timestamp: datetime = dataclass_field(default_factory=datetime.now)  # When edit was queued
 
 
 @dataclass

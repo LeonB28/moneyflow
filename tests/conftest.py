@@ -15,44 +15,8 @@ from moneyflow.state import AppState, TransactionEdit
 
 
 # ============================================================================
-# TEST HELPER FUNCTIONS - Eliminate duplication across test suite
+# TEST HELPER FUNCTIONS
 # ============================================================================
-
-
-def make_edit(
-    transaction_id: str,
-    field: str,
-    old_value: any,
-    new_value: any,
-    timestamp: datetime = None
-) -> TransactionEdit:
-    """
-    Create a TransactionEdit for testing.
-
-    Helper to eliminate repeated TransactionEdit(..., datetime.now()) patterns.
-
-    Args:
-        transaction_id: Transaction ID
-        field: Field being edited ('merchant', 'category', 'hide_from_reports')
-        old_value: Original value
-        new_value: New value
-        timestamp: Optional timestamp (defaults to now)
-
-    Returns:
-        TransactionEdit instance
-
-    Example:
-        >>> edit = make_edit("txn1", "merchant", "Old", "New")
-        >>> edit.transaction_id
-        'txn1'
-    """
-    return TransactionEdit(
-        transaction_id=transaction_id,
-        field=field,
-        old_value=old_value,
-        new_value=new_value,
-        timestamp=timestamp or datetime.now()
-    )
 
 
 def save_test_credentials(
