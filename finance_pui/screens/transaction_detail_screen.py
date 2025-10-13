@@ -134,3 +134,4 @@ class TransactionDetailScreen(ModalScreen):
         """Handle keyboard shortcuts."""
         if event.key in ("escape", "enter"):
             self.dismiss()
+            event.stop()  # Prevent event from propagating to parent app
