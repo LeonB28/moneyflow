@@ -59,6 +59,7 @@ dev = [
     "pytest-mock>=3.11.0",
     "textual-dev>=1.0.0",
     "ruff>=0.1.0",
+    "pyright>=1.1.350",
 ]
 docs = [
     "mkdocs>=1.5.0",
@@ -77,3 +78,13 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
 ignore = ["E501"]  # Line too long (handled by formatter)
+
+[tool.pyright]
+include = ["moneyflow", "tests"]
+exclude = ["**/__pycache__", ".venv"]
+typeCheckingMode = "basic"
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnknownVariableType = false
+pythonVersion = "3.11"

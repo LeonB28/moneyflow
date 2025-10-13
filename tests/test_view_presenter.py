@@ -1,0 +1,657 @@
+"""
+Tests for view_presenter module.
+
+These tests verify the presentation logic is pure, deterministic,
+and produces correct output for all view types.
+"""
+
+import polars as pl
+import pytest
+from datetime import date
+
+from moneyflow.view_presenter import ViewPresenter
+from moneyflow.state import SortMode, SortDirection
+
+
+class TestSortArrow:
+    """Tests for get_sort_arrow method."""
+
+    def test_descending_arrow_when_sorted_by_field(self):
+        """Should return ↓ when field is sorted descending."""
+        arrow = ViewPresenter.get_sort_arrow(
+            SortMode.COUNT, SortDirection.DESC, SortMode.COUNT
+        )
+        assert arrow == "↓"
+
+    def test_ascending_arrow_when_sorted_by_field(self):
+        """Should return ↑ when field is sorted ascending."""
+        arrow = ViewPresenter.get_sort_arrow(
+            SortMode.COUNT, SortDirection.ASC, SortMode.COUNT
+        )
+        assert arrow == "↑"
+
+    def test_no_arrow_when_not_sorted_by_field(self):
+        """Should return empty string when different field is sorted."""
+        arrow = ViewPresenter.get_sort_arrow(
+            SortMode.COUNT, SortDirection.DESC, SortMode.AMOUNT
+        )
+        assert arrow == ""
+
+    def test_amount_field_with_descending(self):
+        """Should show correct arrow for amount field."""
+        arrow = ViewPresenter.get_sort_arrow(
+            SortMode.AMOUNT, SortDirection.DESC, SortMode.AMOUNT
+        )
+        assert arrow == "↓"
+
+
+class TestShouldSortDescending:
+    """Tests for should_sort_descending method."""
+
+    def test_amount_field_inverts_direction(self):
+        """Amount fields should invert direction for expense-first sorting."""
+        # DESC direction for amount becomes ASC (so -1000 comes before -10)
+        assert ViewPresenter.should_sort_descending("total", SortDirection.DESC) is False
+        assert ViewPresenter.should_sort_descending("amount", SortDirection.DESC) is False
+
+    def test_amount_field_asc_becomes_desc(self):
+        """ASC direction for amount becomes DESC."""
+        assert ViewPresenter.should_sort_descending("total", SortDirection.ASC) is True
+        assert ViewPresenter.should_sort_descending("amount", SortDirection.ASC) is True
+
+    def test_count_field_no_inversion(self):
+        """Count field should not invert direction."""
+        assert ViewPresenter.should_sort_descending("count", SortDirection.DESC) is True
+        assert ViewPresenter.should_sort_descending("count", SortDirection.ASC) is False
+
+    def test_other_fields_no_inversion(self):
+        """Other fields should not invert direction."""
+        assert ViewPresenter.should_sort_descending("name", SortDirection.DESC) is True
+        assert ViewPresenter.should_sort_descending("date", SortDirection.ASC) is False
+
+
+class TestPrepareAggregationColumns:
+    """Tests for prepare_aggregation_columns method."""
+
+    def test_merchant_columns(self):
+        """Should create correct columns for merchant view."""
+        cols = ViewPresenter.prepare_aggregation_columns(
+            "merchant", SortMode.COUNT, SortDirection.DESC
+        )
+
+        assert len(cols) == 3
+        assert cols[0]["label"] == "Merchant"
+        assert cols[0]["key"] == "merchant"
+        assert cols[0]["width"] == 40
+
+        assert cols[1]["label"] == "Count ↓"
+        assert cols[1]["key"] == "count"
+
+        assert cols[2]["label"] == "Total"
+        assert cols[2]["key"] == "total"
+
+    def test_category_columns(self):
+        """Should create correct columns for category view."""
+        cols = ViewPresenter.prepare_aggregation_columns(
+            "category", SortMode.AMOUNT, SortDirection.ASC
+        )
+
+        assert cols[0]["label"] == "Category"
+        assert cols[1]["label"] == "Count"
+        assert cols[2]["label"] == "Total ↑"
+
+    def test_group_columns(self):
+        """Should create correct columns for group view."""
+        cols = ViewPresenter.prepare_aggregation_columns(
+            "group", SortMode.COUNT, SortDirection.ASC
+        )
+
+        assert cols[0]["label"] == "Group"
+        assert cols[1]["label"] == "Count ↑"
+
+    def test_account_columns(self):
+        """Should create correct columns for account view."""
+        cols = ViewPresenter.prepare_aggregation_columns(
+            "account", SortMode.AMOUNT, SortDirection.DESC
+        )
+
+        assert cols[0]["label"] == "Account"
+        assert cols[2]["label"] == "Total ↓"
+
+
+class TestFormatAggregationRows:
+    """Tests for format_aggregation_rows method."""
+
+    def test_formats_basic_merchant_rows(self):
+        """Should format merchant aggregation rows correctly."""
+        df = pl.DataFrame({
+            "merchant": ["Amazon", "Starbucks"],
+            "count": [50, 30],
+            "total": [-1234.56, -89.70]
+        })
+
+        rows = ViewPresenter.format_aggregation_rows(df)
+
+        assert len(rows) == 2
+        assert rows[0] == ("Amazon", "50", "$-1,234.56")
+        assert rows[1] == ("Starbucks", "30", "$-89.70")
+
+    def test_formats_category_rows(self):
+        """Should format category aggregation rows correctly."""
+        df = pl.DataFrame({
+            "category": ["Groceries", "Dining"],
+            "count": [100, 45],
+            "total": [-2500.00, -567.89]
+        })
+
+        rows = ViewPresenter.format_aggregation_rows(df)
+
+        assert rows[0] == ("Groceries", "100", "$-2,500.00")
+        assert rows[1] == ("Dining", "45", "$-567.89")
+
+    def test_handles_null_names(self):
+        """Should handle null merchant/category names."""
+        df = pl.DataFrame({
+            "merchant": [None, "Amazon"],
+            "count": [5, 10],
+            "total": [-50.00, -100.00]
+        })
+
+        rows = ViewPresenter.format_aggregation_rows(df)
+
+        assert rows[0][0] == "Unknown"  # None becomes Unknown
+        assert rows[1][0] == "Amazon"
+
+    def test_handles_empty_dataframe(self):
+        """Should return empty list for empty DataFrame."""
+        df = pl.DataFrame({
+            "merchant": [],
+            "count": [],
+            "total": []
+        }, schema={"merchant": pl.Utf8, "count": pl.Int64, "total": pl.Float64})
+
+        rows = ViewPresenter.format_aggregation_rows(df)
+
+        assert rows == []
+
+    def test_formats_large_numbers(self):
+        """Should format large numbers with commas."""
+        df = pl.DataFrame({
+            "merchant": ["BigCorp"],
+            "count": [1000],
+            "total": [-123456.78]
+        })
+
+        rows = ViewPresenter.format_aggregation_rows(df)
+
+        assert rows[0] == ("BigCorp", "1000", "$-123,456.78")
+
+    def test_formats_positive_amounts(self):
+        """Should format positive amounts (income) correctly."""
+        df = pl.DataFrame({
+            "merchant": ["Employer"],
+            "count": [2],
+            "total": [5000.00]
+        })
+
+        rows = ViewPresenter.format_aggregation_rows(df)
+
+        assert rows[0] == ("Employer", "2", "$5,000.00")
+
+
+class TestPrepareAggregationView:
+    """Tests for prepare_aggregation_view method."""
+
+    def test_complete_merchant_view(self):
+        """Should prepare complete merchant view."""
+        df = pl.DataFrame({
+            "merchant": ["Amazon", "Starbucks"],
+            "count": [50, 30],
+            "total": [-1234.56, -89.70]
+        })
+
+        view = ViewPresenter.prepare_aggregation_view(
+            df, "merchant", SortMode.COUNT, SortDirection.DESC
+        )
+
+        assert view["empty"] is False
+        assert len(view["columns"]) == 3
+        assert len(view["rows"]) == 2
+        assert view["columns"][0]["label"] == "Merchant"
+        assert view["rows"][0] == ("Amazon", "50", "$-1,234.56")
+
+    def test_empty_dataframe_view(self):
+        """Should handle empty DataFrame gracefully."""
+        df = pl.DataFrame({
+            "merchant": [],
+            "count": [],
+            "total": []
+        }, schema={"merchant": pl.Utf8, "count": pl.Int64, "total": pl.Float64})
+
+        view = ViewPresenter.prepare_aggregation_view(
+            df, "merchant", SortMode.AMOUNT, SortDirection.ASC
+        )
+
+        assert view["empty"] is True
+        assert len(view["columns"]) == 3
+        assert view["rows"] == []
+
+    def test_category_view_with_sort_indicators(self):
+        """Should include sort indicators in headers."""
+        df = pl.DataFrame({
+            "category": ["Groceries"],
+            "count": [100],
+            "total": [-2500.00]
+        })
+
+        view = ViewPresenter.prepare_aggregation_view(
+            df, "category", SortMode.AMOUNT, SortDirection.DESC
+        )
+
+        # Find the Total column
+        total_col = [c for c in view["columns"] if c["key"] == "total"][0]
+        assert "↓" in total_col["label"]
+
+
+class TestPrepareTransactionColumns:
+    """Tests for prepare_transaction_columns method."""
+
+    def test_creates_all_transaction_columns(self):
+        """Should create all 6 transaction columns."""
+        cols = ViewPresenter.prepare_transaction_columns(
+            SortMode.DATE, SortDirection.DESC
+        )
+
+        assert len(cols) == 6
+        keys = [c["key"] for c in cols]
+        assert keys == ["date", "merchant", "category", "account", "amount", "flags"]
+
+    def test_date_sort_indicator(self):
+        """Should show arrow on date column when sorted by date."""
+        cols = ViewPresenter.prepare_transaction_columns(
+            SortMode.DATE, SortDirection.DESC
+        )
+
+        assert "↓" in cols[0]["label"]  # Date column
+        assert "↓" not in cols[1]["label"]  # Merchant column
+
+    def test_merchant_sort_indicator(self):
+        """Should show arrow on merchant column when sorted by merchant."""
+        cols = ViewPresenter.prepare_transaction_columns(
+            SortMode.MERCHANT, SortDirection.ASC
+        )
+
+        merchant_col = [c for c in cols if c["key"] == "merchant"][0]
+        assert "↑" in merchant_col["label"]
+
+    def test_amount_sort_indicator(self):
+        """Should show arrow on amount column when sorted by amount."""
+        cols = ViewPresenter.prepare_transaction_columns(
+            SortMode.AMOUNT, SortDirection.DESC
+        )
+
+        amount_col = [c for c in cols if c["key"] == "amount"][0]
+        assert "↓" in amount_col["label"]
+
+    def test_flags_column_empty_label(self):
+        """Flags column should have empty label."""
+        cols = ViewPresenter.prepare_transaction_columns(
+            SortMode.DATE, SortDirection.DESC
+        )
+
+        flags_col = [c for c in cols if c["key"] == "flags"][0]
+        assert flags_col["label"] == ""
+
+
+class TestComputeTransactionFlags:
+    """Tests for compute_transaction_flags method."""
+
+    def test_no_flags(self):
+        """Should return empty string when no flags apply."""
+        flags = ViewPresenter.compute_transaction_flags(
+            "txn1", set(), False, set()
+        )
+        assert flags == ""
+
+    def test_selected_flag(self):
+        """Should show ✓ when transaction is selected."""
+        flags = ViewPresenter.compute_transaction_flags(
+            "txn1", {"txn1"}, False, set()
+        )
+        assert flags == "✓"
+
+    def test_hidden_flag(self):
+        """Should show H when transaction is hidden."""
+        flags = ViewPresenter.compute_transaction_flags(
+            "txn1", set(), True, set()
+        )
+        assert flags == "H"
+
+    def test_pending_edit_flag(self):
+        """Should show * when transaction has pending edit."""
+        flags = ViewPresenter.compute_transaction_flags(
+            "txn1", set(), False, {"txn1"}
+        )
+        assert flags == "*"
+
+    def test_all_flags_combined(self):
+        """Should combine all flags in correct order."""
+        flags = ViewPresenter.compute_transaction_flags(
+            "txn1", {"txn1"}, True, {"txn1"}
+        )
+        assert flags == "✓H*"
+
+    def test_selected_and_hidden(self):
+        """Should combine selected and hidden flags."""
+        flags = ViewPresenter.compute_transaction_flags(
+            "txn1", {"txn1"}, True, set()
+        )
+        assert flags == "✓H"
+
+    def test_hidden_and_pending(self):
+        """Should combine hidden and pending flags."""
+        flags = ViewPresenter.compute_transaction_flags(
+            "txn1", set(), True, {"txn1"}
+        )
+        assert flags == "H*"
+
+
+class TestFormatTransactionRows:
+    """Tests for format_transaction_rows method."""
+
+    def test_formats_basic_transaction(self):
+        """Should format basic transaction row."""
+        df = pl.DataFrame({
+            "id": ["txn1"],
+            "date": [date(2025, 1, 15)],
+            "merchant": ["Amazon"],
+            "category": ["Shopping"],
+            "account": ["Chase"],
+            "amount": [-99.99],
+            "hideFromReports": [False]
+        })
+
+        rows = ViewPresenter.format_transaction_rows(df, set(), set())
+
+        assert len(rows) == 1
+        assert rows[0] == ("2025-01-15", "Amazon", "Shopping", "Chase", "$-99.99", "")
+
+    def test_formats_multiple_transactions(self):
+        """Should format multiple transactions."""
+        df = pl.DataFrame({
+            "id": ["txn1", "txn2"],
+            "date": [date(2025, 1, 15), date(2025, 1, 16)],
+            "merchant": ["Amazon", "Starbucks"],
+            "category": ["Shopping", "Dining"],
+            "account": ["Chase", "Amex"],
+            "amount": [-99.99, -5.50],
+            "hideFromReports": [False, False]
+        })
+
+        rows = ViewPresenter.format_transaction_rows(df, set(), set())
+
+        assert len(rows) == 2
+        assert rows[1] == ("2025-01-16", "Starbucks", "Dining", "Amex", "$-5.50", "")
+
+    def test_includes_selected_flag(self):
+        """Should include ✓ flag for selected transactions."""
+        df = pl.DataFrame({
+            "id": ["txn1"],
+            "date": [date(2025, 1, 15)],
+            "merchant": ["Amazon"],
+            "category": ["Shopping"],
+            "account": ["Chase"],
+            "amount": [-99.99],
+            "hideFromReports": [False]
+        })
+
+        rows = ViewPresenter.format_transaction_rows(df, {"txn1"}, set())
+
+        assert rows[0][5] == "✓"  # Flags column
+
+    def test_includes_hidden_flag(self):
+        """Should include H flag for hidden transactions."""
+        df = pl.DataFrame({
+            "id": ["txn1"],
+            "date": [date(2025, 1, 15)],
+            "merchant": ["Amazon"],
+            "category": ["Shopping"],
+            "account": ["Chase"],
+            "amount": [-99.99],
+            "hideFromReports": [True]
+        })
+
+        rows = ViewPresenter.format_transaction_rows(df, set(), set())
+
+        assert rows[0][5] == "H"
+
+    def test_includes_pending_edit_flag(self):
+        """Should include * flag for transactions with pending edits."""
+        df = pl.DataFrame({
+            "id": ["txn1"],
+            "date": [date(2025, 1, 15)],
+            "merchant": ["Amazon"],
+            "category": ["Shopping"],
+            "account": ["Chase"],
+            "amount": [-99.99],
+            "hideFromReports": [False]
+        })
+
+        rows = ViewPresenter.format_transaction_rows(df, set(), {"txn1"})
+
+        assert rows[0][5] == "*"
+
+    def test_all_flags_combined_in_row(self):
+        """Should show all flags for a transaction."""
+        df = pl.DataFrame({
+            "id": ["txn1"],
+            "date": [date(2025, 1, 15)],
+            "merchant": ["Amazon"],
+            "category": ["Shopping"],
+            "account": ["Chase"],
+            "amount": [-99.99],
+            "hideFromReports": [True]
+        })
+
+        rows = ViewPresenter.format_transaction_rows(df, {"txn1"}, {"txn1"})
+
+        assert rows[0][5] == "✓H*"
+
+    def test_handles_null_merchant(self):
+        """Should show 'Unknown' for null merchant."""
+        df = pl.DataFrame({
+            "id": ["txn1"],
+            "date": [date(2025, 1, 15)],
+            "merchant": [None],
+            "category": ["Shopping"],
+            "account": ["Chase"],
+            "amount": [-99.99],
+            "hideFromReports": [False]
+        })
+
+        rows = ViewPresenter.format_transaction_rows(df, set(), set())
+
+        assert rows[0][1] == "Unknown"
+
+    def test_handles_null_category(self):
+        """Should show 'Uncategorized' for null category."""
+        df = pl.DataFrame({
+            "id": ["txn1"],
+            "date": [date(2025, 1, 15)],
+            "merchant": ["Amazon"],
+            "category": [None],
+            "account": ["Chase"],
+            "amount": [-99.99],
+            "hideFromReports": [False]
+        })
+
+        rows = ViewPresenter.format_transaction_rows(df, set(), set())
+
+        assert rows[0][2] == "Uncategorized"
+
+    def test_formats_large_amount(self):
+        """Should format large amounts with commas."""
+        df = pl.DataFrame({
+            "id": ["txn1"],
+            "date": [date(2025, 1, 15)],
+            "merchant": ["BigPurchase"],
+            "category": ["Shopping"],
+            "account": ["Chase"],
+            "amount": [-12345.67],
+            "hideFromReports": [False]
+        })
+
+        rows = ViewPresenter.format_transaction_rows(df, set(), set())
+
+        assert rows[0][4] == "$-12,345.67"
+
+    def test_formats_positive_amount(self):
+        """Should format positive amounts (income)."""
+        df = pl.DataFrame({
+            "id": ["txn1"],
+            "date": [date(2025, 1, 15)],
+            "merchant": ["Employer"],
+            "category": ["Paycheck"],
+            "account": ["Chase"],
+            "amount": [5000.00],
+            "hideFromReports": [False]
+        })
+
+        rows = ViewPresenter.format_transaction_rows(df, set(), set())
+
+        assert rows[0][4] == "$5,000.00"
+
+
+class TestPrepareTransactionView:
+    """Tests for prepare_transaction_view method."""
+
+    def test_complete_transaction_view(self):
+        """Should prepare complete transaction view."""
+        df = pl.DataFrame({
+            "id": ["txn1", "txn2"],
+            "date": [date(2025, 1, 15), date(2025, 1, 16)],
+            "merchant": ["Amazon", "Starbucks"],
+            "category": ["Shopping", "Dining"],
+            "account": ["Chase", "Amex"],
+            "amount": [-99.99, -5.50],
+            "hideFromReports": [False, True]
+        })
+
+        view = ViewPresenter.prepare_transaction_view(
+            df, SortMode.DATE, SortDirection.DESC, set(), {"txn2"}
+        )
+
+        assert view["empty"] is False
+        assert len(view["columns"]) == 6
+        assert len(view["rows"]) == 2
+        # Check flags are computed
+        assert view["rows"][1][5] == "H*"  # txn2 has hidden + pending edit
+
+    def test_empty_transaction_view(self):
+        """Should handle empty transaction DataFrame."""
+        df = pl.DataFrame({
+            "id": [],
+            "date": [],
+            "merchant": [],
+            "category": [],
+            "account": [],
+            "amount": [],
+            "hideFromReports": []
+        }, schema={
+            "id": pl.Utf8,
+            "date": pl.Date,
+            "merchant": pl.Utf8,
+            "category": pl.Utf8,
+            "account": pl.Utf8,
+            "amount": pl.Float64,
+            "hideFromReports": pl.Boolean
+        })
+
+        view = ViewPresenter.prepare_transaction_view(
+            df, SortMode.DATE, SortDirection.DESC, set(), set()
+        )
+
+        assert view["empty"] is True
+        assert len(view["columns"]) == 6
+        assert view["rows"] == []
+
+    def test_sort_indicators_in_headers(self):
+        """Should include sort indicators in column headers."""
+        df = pl.DataFrame({
+            "id": ["txn1"],
+            "date": [date(2025, 1, 15)],
+            "merchant": ["Amazon"],
+            "category": ["Shopping"],
+            "account": ["Chase"],
+            "amount": [-99.99],
+            "hideFromReports": [False]
+        })
+
+        view = ViewPresenter.prepare_transaction_view(
+            df, SortMode.AMOUNT, SortDirection.ASC, set(), set()
+        )
+
+        # Find amount column and check for arrow
+        amount_col = [c for c in view["columns"] if c["key"] == "amount"][0]
+        assert "↑" in amount_col["label"]
+
+
+class TestViewPresenterIntegration:
+    """Integration tests combining multiple presenter methods."""
+
+    def test_aggregation_to_transaction_workflow(self):
+        """Test typical workflow: aggregate view -> transaction view."""
+        # Start with aggregated data
+        agg_df = pl.DataFrame({
+            "merchant": ["Amazon", "Starbucks"],
+            "count": [50, 30],
+            "total": [-1234.56, -89.70]
+        })
+
+        agg_view = ViewPresenter.prepare_aggregation_view(
+            agg_df, "merchant", SortMode.AMOUNT, SortDirection.DESC
+        )
+
+        assert not agg_view["empty"]
+        assert len(agg_view["rows"]) == 2
+
+        # Drill down to transactions
+        txn_df = pl.DataFrame({
+            "id": ["txn1", "txn2"],
+            "date": [date(2025, 1, 15), date(2025, 1, 16)],
+            "merchant": ["Amazon", "Amazon"],
+            "category": ["Shopping", "Shopping"],
+            "account": ["Chase", "Chase"],
+            "amount": [-99.99, -134.57],
+            "hideFromReports": [False, False]
+        })
+
+        txn_view = ViewPresenter.prepare_transaction_view(
+            txn_df, SortMode.DATE, SortDirection.DESC, set(), set()
+        )
+
+        assert not txn_view["empty"]
+        assert len(txn_view["rows"]) == 2
+
+    def test_handles_real_world_data_size(self):
+        """Should handle realistic data volumes efficiently."""
+        # Create 1000 transactions
+        import random
+        merchants = ["Amazon", "Starbucks", "Whole Foods", "Target", "Costco"]
+
+        txn_df = pl.DataFrame({
+            "id": [f"txn{i}" for i in range(1000)],
+            "date": [date(2025, 1, 15) for _ in range(1000)],
+            "merchant": [random.choice(merchants) for _ in range(1000)],
+            "category": ["Shopping" for _ in range(1000)],
+            "account": ["Chase" for _ in range(1000)],
+            "amount": [random.uniform(-200, -10) for _ in range(1000)],
+            "hideFromReports": [False for _ in range(1000)]
+        })
+
+        view = ViewPresenter.prepare_transaction_view(
+            txn_df, SortMode.DATE, SortDirection.DESC, set(), set()
+        )
+
+        assert len(view["rows"]) == 1000
+        assert not view["empty"]

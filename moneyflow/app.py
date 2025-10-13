@@ -11,7 +11,7 @@ import sys
 import traceback
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Callable
 import polars as pl
 
 from textual.app import App, ComposeResult
@@ -24,6 +24,7 @@ from .backends import MonarchBackend, DemoBackend
 from .data_manager import DataManager
 from .state import AppState, ViewMode, SortMode, SortDirection, TimeFrame, TransactionEdit
 from .widgets.help_screen import HelpScreen
+from .view_presenter import ViewPresenter, AggregationField
 
 
 class MonarchTUI(App):
@@ -560,19 +561,17 @@ class MonarchTUI(App):
         self.update_stats()
         self.update_action_hints()
 
-    def show_merchant_aggregation(self) -> None:
-        """Show merchant aggregation view."""
+    def _show_aggregation(
+        self, group_by_field: AggregationField, aggregate_func: Callable[[pl.DataFrame], pl.DataFrame]
+    ) -> None:
+        """
+        Unified aggregation display logic.
+
+        Args:
+            group_by_field: Field to group by ('merchant', 'category', 'group', 'account')
+            aggregate_func: DataManager aggregation function to call
+        """
         table = self.query_one("#data-table", DataTable)
-
-        # Add sort arrows to column headers
-        arrow = "↓" if self.state.sort_direction == SortDirection.DESC else "↑"
-        count_header = "Count " + arrow if self.state.sort_by == SortMode.COUNT else "Count"
-        amount_header = "Total " + arrow if self.state.sort_by == SortMode.AMOUNT else "Total"
-
-        # Add columns
-        table.add_column("Merchant", key="merchant", width=40)
-        table.add_column(count_header, key="count", width=10)
-        table.add_column(amount_header, key="total", width=15)
 
         # Get filtered data based on time_frame
         filtered_df = self.state.get_filtered_df()
@@ -580,11 +579,17 @@ class MonarchTUI(App):
             return
 
         # Get aggregated data
-        agg = self.data_manager.aggregate_by_merchant(filtered_df)
+        agg = aggregate_func(filtered_df)
 
         # Check if we have any data
         if agg.is_empty():
             self.state.current_data = agg
+            # Still need to add columns for empty view
+            view = ViewPresenter.prepare_aggregation_view(
+                agg, group_by_field, self.state.sort_by, self.state.sort_direction
+            )
+            for col in view["columns"]:
+                table.add_column(col["label"], key=col["key"], width=col["width"])
             return
 
         # Apply sorting
@@ -592,185 +597,44 @@ class MonarchTUI(App):
         if sort_col == "amount":
             sort_col = "total"
 
-        # Amount sorting: invert direction so largest expenses (-1000) come first
-        descending = (
-            self.state.sort_direction == SortDirection.ASC
-            if sort_col == "total"
-            else self.state.sort_direction == SortDirection.DESC
-        )
-
+        # Use ViewPresenter to determine sort direction
+        descending = ViewPresenter.should_sort_descending(sort_col, self.state.sort_direction)
         agg = agg.sort(sort_col, descending=descending)
 
         self.state.current_data = agg
 
+        # Use ViewPresenter to prepare view
+        view = ViewPresenter.prepare_aggregation_view(
+            agg, group_by_field, self.state.sort_by, self.state.sort_direction
+        )
+
+        # Add columns
+        for col in view["columns"]:
+            table.add_column(col["label"], key=col["key"], width=col["width"])
+
         # Add rows
-        for row in agg.iter_rows(named=True):
-            merchant = row["merchant"] or "Unknown"
-            count = row["count"]
-            total = row["total"]
-            table.add_row(merchant, str(count), f"${total:,.2f}")
+        for row in view["rows"]:
+            table.add_row(*row)
+
+    def show_merchant_aggregation(self) -> None:
+        """Show merchant aggregation view."""
+        self._show_aggregation("merchant", self.data_manager.aggregate_by_merchant)
 
     def show_category_aggregation(self) -> None:
         """Show category aggregation view."""
-        table = self.query_one("#data-table", DataTable)
-
-        # Add sort arrows to column headers
-        arrow = "↓" if self.state.sort_direction == SortDirection.DESC else "↑"
-        count_header = "Count " + arrow if self.state.sort_by == SortMode.COUNT else "Count"
-        amount_header = "Total " + arrow if self.state.sort_by == SortMode.AMOUNT else "Total"
-
-        table.add_column("Category", key="category", width=40)
-        table.add_column(count_header, key="count", width=10)
-        table.add_column(amount_header, key="total", width=15)
-
-        # Get filtered data based on time_frame
-        filtered_df = self.state.get_filtered_df()
-        if filtered_df is None:
-            return
-
-        agg = self.data_manager.aggregate_by_category(filtered_df)
-
-        # Check if we have any data
-        if agg.is_empty():
-            self.state.current_data = agg
-            return
-
-        # Apply sorting
-        sort_col = self.state.sort_by.value
-        if sort_col == "amount":
-            sort_col = "total"
-
-        # Amount sorting: invert direction so largest expenses (-1000) come first
-        descending = (
-            self.state.sort_direction == SortDirection.ASC
-            if sort_col == "total"
-            else self.state.sort_direction == SortDirection.DESC
-        )
-
-        agg = agg.sort(sort_col, descending=descending)
-
-        self.state.current_data = agg
-
-        for row in agg.iter_rows(named=True):
-            category = row["category"] or "Uncategorized"
-            count = row["count"]
-            total = row["total"]
-            table.add_row(category, str(count), f"${total:,.2f}")
+        self._show_aggregation("category", self.data_manager.aggregate_by_category)
 
     def show_group_aggregation(self) -> None:
         """Show group aggregation view."""
-        table = self.query_one("#data-table", DataTable)
-
-        # Add sort arrows to column headers
-        arrow = "↓" if self.state.sort_direction == SortDirection.DESC else "↑"
-        count_header = "Count " + arrow if self.state.sort_by == SortMode.COUNT else "Count"
-        amount_header = "Total " + arrow if self.state.sort_by == SortMode.AMOUNT else "Total"
-
-        table.add_column("Group", key="group", width=40)
-        table.add_column(count_header, key="count", width=10)
-        table.add_column(amount_header, key="total", width=15)
-
-        # Get filtered data based on time_frame
-        filtered_df = self.state.get_filtered_df()
-        if filtered_df is None:
-            return
-
-        agg = self.data_manager.aggregate_by_group(filtered_df)
-
-        # Check if we have any data
-        if agg.is_empty():
-            self.state.current_data = agg
-            return
-
-        # Apply sorting
-        sort_col = self.state.sort_by.value
-        if sort_col == "amount":
-            sort_col = "total"
-
-        # Amount sorting: invert direction so largest expenses (-1000) come first
-        descending = (
-            self.state.sort_direction == SortDirection.ASC
-            if sort_col == "total"
-            else self.state.sort_direction == SortDirection.DESC
-        )
-
-        agg = agg.sort(sort_col, descending=descending)
-
-        self.state.current_data = agg
-
-        for row in agg.iter_rows(named=True):
-            group = row["group"] or "Other"
-            count = row["count"]
-            total = row["total"]
-            table.add_row(group, str(count), f"${total:,.2f}")
+        self._show_aggregation("group", self.data_manager.aggregate_by_group)
 
     def show_account_aggregation(self) -> None:
         """Show account aggregation view."""
-        table = self.query_one("#data-table", DataTable)
-
-        # Add sort arrows to column headers
-        arrow = "↓" if self.state.sort_direction == SortDirection.DESC else "↑"
-        count_header = "Count " + arrow if self.state.sort_by == SortMode.COUNT else "Count"
-        amount_header = "Total " + arrow if self.state.sort_by == SortMode.AMOUNT else "Total"
-
-        table.add_column("Account", key="account", width=40)
-        table.add_column(count_header, key="count", width=10)
-        table.add_column(amount_header, key="total", width=15)
-
-        # Get filtered data based on time_frame
-        filtered_df = self.state.get_filtered_df()
-        if filtered_df is None:
-            return
-
-        agg = self.data_manager.aggregate_by_account(filtered_df)
-
-        # Check if we have any data
-        if agg.is_empty():
-            self.state.current_data = agg
-            return
-
-        # Apply sorting
-        sort_col = self.state.sort_by.value
-        if sort_col == "amount":
-            sort_col = "total"
-
-        # Amount sorting: invert direction so largest expenses (-1000) come first
-        descending = (
-            self.state.sort_direction == SortDirection.ASC
-            if sort_col == "total"
-            else self.state.sort_direction == SortDirection.DESC
-        )
-
-        agg = agg.sort(sort_col, descending=descending)
-
-        self.state.current_data = agg
-
-        for row in agg.iter_rows(named=True):
-            account = row["account"] or "Unknown"
-            count = row["count"]
-            total = row["total"]
-            table.add_row(account, str(count), f"${total:,.2f}")
+        self._show_aggregation("account", self.data_manager.aggregate_by_account)
 
     def show_transactions(self) -> None:
         """Show individual transactions (drill-down view)."""
         table = self.query_one("#data-table", DataTable)
-
-        # Determine sort arrow based on current sort field and direction
-        arrow = "↓" if self.state.sort_direction == SortDirection.DESC else "↑"
-
-        # Add arrows to the sorted column header
-        date_header = "Date " + arrow if self.state.sort_by == SortMode.DATE else "Date"
-        merchant_header = "Merchant " + arrow if self.state.sort_by == SortMode.MERCHANT else "Merchant"
-        category_header = "Category " + arrow if self.state.sort_by == SortMode.CATEGORY else "Category"
-        account_header = "Account " + arrow if self.state.sort_by == SortMode.ACCOUNT else "Account"
-        amount_header = "Amount " + arrow if self.state.sort_by == SortMode.AMOUNT else "Amount"
-
-        table.add_column(date_header, key="date", width=12)
-        table.add_column(merchant_header, key="merchant", width=25)
-        table.add_column(category_header, key="category", width=20)
-        table.add_column(account_header, key="account", width=18)
-        table.add_column(amount_header, key="amount", width=12)
-        table.add_column("", key="flags", width=3)
 
         # Start with filtered data based on time_frame
         filtered_df = self.state.get_filtered_df()
@@ -792,47 +656,33 @@ class MonarchTUI(App):
 
         # Sort transactions based on sort_by field
         if not txns.is_empty():
-            if self.state.sort_by == SortMode.DATE:
-                descending = self.state.sort_direction == SortDirection.DESC
-                txns = txns.sort("date", descending=descending)
-            elif self.state.sort_by == SortMode.MERCHANT:
-                descending = self.state.sort_direction == SortDirection.DESC
-                txns = txns.sort("merchant", descending=descending)
-            elif self.state.sort_by == SortMode.CATEGORY:
-                descending = self.state.sort_direction == SortDirection.DESC
-                txns = txns.sort("category", descending=descending)
-            elif self.state.sort_by == SortMode.ACCOUNT:
-                descending = self.state.sort_direction == SortDirection.DESC
-                txns = txns.sort("account", descending=descending)
-            elif self.state.sort_by == SortMode.AMOUNT:
-                # Amount sorting: invert direction so largest expenses (-1000) come first
-                descending = self.state.sort_direction == SortDirection.ASC
-                txns = txns.sort("amount", descending=descending)
+            sort_field = self.state.sort_by.value
+            descending = ViewPresenter.should_sort_descending(
+                sort_field, self.state.sort_direction
+            )
+            txns = txns.sort(sort_field, descending=descending)
 
         self.state.current_data = txns
 
         # Get set of transaction IDs with pending edits
         pending_txn_ids = {edit.transaction_id for edit in self.data_manager.pending_edits}
 
+        # Use ViewPresenter to prepare view
+        view = ViewPresenter.prepare_transaction_view(
+            txns,
+            self.state.sort_by,
+            self.state.sort_direction,
+            self.state.selected_ids,
+            pending_txn_ids,
+        )
+
+        # Add columns
+        for col in view["columns"]:
+            table.add_column(col["label"], key=col["key"], width=col["width"])
+
         # Add rows
-        for row in txns.iter_rows(named=True):
-            date = str(row["date"])
-            merchant = row["merchant"] or "Unknown"
-            category = row["category"] or "Uncategorized"
-            account = row.get("account", "Unknown")
-            amount = row["amount"]
-            txn_id = row["id"]
-
-            # Build flags: ✓ for selected, H for hidden, * for pending edit
-            flags = ""
-            if txn_id in self.state.selected_ids:
-                flags += "✓"  # Selected for bulk operation
-            if row.get("hideFromReports", False):
-                flags += "H"  # Hidden from reports
-            if txn_id in pending_txn_ids:
-                flags += "*"  # Has pending edit
-
-            table.add_row(date, merchant, category, account, f"${amount:,.2f}", flags)
+        for row in view["rows"]:
+            table.add_row(*row)
 
     def update_breadcrumb(self) -> None:
         """Update breadcrumb navigation."""
