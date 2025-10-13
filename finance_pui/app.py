@@ -210,7 +210,14 @@ class MonarchTUI(App):
 
                 if cred_manager.credentials_exist():
                     # Show unlock screen
-                    result = await self.push_screen(CredentialUnlockScreen(), wait_for_dismiss=True)
+                    print(f"[INIT] Showing CredentialUnlockScreen", file=sys.stderr, flush=True)
+                    try:
+                        result = await self.push_screen(CredentialUnlockScreen(), wait_for_dismiss=True)
+                        print(f"[INIT] CredentialUnlockScreen returned: {result is not None}", file=sys.stderr, flush=True)
+                    except Exception as screen_err:
+                        print(f"[INIT ERROR] Exception in CredentialUnlockScreen: {screen_err}", file=sys.stderr, flush=True)
+                        traceback.print_exc(file=sys.stderr)
+                        raise
 
                     if result is None:
                         # User chose to reset - show backend selection then setup screen
@@ -492,7 +499,12 @@ class MonarchTUI(App):
         finally:
             self.loading = False
             self.query_one("#loading", LoadingIndicator).display = False
-            self.query_one("#loading-status", Static).display = False
+            # DON'T hide loading-status if it has an error message (starts with ❌)
+            loading_status = self.query_one("#loading-status", Static)
+            current_status = str(loading_status.renderable)
+            if not current_status.startswith("❌"):
+                loading_status.display = False
+            # If there's an error, keep it visible so user can see what went wrong
 
     def update_loading_progress(self, current: int, total: int, message: str) -> None:
         """Update loading progress message."""
