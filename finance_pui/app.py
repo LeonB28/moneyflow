@@ -189,6 +189,7 @@ class MonarchTUI(App):
     async def initialize_data(self) -> None:
         """Load data from Monarch API or cache."""
         print("[INIT] initialize_data started", file=sys.stderr, flush=True)
+        has_error = False  # Track if we encountered an error
 
         try:
             self.loading = True
@@ -330,6 +331,7 @@ class MonarchTUI(App):
                             traceback.print_exc(file=sys.stderr)
                             print(f"{'='*70}\n", file=sys.stderr, flush=True)
                             # Allow quitting with Ctrl+Q
+                            has_error = True
                             return
                     else:
                         # Other login failure
@@ -343,6 +345,7 @@ class MonarchTUI(App):
                         print(f"{'='*70}", file=sys.stderr, flush=True)
                         traceback.print_exc(file=sys.stderr)
                         print(f"{'='*70}\n", file=sys.stderr, flush=True)
+                        has_error = True
                         return
                 except Exception as e:
                     # Catch ANY other exception during login (network errors, etc.)
@@ -357,6 +360,7 @@ class MonarchTUI(App):
                     print(f"{'='*70}", file=sys.stderr, flush=True)
                     traceback.print_exc(file=sys.stderr)
                     print(f"{'='*70}\n", file=sys.stderr, flush=True)
+                    has_error = True
                     return
             else:
                 # Demo mode - no authentication needed
@@ -517,16 +521,15 @@ class MonarchTUI(App):
             if "401" in error_str or "unauthorized" in error_str:
                 print(f"\nSession has been deleted. Restart the app to login fresh.", file=sys.stderr, flush=True)
             print(f"{'='*70}\n", file=sys.stderr, flush=True)
+            has_error = True
 
         finally:
             self.loading = False
             self.query_one("#loading", LoadingIndicator).display = False
-            # DON'T hide loading-status if it has an error message (starts with ❌)
-            loading_status = self.query_one("#loading-status", Static)
-            current_status = str(loading_status.renderable)
-            if not current_status.startswith("❌"):
-                loading_status.display = False
-            # If there's an error, keep it visible so user can see what went wrong
+            # DON'T hide loading-status if we had an error
+            if not has_error:
+                self.query_one("#loading-status", Static).display = False
+            # If there was an error, keep the error message visible
 
     def update_loading_progress(self, current: int, total: int, message: str) -> None:
         """Update loading progress message."""
