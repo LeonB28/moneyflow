@@ -115,6 +115,7 @@ nav:
     - Troubleshooting: reference/troubleshooting.md
     - FAQ: reference/faq.md
   - Development:
+    - Developing moneyflow: development/developing.md
     - Contributing: development/contributing.md
     - Architecture: development/architecture.md
     - Testing: development/testing.md
