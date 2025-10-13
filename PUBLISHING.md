@@ -1,5 +1,37 @@
 # Publishing moneyflow to PyPI
 
+## Quick Start (Automated Scripts)
+
+We've automated the entire publishing workflow! Use the scripts in `scripts/` directory:
+
+```bash
+# 1. Bump version and create tag
+./scripts/bump-version.sh 0.2.0
+
+# 2. Test build locally
+./scripts/test-build.sh
+
+# 3. Publish to TestPyPI first
+./scripts/publish-testpypi.sh
+
+# 4. Test from TestPyPI
+uvx --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ moneyflow --demo
+
+# 5. If good, publish to production PyPI
+./scripts/publish-pypi.sh
+
+# 6. Push to GitHub
+git push && git push --tags
+```
+
+See `scripts/README.md` for details on each script.
+
+---
+
+# Manual Publishing (Advanced)
+
+If you prefer to do it manually or the scripts don't work:
+
 ## Prerequisites
 
 1. **PyPI Account**: Create accounts on [PyPI](https://pypi.org/account/register/) and [TestPyPI](https://test.pypi.org/account/register/)

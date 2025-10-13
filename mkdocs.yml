@@ -92,7 +92,7 @@ markdown_extensions:
 plugins:
   - search:
       lang: en
-  - social
+  # - social  # Disabled - requires imaging dependencies (cairosvg, PIL)
 
 nav:
   - Home: index.md
