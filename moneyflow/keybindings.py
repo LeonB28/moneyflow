@@ -1,5 +1,9 @@
 """
-Centralized keyboard shortcuts and help text for Monarch TUI.
+Centralized keyboard shortcuts and help text for moneyflow TUI.
+
+This module contains keyboard binding documentation displayed in the help screen.
+Keeping this separate from the UI code makes it easy to maintain and update
+keyboard shortcuts across the application.
 """
 
 from dataclasses import dataclass
@@ -64,7 +68,7 @@ def get_help_text() -> str:
         categories[binding.category].append(binding)
 
     # Format as text
-    lines = ["Monarch Money TUI - Keyboard Shortcuts", "=" * 60, ""]
+    lines = ["moneyflow - Keyboard Shortcuts", "=" * 40, ""]
 
     for category in ["Navigation", "Time", "Actions", "Bulk", "System"]:
         if category in categories:

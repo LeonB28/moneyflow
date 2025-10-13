@@ -87,8 +87,8 @@ class MonarchTUI(App):
     """
 
     # Use Path object to properly resolve CSS file location
-    # __file__ is moneyflow/app.py, so parent/styles/monarch.tcss is correct
-    CSS_PATH = str(Path(__file__).parent / "styles" / "monarch.tcss")
+    # __file__ is moneyflow/app.py, so parent/styles/moneyflow.tcss is correct
+    CSS_PATH = str(Path(__file__).parent / "styles" / "moneyflow.tcss")
 
     BINDINGS = [
         # View mode
@@ -244,7 +244,7 @@ class MonarchTUI(App):
             raise
 
     async def initialize_data(self) -> None:
-        """Load data from Monarch API or cache."""
+        """Load data from backend API or cache."""
         print("[INIT] initialize_data started", file=sys.stderr, flush=True)
         has_error = False  # Track if we encountered an error
 
@@ -263,8 +263,8 @@ class MonarchTUI(App):
             print("[INIT] Demo mode enabled", file=sys.stderr, flush=True)
             loading_status.update("🎮 DEMO MODE - Loading sample data...")
         else:
-            print("[INIT] Production mode, connecting to Monarch", file=sys.stderr, flush=True)
-            loading_status.update("🔄 Connecting to Monarch Money...")
+            print("[INIT] Production mode, connecting to backend", file=sys.stderr, flush=True)
+            loading_status.update("🔄 Connecting to backend...")
 
         try:
             print("[INIT] Entering main try block", file=sys.stderr, flush=True)
@@ -498,7 +498,7 @@ class MonarchTUI(App):
                         f"📊 Fetching transactions from {self.start_year} onwards..."
                     )
                 else:
-                    loading_status.update("📊 Fetching ALL transaction data from Monarch Money...")
+                    loading_status.update("📊 Fetching ALL transaction data from backend...")
 
                 loading_status.update(
                     "⏳ This may take a minute for large accounts (10k+ transactions)..."
@@ -1479,7 +1479,7 @@ class MonarchTUI(App):
 
                 # Refresh data - need to re-fetch
                 # For now, just notify user to refresh
-                self.notify("Press Ctrl+L to refresh data from Monarch", timeout=3)
+                self.notify("Press Ctrl+L to refresh data from backend", timeout=3)
             except Exception as e:
                 self.notify(f"Error deleting: {e}", severity="error", timeout=5)
 
@@ -1556,7 +1556,7 @@ class MonarchTUI(App):
 
         if should_commit:
             count = len(self.data_manager.pending_edits)
-            self.notify(f"Committing {count} change(s) to Monarch Money...", timeout=2)
+            self.notify(f"Committing {count} change(s) to backend...", timeout=2)
 
             try:
                 success_count, failure_count = await self._commit_with_retry(
@@ -1676,7 +1676,7 @@ def main():
     print("[MAIN] Starting application", file=sys.stderr, flush=True)
 
     parser = argparse.ArgumentParser(
-        description="Monarch Money Terminal UI - Fast transaction management"
+        description="moneyflow - Terminal UI for personal finance management"
     )
     parser.add_argument(
         "--year",
@@ -1779,7 +1779,7 @@ def main():
     except Exception as e:
         # Print full traceback to console
         print("\n" + "=" * 80, file=sys.stderr)
-        print("FATAL ERROR - Monarch TUI crashed!", file=sys.stderr)
+        print("FATAL ERROR - moneyflow TUI crashed!", file=sys.stderr)
         print("=" * 80, file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
         print("\n" + "=" * 80, file=sys.stderr)
