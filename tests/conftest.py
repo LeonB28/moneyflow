@@ -11,7 +11,88 @@ import polars as pl
 
 from tests.mock_backend import MockMonarchMoney
 from moneyflow.data_manager import DataManager
-from moneyflow.state import AppState
+from moneyflow.state import AppState, TransactionEdit
+
+
+# ============================================================================
+# TEST HELPER FUNCTIONS - Eliminate duplication across test suite
+# ============================================================================
+
+
+def make_edit(
+    transaction_id: str,
+    field: str,
+    old_value: any,
+    new_value: any,
+    timestamp: datetime = None
+) -> TransactionEdit:
+    """
+    Create a TransactionEdit for testing.
+
+    Helper to eliminate repeated TransactionEdit(..., datetime.now()) patterns.
+
+    Args:
+        transaction_id: Transaction ID
+        field: Field being edited ('merchant', 'category', 'hide_from_reports')
+        old_value: Original value
+        new_value: New value
+        timestamp: Optional timestamp (defaults to now)
+
+    Returns:
+        TransactionEdit instance
+
+    Example:
+        >>> edit = make_edit("txn1", "merchant", "Old", "New")
+        >>> edit.transaction_id
+        'txn1'
+    """
+    return TransactionEdit(
+        transaction_id=transaction_id,
+        field=field,
+        old_value=old_value,
+        new_value=new_value,
+        timestamp=timestamp or datetime.now()
+    )
+
+
+def save_test_credentials(
+    credential_manager,
+    email: str = "test@example.com",
+    password: str = "test_password",
+    mfa_secret: str = "TEST_SECRET_KEY",
+    encryption_password: str = "encryption_pass",
+    backend_type: str = "monarch"
+):
+    """
+    Save test credentials with default values.
+
+    Helper to eliminate repeated credential_manager.save_credentials() calls
+    with the same test data.
+
+    Args:
+        credential_manager: CredentialManager instance
+        email: Email (default: test@example.com)
+        password: Password (default: test_password)
+        mfa_secret: MFA secret (default: TEST_SECRET_KEY)
+        encryption_password: Encryption password (default: encryption_pass)
+        backend_type: Backend type (default: monarch)
+
+    Example:
+        >>> save_test_credentials(mgr)  # Uses all defaults
+        >>> save_test_credentials(mgr, email="custom@example.com")
+    """
+    credential_manager.save_credentials(
+        email=email,
+        password=password,
+        mfa_secret=mfa_secret,
+        encryption_password=encryption_password,
+        backend_type=backend_type
+    )
+
+
+# ============================================================================
+# PYTEST FIXTURES
+# ============================================================================
 
 
 @pytest.fixture

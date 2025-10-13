@@ -147,18 +147,9 @@ class TestCommitEdits:
 
     async def test_commit_single_edit(self, data_manager, mock_mm):
         """Test committing a single edit."""
-        from moneyflow.state import TransactionEdit
-        from datetime import datetime
+        from tests.conftest import make_edit
 
-        edits = [
-            TransactionEdit(
-                transaction_id="txn_1",
-                field="merchant",
-                old_value="Old Name",
-                new_value="New Name",
-                timestamp=datetime.now(),
-            )
-        ]
+        edits = [make_edit("txn_1", "merchant", "Old Name", "New Name")]
 
         success, failure = await data_manager.commit_pending_edits(edits)
 
@@ -173,13 +164,12 @@ class TestCommitEdits:
 
     async def test_commit_multiple_edits(self, data_manager, mock_mm):
         """Test committing multiple edits."""
-        from moneyflow.state import TransactionEdit
-        from datetime import datetime
+        from tests.conftest import make_edit
 
         edits = [
-            TransactionEdit("txn_1", "merchant", "A", "B", datetime.now()),
-            TransactionEdit("txn_2", "category", "cat_old", "cat_new", datetime.now()),
-            TransactionEdit("txn_3", "hide_from_reports", False, True, datetime.now()),
+            make_edit("txn_1", "merchant", "A", "B"),
+            make_edit("txn_2", "category", "cat_old", "cat_new"),
+            make_edit("txn_3", "hide_from_reports", False, True),
         ]
 
         success, failure = await data_manager.commit_pending_edits(edits)
@@ -198,10 +188,9 @@ class TestCommitEdits:
 
     async def test_commit_merchant_rename(self, data_manager, mock_mm):
         """Test committing a merchant rename."""
-        from moneyflow.state import TransactionEdit
-        from datetime import datetime
+        from tests.conftest import make_edit
 
-        edits = [TransactionEdit("txn_1", "merchant", "Amazon.com", "Amazon", datetime.now())]
+        edits = [make_edit("txn_1", "merchant", "Amazon.com", "Amazon")]
 
         await data_manager.commit_pending_edits(edits)
 
@@ -212,12 +201,9 @@ class TestCommitEdits:
 
     async def test_commit_category_change(self, data_manager, mock_mm):
         """Test committing a category change."""
-        from moneyflow.state import TransactionEdit
-        from datetime import datetime
+        from tests.conftest import make_edit
 
-        edits = [
-            TransactionEdit("txn_1", "category", "cat_groceries", "cat_shopping", datetime.now())
-        ]
+        edits = [make_edit("txn_1", "category", "cat_groceries", "cat_shopping")]
 
         await data_manager.commit_pending_edits(edits)
 
@@ -228,10 +214,9 @@ class TestCommitEdits:
 
     async def test_commit_hide_toggle(self, data_manager, mock_mm):
         """Test committing hide from reports toggle."""
-        from moneyflow.state import TransactionEdit
-        from datetime import datetime
+        from tests.conftest import make_edit
 
-        edits = [TransactionEdit("txn_1", "hide_from_reports", False, True, datetime.now())]
+        edits = [make_edit("txn_1", "hide_from_reports", False, True)]
 
         await data_manager.commit_pending_edits(edits)
 

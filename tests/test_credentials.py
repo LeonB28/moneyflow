@@ -137,28 +137,17 @@ class TestCredentialStorage:
 
     def test_save_credentials(self, credential_manager):
         """Test that credentials are saved successfully."""
-        email = "test@example.com"
-        password = "monarch_password"
-        mfa_secret = "JBSWY3DPEHPK3PXP"
-        encryption_password = "encryption_pass"
+        from tests.conftest import save_test_credentials
 
-        credential_manager.save_credentials(
-            email=email,
-            password=password,
-            mfa_secret=mfa_secret,
-            encryption_password=encryption_password,
-        )
+        save_test_credentials(credential_manager)
 
         assert credential_manager.credentials_file.exists()
 
     def test_credentials_file_has_secure_permissions(self, credential_manager):
         """Test that credentials file has owner-only permissions."""
-        credential_manager.save_credentials(
-            email="test@example.com",
-            password="pass",
-            mfa_secret="SECRET",
-            encryption_password="enc_pass",
-        )
+        from tests.conftest import save_test_credentials
+
+        save_test_credentials(credential_manager)
 
         stat_info = credential_manager.credentials_file.stat()
         assert oct(stat_info.st_mode)[-3:] == "600"
