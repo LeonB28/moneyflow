@@ -1,0 +1,45 @@
+/* Additional custom styles for moneyflow docs */
+
+/* Smooth animations */
+* {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Custom spacing for better readability */
+.md-typeset h1 {
+  margin-top: 2rem;
+}
+
+.md-typeset h2 {
+  margin-top: 1.5rem;
+  border-bottom: 2px solid rgba(57, 186, 230, 0.2);
+  padding-bottom: 0.5rem;
+}
+
+/* Make tables look better */
+.md-typeset table:not([class]) {
+  border: 1px solid rgba(57, 186, 230, 0.2);
+  border-radius: 4px;
+}
+
+.md-typeset table:not([class]) th {
+  background-color: rgba(57, 186, 230, 0.1);
+  color: #39bae6;
+  font-family: 'Fira Code', monospace;
+}
+
+/* Custom button styling */
+.md-button {
+  border-radius: 4px;
+  font-family: 'Fira Code', monospace;
+}
+
+.md-button--primary {
+  background-color: #39bae6;
+  border-color: #39bae6;
+}
+
+.md-button--primary:hover {
+  background-color: #59c2ff;
+  transform: translateY(-1px);
+}
