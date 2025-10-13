@@ -16,19 +16,21 @@ parts/
 sdist/
 var/
 wheels/
-pip-wheel-metadata/
-share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
 # Virtual environments
 venv/
-env/
 ENV/
-env.bak/
-venv.bak/
+env/
+.venv/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
 
 # IDEs
 .vscode/
@@ -36,48 +38,11 @@ venv.bak/
 *.swp
 *.swo
 *~
-.DS_Store
 
-# Claude Code
-.claude/
-
-# Monarch session data
+# moneyflow specific
 .mm/
-*.pickle
-
-# Local data files (keep structure, ignore data)
-*.csv
-*.db
-*.sqlite
-*.sqlite3
-
-# Testing
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-.tox/
-.nox/
-coverage.xml
-.pytest_cache/
-*.cover
-
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb
-
-# Type checking
-.mypy_cache/
-.dmypy.json
-dmypy.json
-.pytype/
-
-# Logs
+.moneyflow/
 *.log
 
-# Environment variables
-.env
-.env.local
-
-# Distribution / packaging
-*.whl
+# macOS
+.DS_Store
