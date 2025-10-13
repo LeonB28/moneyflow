@@ -25,6 +25,7 @@ from .data_manager import DataManager
 from .state import AppState, ViewMode, SortMode, SortDirection, TimeFrame, TransactionEdit
 from .widgets.help_screen import HelpScreen
 from .view_presenter import ViewPresenter, AggregationField
+from .time_navigator import TimeNavigator
 
 
 class MonarchTUI(App):
@@ -872,102 +873,50 @@ class MonarchTUI(App):
     def _select_month(self, month: int, month_name: str) -> None:
         """Helper to select a specific month of the current year."""
         from datetime import date as date_type
-        import calendar
 
         today = date_type.today()
-        year = today.year
-        first_day = date_type(year, month, 1)
-        last_day_num = calendar.monthrange(year, month)[1]
-        last_day = date_type(year, month, last_day_num)
+        date_range = TimeNavigator.get_month_range(today.year, month)
 
-        self.state.set_timeframe(TimeFrame.CUSTOM, start_date=first_day, end_date=last_day)
+        self.state.set_timeframe(
+            TimeFrame.CUSTOM,
+            start_date=date_range.start_date,
+            end_date=date_range.end_date
+        )
         self.refresh_view()
-        self.notify(f"Viewing: {month_name} {year}", timeout=1)
+        self.notify(f"Viewing: {date_range.description}", timeout=1)
 
     def action_prev_period(self) -> None:
         """Navigate to previous time period."""
-        from datetime import date as date_type
-        from dateutil.relativedelta import relativedelta
-        import calendar
-
         if self.state.start_date is None:
             # In all-time view, go to current year
             self.action_this_year()
             return
 
-        # Check if viewing full year (Jan 1 - Dec 31)
-        is_full_year = (
-            self.state.start_date.month == 1
-            and self.state.start_date.day == 1
-            and self.state.end_date.month == 12
-            and self.state.end_date.day == 31
-            and self.state.start_date.year == self.state.end_date.year
+        date_range = TimeNavigator.previous_period(self.state.start_date, self.state.end_date)
+
+        self.state.set_timeframe(
+            TimeFrame.CUSTOM,
+            start_date=date_range.start_date,
+            end_date=date_range.end_date
         )
-
-        if is_full_year:
-            # Navigate to previous year
-            new_year = self.state.start_date.year - 1
-            self.state.set_timeframe(
-                TimeFrame.CUSTOM,
-                start_date=date_type(new_year, 1, 1),
-                end_date=date_type(new_year, 12, 31),
-            )
-            self.notify(f"Viewing: Year {new_year}", timeout=1)
-        else:
-            # Navigate to previous month
-            prev_month_start = self.state.start_date.replace(day=1) - relativedelta(months=1)
-            last_day = calendar.monthrange(prev_month_start.year, prev_month_start.month)[1]
-            prev_month_end = prev_month_start.replace(day=last_day)
-
-            self.state.set_timeframe(
-                TimeFrame.CUSTOM, start_date=prev_month_start, end_date=prev_month_end
-            )
-            month_name = prev_month_start.strftime("%B")
-            self.notify(f"Viewing: {month_name} {prev_month_start.year}", timeout=1)
-
+        self.notify(f"Viewing: {date_range.description}", timeout=1)
         self.refresh_view()
 
     def action_next_period(self) -> None:
         """Navigate to next time period."""
-        from datetime import date as date_type
-        from dateutil.relativedelta import relativedelta
-        import calendar
-
         if self.state.start_date is None:
             # In all-time view, go to current year
             self.action_this_year()
             return
 
-        # Check if viewing full year (Jan 1 - Dec 31)
-        is_full_year = (
-            self.state.start_date.month == 1
-            and self.state.start_date.day == 1
-            and self.state.end_date.month == 12
-            and self.state.end_date.day == 31
-            and self.state.start_date.year == self.state.end_date.year
+        date_range = TimeNavigator.next_period(self.state.start_date, self.state.end_date)
+
+        self.state.set_timeframe(
+            TimeFrame.CUSTOM,
+            start_date=date_range.start_date,
+            end_date=date_range.end_date
         )
-
-        if is_full_year:
-            # Navigate to next year
-            new_year = self.state.start_date.year + 1
-            self.state.set_timeframe(
-                TimeFrame.CUSTOM,
-                start_date=date_type(new_year, 1, 1),
-                end_date=date_type(new_year, 12, 31),
-            )
-            self.notify(f"Viewing: Year {new_year}", timeout=1)
-        else:
-            # Navigate to next month
-            next_month_start = self.state.start_date.replace(day=1) + relativedelta(months=1)
-            last_day = calendar.monthrange(next_month_start.year, next_month_start.month)[1]
-            next_month_end = next_month_start.replace(day=last_day)
-
-            self.state.set_timeframe(
-                TimeFrame.CUSTOM, start_date=next_month_start, end_date=next_month_end
-            )
-            month_name = next_month_start.strftime("%B")
-            self.notify(f"Viewing: {month_name} {next_month_start.year}", timeout=1)
-
+        self.notify(f"Viewing: {date_range.description}", timeout=1)
         self.refresh_view()
 
     def action_reverse_sort(self) -> None:
