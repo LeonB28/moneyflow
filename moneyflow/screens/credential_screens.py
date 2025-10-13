@@ -496,7 +496,15 @@ class QuitConfirmationScreen(ModalScreen):
 
 
 class FilterScreen(ModalScreen):
-    """Filter options modal."""
+    """
+    Filter options modal with full keyboard navigation.
+
+    Keyboard shortcuts:
+    - h: Toggle show hidden transactions
+    - t: Toggle show transfers
+    - Enter/Space: Apply filters
+    - Esc: Cancel
+    """
 
     CSS = """
     FilterScreen {
@@ -517,6 +525,12 @@ class FilterScreen(ModalScreen):
         text-style: bold;
         color: $accent;
         margin-bottom: 2;
+    }
+
+    #filter-instructions {
+        text-align: center;
+        color: $text-muted;
+        margin-bottom: 1;
     }
 
     .filter-option {
@@ -545,23 +559,25 @@ class FilterScreen(ModalScreen):
         with Container(id="filter-dialog"):
             yield Label("🔍 Filter Options", id="filter-title")
 
+            yield Static("h=Toggle hidden | t=Toggle transfers | Enter=Apply | Esc=Cancel", id="filter-instructions")
+
             yield Checkbox(
-                "Show hidden from reports transactions",
+                "Show hidden from reports transactions (H)",
                 value=self.show_hidden,
                 id="show-hidden-checkbox",
                 classes="filter-option",
             )
 
             yield Checkbox(
-                "Show Transfer transactions",
+                "Show Transfer transactions (T)",
                 value=self.show_transfers,
                 id="show-transfers-checkbox",
                 classes="filter-option",
             )
 
             with Container(id="button-container"):
-                yield Button("Apply", variant="primary", id="apply-button")
-                yield Button("Cancel", variant="default", id="cancel-button")
+                yield Button("Apply (Enter)", variant="primary", id="apply-button")
+                yield Button("Cancel (Esc)", variant="default", id="cancel-button")
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "cancel-button":
@@ -573,9 +589,22 @@ class FilterScreen(ModalScreen):
             self.dismiss({"show_hidden": show_hidden, "show_transfers": show_transfers})
 
     def on_key(self, event: Key) -> None:
-        """Handle keyboard shortcuts."""
+        """Handle keyboard shortcuts for filter modal."""
         if event.key == "escape":
             self.dismiss(None)
+        elif event.key in ("enter", "space"):
+            # Apply filters
+            show_hidden = self.query_one("#show-hidden-checkbox", Checkbox).value
+            show_transfers = self.query_one("#show-transfers-checkbox", Checkbox).value
+            self.dismiss({"show_hidden": show_hidden, "show_transfers": show_transfers})
+        elif event.key == "h":
+            # Toggle hidden checkbox
+            checkbox = self.query_one("#show-hidden-checkbox", Checkbox)
+            checkbox.value = not checkbox.value
+        elif event.key == "t":
+            # Toggle transfers checkbox
+            checkbox = self.query_one("#show-transfers-checkbox", Checkbox)
+            checkbox.value = not checkbox.value
 
 
 class CachePromptScreen(ModalScreen):
