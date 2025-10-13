@@ -1335,6 +1335,9 @@ class MonarchTUI(App):
             )
 
             if new_merchant:
+                # Save cursor position before refresh
+                saved_cursor_row = table.cursor_row
+
                 txn_id = row_data["id"]
                 self.data_manager.pending_edits.append(
                     TransactionEdit(
@@ -1349,6 +1352,9 @@ class MonarchTUI(App):
                 self.notify("Merchant changed. Press w to review and commit.", timeout=2)
                 # Refresh to show * marker, stays in detail view since view_mode unchanged
                 self.refresh_view()
+                # Restore cursor position
+                if saved_cursor_row < table.row_count:
+                    table.move_cursor(row=saved_cursor_row)
 
     def action_recategorize(self) -> None:
         """Change category for current selection."""
@@ -1428,6 +1434,9 @@ class MonarchTUI(App):
                 )
 
                 if new_category_id:
+                    # Save cursor position before refresh
+                    saved_cursor_row = table.cursor_row
+
                     txn_id = row_data["id"]
                     old_category_id = row_data["category_id"]
 
@@ -1444,6 +1453,9 @@ class MonarchTUI(App):
                     self.notify("Category changed. Press w to review and commit.", timeout=2)
                     # Refresh to show * marker, stays in detail view since view_mode unchanged
                     self.refresh_view()
+                    # Restore cursor position
+                    if saved_cursor_row < table.row_count:
+                        table.move_cursor(row=saved_cursor_row)
         else:
             self.notify("Recategorize only works in transaction detail view", timeout=2)
 
@@ -1491,6 +1503,9 @@ class MonarchTUI(App):
             txn_id = row_data["id"]
             current_hidden = row_data.get("hideFromReports", False)
 
+            # Save cursor position before refresh
+            saved_cursor_row = table.cursor_row
+
             self.data_manager.pending_edits.append(
                 TransactionEdit(
                     transaction_id=txn_id,
@@ -1504,6 +1519,9 @@ class MonarchTUI(App):
             action = "Unhidden" if current_hidden else "Hidden"
             self.notify(f"{action} from reports. Press w to commit.", timeout=2)
             self.refresh_view()
+            # Restore cursor position
+            if saved_cursor_row < table.row_count:
+                table.move_cursor(row=saved_cursor_row)
 
     def action_show_transaction_details(self) -> None:
         """Show detailed information about current transaction."""
