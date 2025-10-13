@@ -833,7 +833,10 @@ class MoneyflowTUI(App):
             hints = (
                 f"Enter=Drill down | m=Edit merchant (bulk) | s=Sort({sort_name}) | g=Change grouping | ←/→=Change period"
             )
-        elif self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
+        elif self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP]:
+            sort_name = self.state.sort_by.value.capitalize()
+            hints = f"Enter=Drill down | r=Recategorize (bulk) | s=Sort({sort_name}) | g=Change grouping | ←/→=Change period"
+        elif self.state.view_mode == ViewMode.ACCOUNT:
             sort_name = self.state.sort_by.value.capitalize()
             hints = f"Enter=Drill down | s=Sort({sort_name}) | g=Change grouping | ←/→=Change period"
         else:  # DETAIL (transactions)
@@ -1319,14 +1322,112 @@ class MoneyflowTUI(App):
                     table.move_cursor(row=saved_cursor_row)
 
     def action_recategorize(self) -> None:
-        """Change category for current selection."""
+        """Change category for current selection (works in aggregate and detail views)."""
         if self.data_manager is None:
             return
 
-        self.run_worker(self._recategorize(), exclusive=False)
+        # Check if in aggregate view (CATEGORY or GROUP) or detail view
+        if self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP]:
+            # Aggregate view - recategorize all transactions for this category/group
+            self.run_worker(self._bulk_recategorize_from_aggregate(), exclusive=False)
+        else:
+            # Detail view - recategorize selected transaction(s)
+            self.run_worker(self._recategorize(), exclusive=False)
+
+    async def _bulk_recategorize_from_aggregate(self) -> None:
+        """Recategorize all transactions in selected category/group."""
+        from .screens.edit_screens import SelectCategoryScreen
+
+        if self.state.current_data is None:
+            return
+
+        table = self.query_one("#data-table", DataTable)
+        if table.cursor_row < 0:
+            return
+
+        # Get the category/group from current row
+        row_data = self.state.current_data.row(table.cursor_row, named=True)
+
+        if self.state.view_mode == ViewMode.CATEGORY:
+            category_name = row_data["category"]
+            category_id = row_data["category_id"]
+            transaction_count = row_data["count"]
+            total_amount = row_data["total"]
+
+            # Show category selection
+            new_category_id = await self.push_screen(
+                SelectCategoryScreen(
+                    self.data_manager.categories,
+                    category_id,
+                    None  # No transaction details for bulk
+                ),
+                wait_for_dismiss=True,
+            )
+
+            if new_category_id and new_category_id != category_id:
+                # Get all transactions for this category
+                filtered_df = self.state.get_filtered_df()
+                category_txns = self.data_manager.filter_by_category(filtered_df, category_name)
+
+                # Add edits for all transactions
+                for txn in category_txns.iter_rows(named=True):
+                    self.data_manager.pending_edits.append(
+                        TransactionEdit(
+                            transaction_id=txn["id"],
+                            field="category",
+                            old_value=category_id,
+                            new_value=new_category_id,
+                            timestamp=datetime.now(),
+                        )
+                    )
+
+                new_cat_name = self.data_manager.categories.get(new_category_id, {}).get("name", "Unknown")
+                self.notify(
+                    f"Queued {len(category_txns)} transactions to recategorize: {category_name} → {new_cat_name}. Press w to commit.",
+                    timeout=3
+                )
+                self.refresh_view()
+        elif self.state.view_mode == ViewMode.GROUP:
+            group_name = row_data["group"]
+            transaction_count = row_data["count"]
+
+            # For group view, show category picker
+            # (groups don't have IDs, so we pick a category from that group)
+            new_category_id = await self.push_screen(
+                SelectCategoryScreen(
+                    self.data_manager.categories,
+                    None,  # No current category
+                    None  # No transaction details
+                ),
+                wait_for_dismiss=True,
+            )
+
+            if new_category_id:
+                # Get all transactions for this group
+                filtered_df = self.state.get_filtered_df()
+                group_txns = self.data_manager.filter_by_group(filtered_df, group_name)
+
+                # Add edits for all transactions
+                for txn in group_txns.iter_rows(named=True):
+                    self.data_manager.pending_edits.append(
+                        TransactionEdit(
+                            transaction_id=txn["id"],
+                            field="category",
+                            old_value=txn["category_id"],
+                            new_value=new_category_id,
+                            timestamp=datetime.now(),
+                        )
+                    )
+
+                new_cat_name = self.data_manager.categories.get(new_category_id, {}).get("name", "Unknown")
+                self.notify(
+                    f"Queued {len(group_txns)} transactions from {group_name} to recategorize to {new_cat_name}. Press w to commit.",
+                    timeout=3
+                )
+                self.refresh_view()
 
     async def _recategorize(self) -> None:
-        """Show category selection and apply."""
+        """Show category selection and apply (for detail view)."""
         from .screens.edit_screens import SelectCategoryScreen
         from .state import TransactionEdit
 
