@@ -121,8 +121,13 @@ class MonarchTUI(App):
     def compose(self) -> ComposeResult:
         """Compose the main UI."""
         print("[COMPOSE] compose() called", file=sys.stderr, flush=True)
-        yield Header(show_clock=True)
-        print("[COMPOSE] Header yielded", file=sys.stderr, flush=True)
+        try:
+            yield Header(show_clock=True)
+            print("[COMPOSE] Header yielded", file=sys.stderr, flush=True)
+        except Exception as e:
+            print(f"[COMPOSE ERROR] Exception yielding Header: {e}", file=sys.stderr, flush=True)
+            traceback.print_exc(file=sys.stderr)
+            raise
 
         with Container(id="app-body"):
             # Top status bar
@@ -141,28 +146,45 @@ class MonarchTUI(App):
                 yield Static("", id="action-hints")
                 yield Static("", id="pending-changes")
 
-        print("[COMPOSE] About to yield Footer", file=sys.stderr, flush=True)
-        yield Footer()
-        print("[COMPOSE] compose() complete", file=sys.stderr, flush=True)
+        try:
+            print("[COMPOSE] About to yield Footer", file=sys.stderr, flush=True)
+            yield Footer()
+            print("[COMPOSE] compose() complete", file=sys.stderr, flush=True)
+        except Exception as e:
+            print(f"[COMPOSE ERROR] Exception in compose: {e}", file=sys.stderr, flush=True)
+            traceback.print_exc(file=sys.stderr)
+            raise
 
     async def on_mount(self) -> None:
         """Initialize the app after mounting."""
         print("[STARTUP] on_mount called", file=sys.stderr, flush=True)
 
-        # Set up data table
-        table = self.query_one("#data-table", DataTable)
-        table.cursor_type = "row"
-        table.zebra_stripes = True
+        try:
+            # Set up data table
+            table = self.query_one("#data-table", DataTable)
+            table.cursor_type = "row"
+            table.zebra_stripes = True
 
-        # Hide loading initially
-        self.query_one("#loading", LoadingIndicator).display = False
-        self.query_one("#loading-status", Static).display = False
+            # Hide loading initially
+            self.query_one("#loading", LoadingIndicator).display = False
+            self.query_one("#loading-status", Static).display = False
 
-        print("[STARTUP] Starting initialize_data worker", file=sys.stderr, flush=True)
+            print("[STARTUP] Starting initialize_data worker", file=sys.stderr, flush=True)
 
-        # Attempt to use saved session or show login prompt
-        # Must run in a worker to use push_screen with wait_for_dismiss
-        self.run_worker(self.initialize_data(), exclusive=True)
+            # Attempt to use saved session or show login prompt
+            # Must run in a worker to use push_screen with wait_for_dismiss
+            self.run_worker(self.initialize_data(), exclusive=True)
+        except Exception as e:
+            print(f"[STARTUP ERROR] Exception in on_mount: {e}", file=sys.stderr, flush=True)
+            traceback.print_exc(file=sys.stderr)
+            # Try to show error to user
+            try:
+                loading_status = self.query_one("#loading-status", Static)
+                loading_status.update(f"❌ Startup failed: {e}\n\nPress 'q' to quit")
+                loading_status.display = True
+            except:
+                pass
+            raise
 
     async def initialize_data(self) -> None:
         """Load data from Monarch API or cache."""
