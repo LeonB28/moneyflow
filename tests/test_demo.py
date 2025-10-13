@@ -2,7 +2,11 @@
 Tests for demo mode system - data generator and backend.
 
 Ensures the demo mode provides realistic, testable data for showcasing
-the TUI without requiring real Monarch Money credentials.
+the TUI without requiring real finance account credentials.
+
+Demo mode generates a full year of synthetic transactions for a dual-income
+household, with realistic spending patterns, merchant variations, and
+intentional edge cases for testing features.
 """
 
 import pytest

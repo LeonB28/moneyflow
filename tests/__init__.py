@@ -1,1 +1,1 @@
-"""Test suite for Monarch CLI."""
+"""Test suite for moneyflow."""

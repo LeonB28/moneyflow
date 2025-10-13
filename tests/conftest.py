@@ -1,5 +1,8 @@
 """
-Pytest configuration and fixtures for Monarch CLI tests.
+Pytest configuration and fixtures for moneyflow tests.
+
+This module provides reusable fixtures and test data for the test suite,
+including sample transactions, categories, and mock backends.
 """
 
 import pytest

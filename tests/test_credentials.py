@@ -1,7 +1,9 @@
 """
 Tests for credential management module.
 
-Tests encryption, decryption, and secure storage of Monarch Money credentials.
+Tests encryption, decryption, and secure storage of finance backend credentials.
+Verifies AES-128 encryption with Fernet, PBKDF2 key derivation (100k iterations),
+secure file permissions, and multi-backend support.
 """
 
 import json
