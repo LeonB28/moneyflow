@@ -846,9 +846,13 @@ class MonarchTUI(App):
             changes_widget.update("")
 
     # Actions
-    def action_view_merchants(self) -> None:
-        """Switch to merchant view."""
-        self.state.view_mode = ViewMode.MERCHANT
+    def _switch_to_aggregate_view(self, view_mode: ViewMode) -> None:
+        """
+        Helper to switch to an aggregate view.
+
+        Clears selections, resets sort field to valid aggregate column, and refreshes.
+        """
+        self.state.view_mode = view_mode
         self.state.selected_merchant = None
         self.state.selected_category = None
         self.state.selected_group = None
@@ -857,42 +861,22 @@ class MonarchTUI(App):
         if self.state.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
             self.state.sort_by = SortMode.AMOUNT
         self.refresh_view()
+
+    def action_view_merchants(self) -> None:
+        """Switch to merchant view."""
+        self._switch_to_aggregate_view(ViewMode.MERCHANT)
 
     def action_view_categories(self) -> None:
         """Switch to category view."""
-        self.state.view_mode = ViewMode.CATEGORY
-        self.state.selected_merchant = None
-        self.state.selected_category = None
-        self.state.selected_group = None
-        self.state.selected_account = None
-        # Reset sort to valid field for aggregate views
-        if self.state.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
-            self.state.sort_by = SortMode.AMOUNT
-        self.refresh_view()
+        self._switch_to_aggregate_view(ViewMode.CATEGORY)
 
     def action_view_groups(self) -> None:
         """Switch to group view."""
-        self.state.view_mode = ViewMode.GROUP
-        self.state.selected_merchant = None
-        self.state.selected_category = None
-        self.state.selected_group = None
-        self.state.selected_account = None
-        # Reset sort to valid field for aggregate views
-        if self.state.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
-            self.state.sort_by = SortMode.AMOUNT
-        self.refresh_view()
+        self._switch_to_aggregate_view(ViewMode.GROUP)
 
     def action_view_accounts(self) -> None:
         """Switch to account view."""
-        self.state.view_mode = ViewMode.ACCOUNT
-        self.state.selected_merchant = None
-        self.state.selected_category = None
-        self.state.selected_group = None
-        self.state.selected_account = None
-        # Reset sort to valid field for aggregate views
-        if self.state.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
-            self.state.sort_by = SortMode.AMOUNT
-        self.refresh_view()
+        self._switch_to_aggregate_view(ViewMode.ACCOUNT)
 
     def action_cycle_grouping(self) -> None:
         """Cycle through aggregation views (Merchant → Category → Group → Account)."""
