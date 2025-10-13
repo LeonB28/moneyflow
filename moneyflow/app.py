@@ -3,7 +3,7 @@ Main moneyflow TUI Application.
 
 A fast, keyboard-driven terminal interface for personal finance management.
 
-This is the main application module containing the MonarchTUI class which:
+This is the main application module containing the MoneyflowTUI class which:
 - Coordinates all UI components (screens, widgets, data table)
 - Handles keyboard bindings and user actions
 - Manages application state and data loading
@@ -44,7 +44,7 @@ from .time_navigator import TimeNavigator
 from .commit_orchestrator import CommitOrchestrator
 
 
-class MonarchTUI(App):
+class MoneyflowTUI(App):
     """
     Main application class for the moneyflow terminal UI.
 
@@ -147,7 +147,7 @@ class MonarchTUI(App):
         cache_path: Optional[str] = None,
         force_refresh: bool = False,
     ):
-        print("[INIT] MonarchTUI.__init__ called", file=sys.stderr, flush=True)
+        print("[INIT] MoneyflowTUI.__init__ called", file=sys.stderr, flush=True)
         try:
             super().__init__()
             print("[INIT] super().__init__() completed", file=sys.stderr, flush=True)
@@ -1735,9 +1735,9 @@ def main():
     cache_path = args.cache if hasattr(args, "cache") and args.cache is not None else None
 
     try:
-        print(f"[MAIN] Creating MonarchTUI instance (demo={args.demo})", file=sys.stderr, flush=True)
+        print(f"[MAIN] Creating MoneyflowTUI instance (demo={args.demo})", file=sys.stderr, flush=True)
 
-        app = MonarchTUI(
+        app = MoneyflowTUI(
             start_year=start_year,
             custom_start_date=custom_start_date,
             demo_mode=args.demo,
