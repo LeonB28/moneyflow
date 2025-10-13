@@ -772,24 +772,45 @@ class MoneyflowTUI(App):
         breadcrumb.update(self.state.get_breadcrumb())
 
     def update_stats(self) -> None:
-        """Update statistics display."""
+        """
+        Update statistics display based on FILTERED data.
+
+        Shows stats for the current view (filtered by time, search, etc.)
+        not the entire dataset. This way stats reflect what the user is viewing.
+        """
         if self.data_manager is None:
             return
 
-        stats = self.data_manager.get_stats()
-        stats_widget = self.query_one("#stats", Static)
+        # Get filtered DataFrame to calculate stats for current view
+        filtered_df = self.state.get_filtered_df()
 
-        txn_count = stats["total_transactions"]
-        income = stats["total_income"]
-        expenses = stats["total_expenses"]
-        savings = stats["net_savings"]
+        if filtered_df is None or filtered_df.is_empty():
+            stats_widget = self.query_one("#stats", Static)
+            stats_widget.update("0 txns | No data in view")
+            return
+
+        # Calculate stats on filtered data
+        # Income (from Income group, excluding Transfers)
+        income_df = filtered_df.filter(pl.col("group") == "Income")
+        total_income = float(income_df["amount"].sum()) if not income_df.is_empty() else 0.0
+
+        # Expenses (all non-Income, non-Transfer transactions)
+        expense_df = filtered_df.filter(
+            (pl.col("group") != "Income") & (pl.col("group") != "Transfers")
+        )
+        total_expenses = float(expense_df["amount"].sum()) if not expense_df.is_empty() else 0.0
+
+        # Net savings = Income + Expenses (expenses are negative)
+        net_savings = total_income + total_expenses
+
+        stats_widget = self.query_one("#stats", Static)
 
         # Format: "N txns | Income: $X | Expenses: $Y | Savings: $Z"
         stats_text = (
-            f"{txn_count:,} txns | "
-            f"Income: ${income:,.2f} | "
-            f"Expenses: ${expenses:,.2f} | "
-            f"Savings: ${savings:,.2f}"
+            f"{len(filtered_df):,} txns | "
+            f"Income: ${total_income:,.2f} | "
+            f"Expenses: ${total_expenses:,.2f} | "
+            f"Savings: ${net_savings:,.2f}"
         )
         stats_widget.update(stats_text)
 
