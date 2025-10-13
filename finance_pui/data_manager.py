@@ -43,6 +43,7 @@ CATEGORY_GROUPS = {
         "Public Transit",
         "Luggage",
         "Travel Services",
+        "Travel & Vacation"
     ],
     "Automotive": [
         "Gas",
