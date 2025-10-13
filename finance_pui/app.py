@@ -1711,6 +1711,11 @@ class MonarchTUI(App):
                             .otherwise(pl.col("category"))
                             .alias("category")
                         )
+                        # Reapply category groups to update the 'group' column
+                        self.data_manager.df = self.data_manager.apply_category_groups(
+                            self.data_manager.df
+                        )
+
                         # Also update in state
                         if self.state.transactions_df is not None:
                             self.state.transactions_df = self.state.transactions_df.with_columns(
@@ -1724,6 +1729,10 @@ class MonarchTUI(App):
                                 .then(pl.lit(cat_name))
                                 .otherwise(pl.col("category"))
                                 .alias("category")
+                            )
+                            # Reapply category groups to state DataFrame too
+                            self.state.transactions_df = self.data_manager.apply_category_groups(
+                                self.state.transactions_df
                             )
                     elif edit.field == "hide_from_reports":
                         # Update hideFromReports flag in DataFrame
