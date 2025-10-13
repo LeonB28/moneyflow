@@ -1758,6 +1758,11 @@ def main():
         help="Only load transactions from this date onwards (e.g., --since 2024-06-01). Overrides --year if both provided.",
     )
     parser.add_argument(
+        "--mtd",
+        action="store_true",
+        help="Load month-to-date transactions (from 1st of current month to today). Fast startup for editing recent transactions. Overrides --year and --since.",
+    )
+    parser.add_argument(
         "--cache",
         type=str,
         nargs="?",
@@ -1783,11 +1788,17 @@ def main():
 
     args = parser.parse_args()
 
-    # Determine start year
+    # Determine start year or date range
     start_year = None
     custom_start_date = None
 
-    if args.since:
+    if args.mtd:
+        # Month-to-date: Load from 1st of current month to today
+        from datetime import date as date_type
+        today = date_type.today()
+        first_of_month = date_type(today.year, today.month, 1)
+        custom_start_date = first_of_month.strftime("%Y-%m-%d")
+    elif args.since:
         custom_start_date = args.since
     elif args.year:
         start_year = args.year
