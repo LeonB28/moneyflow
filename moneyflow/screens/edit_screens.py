@@ -220,8 +220,10 @@ class EditMerchantScreen(ModalScreen):
     def on_key(self, event: Key) -> None:
         """Handle keyboard shortcuts."""
         if event.key == "escape":
+            event.stop()  # Prevent propagation to parent
             self.dismiss(None)
         elif event.key == "down":
+            event.stop()  # Prevent propagation
             # Move focus to suggestions list
             if self.all_merchants:
                 self.query_one("#suggestions", OptionList).focus()
@@ -369,11 +371,14 @@ class SelectCategoryScreen(ModalScreen):
     def on_key(self, event: Key) -> None:
         """Handle keyboard shortcuts."""
         if event.key == "escape":
+            event.stop()  # Prevent propagation to parent
             self.dismiss(None)
         elif event.key == "down":
+            event.stop()  # Prevent propagation
             # Move focus from input to list
             self.query_one("#category-list", OptionList).focus()
         elif event.key == "slash":
+            event.stop()  # Prevent propagation
             # Focus search input when user presses /
             self.query_one("#search-input", Input).focus()
 
@@ -453,4 +458,5 @@ class DeleteConfirmationScreen(ModalScreen):
     def on_key(self, event: Key) -> None:
         """Handle keyboard shortcuts."""
         if event.key == "escape":
+            event.stop()  # Prevent propagation to parent
             self.dismiss(False)
