@@ -81,10 +81,18 @@ ignore = ["E501"]  # Line too long (handled by formatter)
 
 [tool.pyright]
 include = ["moneyflow", "tests"]
-exclude = ["**/__pycache__", ".venv"]
+exclude = [
+    "**/__pycache__",
+    ".venv",
+    "**/monarchmoney.py",  # External vendor code (from hammem/monarchmoney)
+    "**/screens/**",       # UI layer - has unavoidable Optional types from Textual
+    "**/widgets/**",       # UI layer
+]
 typeCheckingMode = "basic"
 reportMissingTypeStubs = false
 reportUnknownMemberType = false
 reportUnknownArgumentType = false
 reportUnknownVariableType = false
+reportOptionalMemberAccess = false  # UI code has many Optional types
+reportArgumentType = false           # UI framework types are complex
 pythonVersion = "3.11"

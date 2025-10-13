@@ -154,3 +154,14 @@ class FinanceBackend(ABC):
             Exception: If transaction not found or deletion fails
         """
         pass
+
+    def delete_session(self) -> None:
+        """
+        Delete saved session data.
+
+        This is optional - backends that don't support session persistence
+        can use the default no-op implementation.
+
+        Default implementation does nothing.
+        """
+        pass  # Default: no-op

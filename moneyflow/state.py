@@ -6,7 +6,7 @@ including view mode, filters, selections, and pending edits. State should be dat
 not operations - complex operations belong in separate service classes.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field as dataclass_field
 from datetime import datetime, date
 from enum import Enum
 from typing import Any, Optional, List, Dict
@@ -60,7 +60,7 @@ class TransactionEdit:
     field: str  # 'merchant', 'category', 'hide_from_reports'
     old_value: Any
     new_value: Any
-    timestamp: datetime = field(default_factory=datetime.now)
+    timestamp: datetime = dataclass_field(default_factory=datetime.now)
 
 
 @dataclass
@@ -84,9 +84,9 @@ class AppState:
 
     # Data
     transactions_df: Optional[pl.DataFrame] = None
-    categories: Dict[str, Any] = field(default_factory=dict)
-    category_groups: Dict[str, Any] = field(default_factory=dict)
-    merchants: Dict[str, Any] = field(default_factory=dict)
+    categories: Dict[str, Any] = dataclass_field(default_factory=dict)
+    category_groups: Dict[str, Any] = dataclass_field(default_factory=dict)
+    merchants: Dict[str, Any] = dataclass_field(default_factory=dict)
 
     # View state
     view_mode: ViewMode = ViewMode.MERCHANT
@@ -106,7 +106,7 @@ class AppState:
     selected_row: int = 0
 
     # Multi-select for bulk operations
-    selected_ids: set[str] = field(default_factory=set)
+    selected_ids: set[str] = dataclass_field(default_factory=set)
 
     # Search/filter
     search_query: str = ""
@@ -114,9 +114,9 @@ class AppState:
     show_hidden: bool = True  # Whether to show transactions hidden from reports
 
     # Change tracking
-    pending_edits: List[TransactionEdit] = field(default_factory=list)
-    undo_stack: List[TransactionEdit] = field(default_factory=list)
-    redo_stack: List[TransactionEdit] = field(default_factory=list)
+    pending_edits: List[TransactionEdit] = dataclass_field(default_factory=list)
+    undo_stack: List[TransactionEdit] = dataclass_field(default_factory=list)
+    redo_stack: List[TransactionEdit] = dataclass_field(default_factory=list)
 
     # UI state
     loading: bool = False
@@ -128,7 +128,7 @@ class AppState:
 
     # Navigation history for breadcrumb and back navigation
     # Stores (view_mode, cursor_position) for restoring state on go_back
-    navigation_history: List[tuple[ViewMode, int]] = field(default_factory=list)
+    navigation_history: List[tuple[ViewMode, int]] = dataclass_field(default_factory=list)
 
     def add_edit(self, transaction_id: str, field: str, old_value: Any, new_value: Any):
         """Add a pending edit to the change tracker."""

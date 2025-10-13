@@ -1131,6 +1131,8 @@ class MonarchTUI(App):
             total_amount = row_data["total"]
 
             # Get list of all merchants for suggestions
+            if self.data_manager.df is None:
+                return
             all_merchants = self.data_manager.df["merchant"].unique().to_list()
 
             # Pass aggregate summary for bulk edit
@@ -1184,6 +1186,8 @@ class MonarchTUI(App):
         current_merchant = row_data["merchant"]
 
         # Get list of all merchants for suggestions
+        if self.data_manager.df is None:
+            return
         all_merchants = self.data_manager.df["merchant"].unique().to_list()
 
         # Check if we have selected transactions for bulk edit
