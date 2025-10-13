@@ -26,6 +26,7 @@ from .state import AppState, ViewMode, SortMode, SortDirection, TimeFrame, Trans
 from .widgets.help_screen import HelpScreen
 from .view_presenter import ViewPresenter, AggregationField
 from .time_navigator import TimeNavigator
+from .commit_orchestrator import CommitOrchestrator
 
 
 class MonarchTUI(App):
@@ -1520,80 +1521,23 @@ class MonarchTUI(App):
                         timeout=3,
                     )
 
-                # Apply edits to local DataFrame for instant UI update
-                for edit in self.data_manager.pending_edits:
-                    if edit.field == "merchant":
-                        # Update merchant in DataFrame
-                        self.data_manager.df = self.data_manager.df.with_columns(
-                            pl.when(pl.col("id") == edit.transaction_id)
-                            .then(pl.lit(edit.new_value))
-                            .otherwise(pl.col("merchant"))
-                            .alias("merchant")
-                        )
-                        # Also update in state
-                        if self.state.transactions_df is not None:
-                            self.state.transactions_df = self.state.transactions_df.with_columns(
-                                pl.when(pl.col("id") == edit.transaction_id)
-                                .then(pl.lit(edit.new_value))
-                                .otherwise(pl.col("merchant"))
-                                .alias("merchant")
-                            )
-                    elif edit.field == "category":
-                        # Update category in DataFrame - lookup category name from ID
-                        cat_name = self.data_manager.categories.get(edit.new_value, {}).get(
-                            "name", "Unknown"
-                        )
-                        self.data_manager.df = self.data_manager.df.with_columns(
-                            pl.when(pl.col("id") == edit.transaction_id)
-                            .then(pl.lit(edit.new_value))
-                            .otherwise(pl.col("category_id"))
-                            .alias("category_id")
-                        )
-                        self.data_manager.df = self.data_manager.df.with_columns(
-                            pl.when(pl.col("id") == edit.transaction_id)
-                            .then(pl.lit(cat_name))
-                            .otherwise(pl.col("category"))
-                            .alias("category")
-                        )
-                        # Reapply category groups to update the 'group' column
-                        self.data_manager.df = self.data_manager.apply_category_groups(
-                            self.data_manager.df
-                        )
+                # Apply edits to local DataFrames for instant UI update
+                # Use CommitOrchestrator to apply all edits (fully tested)
+                self.data_manager.df = CommitOrchestrator.apply_edits_to_dataframe(
+                    self.data_manager.df,
+                    self.data_manager.pending_edits,
+                    self.data_manager.categories,
+                    self.data_manager.apply_category_groups,
+                )
 
-                        # Also update in state
-                        if self.state.transactions_df is not None:
-                            self.state.transactions_df = self.state.transactions_df.with_columns(
-                                pl.when(pl.col("id") == edit.transaction_id)
-                                .then(pl.lit(edit.new_value))
-                                .otherwise(pl.col("category_id"))
-                                .alias("category_id")
-                            )
-                            self.state.transactions_df = self.state.transactions_df.with_columns(
-                                pl.when(pl.col("id") == edit.transaction_id)
-                                .then(pl.lit(cat_name))
-                                .otherwise(pl.col("category"))
-                                .alias("category")
-                            )
-                            # Reapply category groups to state DataFrame too
-                            self.state.transactions_df = self.data_manager.apply_category_groups(
-                                self.state.transactions_df
-                            )
-                    elif edit.field == "hide_from_reports":
-                        # Update hideFromReports flag in DataFrame
-                        self.data_manager.df = self.data_manager.df.with_columns(
-                            pl.when(pl.col("id") == edit.transaction_id)
-                            .then(pl.lit(edit.new_value))
-                            .otherwise(pl.col("hideFromReports"))
-                            .alias("hideFromReports")
-                        )
-                        # Also update in state
-                        if self.state.transactions_df is not None:
-                            self.state.transactions_df = self.state.transactions_df.with_columns(
-                                pl.when(pl.col("id") == edit.transaction_id)
-                                .then(pl.lit(edit.new_value))
-                                .otherwise(pl.col("hideFromReports"))
-                                .alias("hideFromReports")
-                            )
+                # Also update state DataFrame
+                if self.state.transactions_df is not None:
+                    self.state.transactions_df = CommitOrchestrator.apply_edits_to_dataframe(
+                        self.state.transactions_df,
+                        self.data_manager.pending_edits,
+                        self.data_manager.categories,
+                        self.data_manager.apply_category_groups,
+                    )
 
                 # Clear pending edits on success
                 self.data_manager.pending_edits.clear()

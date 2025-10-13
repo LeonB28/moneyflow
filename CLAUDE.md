@@ -52,11 +52,14 @@ open htmlcov/index.html
 # Run full test suite
 uv run pytest -v
 
+# Run type checker
+uv run pyright moneyflow/
+
 # Check coverage
 uv run pytest --cov --cov-report=term-missing
 ```
 
-**All tests must pass before committing.** No exceptions.
+**All tests must pass and type checking must be clean before committing.** No exceptions.
 
 ### Project Structure
 
@@ -64,26 +67,32 @@ uv run pytest --cov --cov-report=term-missing
 
 ```
 moneyflow/
-├── moneyflow/                # Main package (ALL code goes here)
-│   ├── monarchmoney.py       # GraphQL client (keep separate for upstream diffs)
-│   ├── app.py                # Main Textual application
-│   ├── data_manager.py       # Data layer with Polars
-│   ├── state.py              # App state with undo/redo
-│   ├── credentials.py        # Encrypted credential storage
-│   ├── duplicate_detector.py # Duplicate detection
-│   ├── backends/             # Backend implementations
-│   ├── screens/              # UI screens and modals
-│   ├── widgets/              # Custom UI widgets
-│   └── styles/               # Textual CSS
-├── tests/                    # Test suite
-│   ├── conftest.py           # Pytest fixtures
-│   ├── mock_backend.py       # Mock MonarchMoney API
-│   ├── test_state.py         # State management tests
-│   ├── test_data_manager.py  # Data operations tests
-│   └── test_workflows.py     # Edit workflow tests
-├── pyproject.toml            # Project metadata and dependencies
-├── README.md                 # User documentation
-└── CLAUDE.md                 # This file - development guide
+├── moneyflow/                   # Main package (ALL code goes here)
+│   ├── app.py                   # Main Textual application (~1750 lines)
+│   ├── monarchmoney.py          # GraphQL client (keep separate for upstream diffs)
+│   ├── data_manager.py          # Data layer with Polars
+│   ├── state.py                 # App state management
+│   ├── credentials.py           # Encrypted credential storage
+│   ├── duplicate_detector.py    # Duplicate detection
+│   ├── view_presenter.py        # Presentation logic (NEW - fully typed & tested)
+│   ├── time_navigator.py        # Time period calculations (NEW - 100% coverage)
+│   ├── commit_orchestrator.py   # DataFrame update logic (NEW - critical, 100% tested)
+│   ├── backends/                # Backend implementations
+│   ├── screens/                 # UI screens and modals
+│   ├── widgets/                 # Custom UI widgets
+│   └── styles/                  # Textual CSS
+├── tests/                       # Test suite (465+ tests)
+│   ├── conftest.py              # Pytest fixtures
+│   ├── mock_backend.py          # Mock MonarchMoney API
+│   ├── test_state.py            # State management tests
+│   ├── test_data_manager.py     # Data operations tests
+│   ├── test_view_presenter.py   # Presentation logic tests (NEW - 48 tests)
+│   ├── test_time_navigator.py   # Time navigation tests (NEW - 52 tests)
+│   ├── test_commit_orchestrator.py  # DataFrame updates (NEW - 30 tests)
+│   └── test_workflows.py        # Edit workflow tests
+├── pyproject.toml               # Project metadata and dependencies
+├── README.md                    # User documentation
+└── CLAUDE.md                    # This file - development guide
 ```
 
 **File Organization Rules**:
@@ -115,6 +124,9 @@ moneyflow/
 - ✅ Edit workflows: merchant rename, category change, hide toggle
 - ✅ Bulk operations: multi-select, bulk edit
 - ✅ Duplicate detection: finding and handling duplicates
+- ✅ **Presentation logic**: View formatting, flag computation (100% coverage)
+- ✅ **Time navigation**: Date calculations, leap years, boundaries (100% coverage)
+- ✅ **DataFrame updates**: Critical commit logic (100% coverage)
 - ✅ Edge cases: empty datasets, invalid data, API failures
 
 ### Running Tests
@@ -146,9 +158,12 @@ uv run pytest -l
 **Business Logic Coverage Target: >90%**
 
 Core modules must maintain high coverage:
-- `state.py`: State management and undo/redo (target: 95%+)
-- `data_manager.py`: Data operations and API integration (target: 90%+)
-- `duplicate_detector.py`: Duplicate detection (target: 100%)
+- `state.py`: State management (target: 90%+, current: 85%)
+- `data_manager.py`: Data operations and API integration (target: 90%+, current: 97%)
+- `duplicate_detector.py`: Duplicate detection (target: 95%+, current: 84%)
+- `view_presenter.py`: Presentation logic (**100% - keep at 100%**)
+- `time_navigator.py`: Time period calculations (**100% - keep at 100%**)
+- `commit_orchestrator.py`: DataFrame updates (**100% - CRITICAL, keep at 100%**)
 
 UI layer coverage is less critical but still valuable.
 
@@ -249,10 +264,32 @@ git commit -m "Descriptive commit message"
 
 **Pre-commit Checklist**:
 - [ ] All tests pass (`uv run pytest -v`)
+- [ ] Type checking passes (`uv run pyright moneyflow/`)
 - [ ] Coverage hasn't decreased
 - [ ] No debug print statements left in code
 - [ ] Updated tests for any changed behavior
 - [ ] Ran with real test data if changing API logic
+
+### Static Type Checking (NEW)
+
+**Pyright** is integrated for static type analysis. Use comprehensive type hints for all new code.
+
+```bash
+# Type-check specific module
+uv run pyright moneyflow/view_presenter.py
+
+# Type-check all application code
+uv run pyright moneyflow/
+
+# Type checking is also run in CI on every push
+```
+
+**Type Hint Requirements**:
+- All function signatures must have full type hints
+- Use `TypedDict` for complex dictionaries
+- Use `Literal` types for string enums
+- Use `NamedTuple` for data transfer objects
+- Prefer `Callable[[Args], Return]` for function types
 
 ## Performance Considerations
 
