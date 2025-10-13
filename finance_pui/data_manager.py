@@ -97,6 +97,7 @@ CATEGORY_GROUPS = {
         "Financial Fees",
         "Loan Repayment",
         "Student Loans",
+        "Taxes"
     ],
     "Personal Care": ["Chiropractic & Massage", "Hair", "Personal Care"],
     "Income": ["Paychecks", "Interest", "Business Income", "Other Income"],

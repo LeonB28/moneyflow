@@ -233,6 +233,10 @@ class AppState:
         self.selected_group = None
         self.selected_account = None
 
+        # Reset sort to valid field for aggregate views if needed
+        if self.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
+            self.sort_by = SortMode.AMOUNT
+
         # Cycle through views
         if self.view_mode == ViewMode.MERCHANT:
             self.view_mode = ViewMode.CATEGORY

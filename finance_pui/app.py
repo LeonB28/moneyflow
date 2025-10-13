@@ -853,6 +853,9 @@ class MonarchTUI(App):
         self.state.selected_category = None
         self.state.selected_group = None
         self.state.selected_account = None
+        # Reset sort to valid field for aggregate views
+        if self.state.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
+            self.state.sort_by = SortMode.AMOUNT
         self.refresh_view()
 
     def action_view_categories(self) -> None:
@@ -862,6 +865,9 @@ class MonarchTUI(App):
         self.state.selected_category = None
         self.state.selected_group = None
         self.state.selected_account = None
+        # Reset sort to valid field for aggregate views
+        if self.state.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
+            self.state.sort_by = SortMode.AMOUNT
         self.refresh_view()
 
     def action_view_groups(self) -> None:
@@ -871,6 +877,9 @@ class MonarchTUI(App):
         self.state.selected_category = None
         self.state.selected_group = None
         self.state.selected_account = None
+        # Reset sort to valid field for aggregate views
+        if self.state.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
+            self.state.sort_by = SortMode.AMOUNT
         self.refresh_view()
 
     def action_view_accounts(self) -> None:
@@ -880,6 +889,9 @@ class MonarchTUI(App):
         self.state.selected_category = None
         self.state.selected_group = None
         self.state.selected_account = None
+        # Reset sort to valid field for aggregate views
+        if self.state.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
+            self.state.sort_by = SortMode.AMOUNT
         self.refresh_view()
 
     def action_cycle_grouping(self) -> None:
