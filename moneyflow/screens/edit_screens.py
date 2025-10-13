@@ -1,4 +1,16 @@
-"""Edit screens for transaction modifications."""
+"""
+Edit screens for transaction modifications.
+
+This module contains modal screens for editing transactions:
+- EditMerchantScreen: Edit merchant names with autocomplete suggestions
+- SelectCategoryScreen: Select category with type-to-search filtering
+- DeleteConfirmationScreen: Confirm transaction deletion
+
+All screens follow a consistent pattern:
+1. Display transaction context (date, amount, current value)
+2. Provide keyboard-driven input (type-to-search, arrow navigation)
+3. Dismiss with new value or None (if cancelled)
+"""
 
 from textual.app import ComposeResult
 from textual.events import Key
@@ -9,7 +21,24 @@ from textual.widgets.option_list import Option
 
 
 class EditMerchantScreen(ModalScreen):
-    """Modal for editing merchant name with suggestions."""
+    """
+    Modal screen for editing merchant names with autocomplete suggestions.
+
+    Features:
+    - Shows transaction context (date, amount, category)
+    - Pre-fills current merchant name
+    - Provides live-filtered suggestions from existing merchants
+    - Supports both typing new name and selecting from list
+    - Keyboard-driven: Enter=save, Esc=cancel, ↓=move to suggestions
+
+    The screen handles both single and bulk edits:
+    - Single edit: Shows transaction details
+    - Bulk edit: Shows count and total amount
+
+    Returns:
+        str: New merchant name (if saved)
+        None: If cancelled (Esc or Cancel button)
+    """
 
     CSS = """
     EditMerchantScreen {
@@ -199,7 +228,27 @@ class EditMerchantScreen(ModalScreen):
 
 
 class SelectCategoryScreen(ModalScreen):
-    """Modal for selecting a category with keyboard-driven type-to-search."""
+    """
+    Modal screen for selecting transaction category with type-to-search.
+
+    Features:
+    - Shows transaction context (date, amount, merchant)
+    - Live filtering as you type
+    - Keyboard-driven list navigation (↑/↓ arrows, Enter to select)
+    - Shows current category with "← current" indicator
+    - Focus starts on search input for immediate typing
+
+    The screen provides fast category selection for recategorization workflows.
+    Type a few letters to filter hundreds of categories down to relevant matches.
+
+    Returns:
+        str: Selected category ID (if user selected a category)
+        None: If cancelled (Esc key)
+
+    Note: Lines 279-313 contain search/filter business logic that could be
+    extracted to a CategorySearchService for better testability.
+    See SECOND_PASS_ANALYSIS.md for details.
+    """
 
     CSS = """
     SelectCategoryScreen {

@@ -1,10 +1,21 @@
 """
 Data management layer using Polars for high-performance aggregation and filtering.
+
+This module handles all data operations for the application:
+- Fetching transactions from backend API (with pagination)
+- Converting API responses to Polars DataFrames
+- Aggregating transactions by merchant, category, group, account
+- Filtering and searching transactions
+- Committing edits back to the API
+- Applying category-to-group mappings
+
+The DataManager acts as the boundary between the backend API and the UI layer,
+providing a clean interface for data operations without exposing API details.
 """
 
 import asyncio
 from datetime import datetime, date
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any, Tuple, Callable
 import polars as pl
 from .backends.base import FinanceBackend
 
@@ -109,11 +120,47 @@ CATEGORY_GROUPS = {
 
 class DataManager:
     """
-    Handles all data operations including fetching from API and
-    local aggregations using Polars.
+    Manages all transaction data operations.
+
+    This class serves as the data layer between the backend API and the UI,
+    handling:
+
+    **Data Loading**:
+    - Fetch transactions from API with pagination (batches of 1000)
+    - Fetch categories and category groups
+    - Convert API responses to Polars DataFrames for fast operations
+
+    **Data Transformation**:
+    - Apply category-to-group mappings (uses CATEGORY_GROUPS constant)
+    - Aggregate transactions by merchant, category, group, account
+    - Filter transactions by various criteria
+    - Search transactions by text
+
+    **Data Persistence**:
+    - Commit pending edits back to API (in parallel for speed)
+    - Track success/failure counts for commit operations
+
+    **Design Philosophy**:
+    - All aggregations done locally with Polars (fast, no API calls)
+    - Batch API updates to minimize round trips
+    - Separate data operations from presentation (no formatting here)
+
+    Attributes:
+        mm: Backend API instance (MonarchBackend, DemoBackend, etc.)
+        df: Main transaction DataFrame (loaded on startup)
+        categories: Category lookup dict {id: {name, group_id, ...}}
+        category_groups: Group lookup dict {id: {name, type, ...}}
+        pending_edits: List of edits queued for commit
+        category_to_group: Reverse mapping {category_name: group_name}
     """
 
     def __init__(self, mm: FinanceBackend):
+        """
+        Initialize DataManager with a finance backend.
+
+        Args:
+            mm: Backend instance (must implement FinanceBackend interface)
+        """
         self.mm = mm
         self.category_to_group: Dict[str, str] = {}
         self._build_category_group_mapping()
@@ -134,13 +181,37 @@ class DataManager:
         self,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        progress_callback: Optional[callable] = None,
+        progress_callback: Optional[Callable[[str], None]] = None,
     ) -> Tuple[pl.DataFrame, Dict, Dict]:
         """
-        Fetch all transactions and metadata from Monarch Money API.
+        Fetch all transactions and metadata from backend API.
+
+        This is the main data loading method, called on app startup. It:
+        1. Fetches categories and category groups (in parallel)
+        2. Fetches transactions in batches of 1000 with pagination
+        3. Converts API responses to Polars DataFrame
+        4. Applies category group mappings
+
+        For large accounts (10k+ transactions), this may take 1-2 minutes.
+        Progress updates are sent via the callback for UI display.
+
+        Args:
+            start_date: Optional start date filter (YYYY-MM-DD format)
+            end_date: Optional end date filter (YYYY-MM-DD format)
+            progress_callback: Optional callback for progress updates (e.g., "Downloaded 500/1000...")
 
         Returns:
-            Tuple of (transactions_df, categories, category_groups)
+            Tuple of:
+            - transactions_df: Polars DataFrame with all transactions
+            - categories: Dict mapping category_id to {name, group_id, ...}
+            - category_groups: Dict mapping group_id to {name, type, ...}
+
+        Example:
+            >>> dm = DataManager(backend)
+            >>> df, cats, groups = await dm.fetch_all_data(
+            ...     start_date="2025-01-01",
+            ...     progress_callback=lambda msg: print(msg)
+            ... )
         """
         # Fetch categories and groups in parallel
         if progress_callback:
@@ -191,7 +262,7 @@ class DataManager:
         self,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        progress_callback: Optional[callable] = None,
+        progress_callback: Optional[Callable[[str], None]] = None,
     ) -> List[Dict]:
         """Fetch all transactions from API in batches."""
         all_transactions = []
@@ -329,57 +400,96 @@ class DataManager:
 
         return df
 
-    def aggregate_by_merchant(self, df: pl.DataFrame) -> pl.DataFrame:
-        """Aggregate transactions by merchant."""
+    def _aggregate_by_field(
+        self,
+        df: pl.DataFrame,
+        group_field: str,
+        include_id: bool = True,
+        include_group: bool = False
+    ) -> pl.DataFrame:
+        """
+        Generic aggregation method to eliminate duplication.
+
+        This is the shared implementation for all aggregate_by_* methods.
+        It groups by the specified field and computes count and total.
+
+        Args:
+            df: DataFrame to aggregate
+            group_field: Field name to group by ('merchant', 'category', 'group', 'account')
+            include_id: Whether to include the field's _id column (e.g., merchant_id)
+            include_group: Whether to include group column (for category aggregation)
+
+        Returns:
+            Aggregated DataFrame with columns: [group_field, count, total, ...]
+            Additional columns based on include_id and include_group flags
+
+        Example:
+            >>> # Aggregate by merchant with merchant_id
+            >>> agg = dm._aggregate_by_field(df, "merchant", include_id=True)
+            >>> agg.columns
+            ['merchant', 'count', 'total', 'merchant_id']
+        """
         if df.is_empty():
             return pl.DataFrame()
 
-        return df.group_by("merchant").agg(
-            [
-                pl.count("id").alias("count"),
-                pl.sum("amount").alias("total"),
-                pl.first("merchant_id").alias("merchant_id"),
-            ]
-        )
+        agg_exprs = [
+            pl.count("id").alias("count"),
+            pl.sum("amount").alias("total"),
+        ]
+
+        if include_id:
+            id_field = f"{group_field}_id"
+            agg_exprs.append(pl.first(id_field).alias(id_field))
+
+        if include_group:
+            agg_exprs.append(pl.first("group").alias("group"))
+
+        return df.group_by(group_field).agg(agg_exprs)
+
+    def aggregate_by_merchant(self, df: pl.DataFrame) -> pl.DataFrame:
+        """
+        Aggregate transactions by merchant.
+
+        Groups all transactions by merchant name and computes:
+        - count: Number of transactions
+        - total: Sum of transaction amounts
+        - merchant_id: ID of the merchant (for API operations)
+
+        Args:
+            df: Transaction DataFrame to aggregate
+
+        Returns:
+            Aggregated DataFrame with columns: [merchant, count, total, merchant_id]
+            Empty DataFrame if input is empty
+        """
+        return self._aggregate_by_field(df, "merchant", include_id=True, include_group=False)
 
     def aggregate_by_category(self, df: pl.DataFrame) -> pl.DataFrame:
-        """Aggregate transactions by category."""
-        if df.is_empty():
-            return pl.DataFrame()
+        """
+        Aggregate transactions by category.
 
-        return df.group_by("category").agg(
-            [
-                pl.count("id").alias("count"),
-                pl.sum("amount").alias("total"),
-                pl.first("category_id").alias("category_id"),
-                pl.first("group").alias("group"),
-            ]
-        )
+        Returns:
+            Aggregated DataFrame with columns: [category, count, total, category_id, group]
+        """
+        return self._aggregate_by_field(df, "category", include_id=True, include_group=True)
 
     def aggregate_by_group(self, df: pl.DataFrame) -> pl.DataFrame:
-        """Aggregate transactions by category group."""
-        if df.is_empty():
-            return pl.DataFrame()
+        """
+        Aggregate transactions by category group.
 
-        return df.group_by("group").agg(
-            [
-                pl.count("id").alias("count"),
-                pl.sum("amount").alias("total"),
-            ]
-        )
+        Returns:
+            Aggregated DataFrame with columns: [group, count, total]
+        """
+        return self._aggregate_by_field(df, "group", include_id=False, include_group=False)
 
     def aggregate_by_account(self, df: pl.DataFrame) -> pl.DataFrame:
-        """Aggregate transactions by account."""
-        if df.is_empty():
-            return pl.DataFrame()
+        """
+        Aggregate transactions by account.
 
-        return df.group_by("account").agg(
-            [
-                pl.count("id").alias("count"),
-                pl.sum("amount").alias("total"),
-                pl.first("account_id").alias("account_id"),
-            ]
-        )
+        Returns:
+            Aggregated DataFrame with columns: [account, count, total, account_id]
+        """
+        return self._aggregate_by_field(df, "account", include_id=True, include_group=False)
 
     def filter_by_merchant(self, df: pl.DataFrame, merchant: str) -> pl.DataFrame:
         """Filter transactions by merchant name."""
@@ -411,10 +521,33 @@ class DataManager:
 
     async def commit_pending_edits(self, edits: List[Any]) -> Tuple[int, int]:
         """
-        Commit pending edits to Monarch Money API in parallel.
+        Commit pending edits to backend API in parallel.
+
+        This method groups edits by transaction ID (in case multiple edits
+        affect the same transaction) and sends update requests in parallel
+        for maximum speed.
+
+        The method is resilient to partial failures - if some updates fail,
+        others will still succeed. The caller receives counts for both.
+
+        Args:
+            edits: List of TransactionEdit objects to commit
 
         Returns:
             Tuple of (success_count, failure_count)
+            - success_count: Number of successful API updates
+            - failure_count: Number of failed API updates
+
+        Example:
+            >>> edits = [
+            ...     TransactionEdit("txn1", "merchant", "Old", "New", ...),
+            ...     TransactionEdit("txn2", "category", "cat1", "cat2", ...)
+            ... ]
+            >>> success, failure = await dm.commit_pending_edits(edits)
+            >>> print(f"Committed {success} edits, {failure} failed")
+
+        Note: After successful commit, caller should use CommitOrchestrator
+        to apply edits to local DataFrames for instant UI update.
         """
         if not edits:
             return 0, 0

@@ -736,9 +736,9 @@ class TestTimeFrameEdgeCases:
 
     def test_set_timeframe_this_month_december(self, app_state):
         """Test setting timeframe to THIS_MONTH handles December correctly."""
-        # Mock today being in December
+        # Mock today being in December - must mock in time_navigator module
         from unittest.mock import patch
-        with patch('moneyflow.state.date') as mock_date:
+        with patch('moneyflow.time_navigator.date') as mock_date:
             mock_date.today.return_value = date(2024, 12, 15)
             mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
 
@@ -750,7 +750,7 @@ class TestTimeFrameEdgeCases:
     def test_set_timeframe_this_month_february_leap_year(self, app_state):
         """Test THIS_MONTH handles February in a leap year."""
         from unittest.mock import patch
-        with patch('moneyflow.state.date') as mock_date:
+        with patch('moneyflow.time_navigator.date') as mock_date:
             mock_date.today.return_value = date(2024, 2, 15)  # 2024 is leap year
             mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
 
@@ -762,7 +762,7 @@ class TestTimeFrameEdgeCases:
     def test_set_timeframe_this_month_february_non_leap_year(self, app_state):
         """Test THIS_MONTH handles February in a non-leap year."""
         from unittest.mock import patch
-        with patch('moneyflow.state.date') as mock_date:
+        with patch('moneyflow.time_navigator.date') as mock_date:
             mock_date.today.return_value = date(2023, 2, 15)  # 2023 is not leap year
             mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
 

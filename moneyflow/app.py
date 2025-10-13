@@ -1,7 +1,22 @@
 """
-Main Monarch Money TUI Application.
+Main moneyflow TUI Application.
 
-A fast, keyboard-driven terminal interface for transaction management.
+A fast, keyboard-driven terminal interface for personal finance management.
+
+This is the main application module containing the MonarchTUI class which:
+- Coordinates all UI components (screens, widgets, data table)
+- Handles keyboard bindings and user actions
+- Manages application state and data loading
+- Orchestrates the commit workflow
+
+Architecture:
+- UI Layer: This file (Textual screens and widgets)
+- Business Logic: Extracted to service classes (ViewPresenter, TimeNavigator, CommitOrchestrator)
+- Data Layer: DataManager handles API operations and Polars DataFrames
+- State Layer: AppState holds application state
+
+The separation allows business logic to be thoroughly tested while keeping
+the UI layer thin and focused on rendering and user interaction.
 """
 
 import argparse
@@ -30,7 +45,46 @@ from .commit_orchestrator import CommitOrchestrator
 
 
 class MonarchTUI(App):
-    """Monarch Money Power User TUI."""
+    """
+    Main application class for the moneyflow terminal UI.
+
+    This Textual application provides a keyboard-driven interface for managing
+    personal finance transactions with a focus on power user workflows:
+
+    **Key Features**:
+    - Aggregated views (merchant, category, group, account)
+    - Drill-down navigation with breadcrumbs
+    - Bulk editing with multi-select
+    - Time period navigation (year/month with arrow keys)
+    - Search and filtering
+    - Review-before-commit workflow
+    - Offline-first (fetch once, work locally, commit when ready)
+
+    **State Management**:
+    - AppState: Holds all application state
+    - DataManager: Manages transaction data and API operations
+    - Backend: Pluggable backend (MonarchBackend, DemoBackend, etc.)
+
+    **Keyboard Bindings**:
+    See BINDINGS class attribute for full list. Key actions:
+    - g: Cycle grouping modes
+    - u: View all transactions
+    - Enter: Drill down
+    - Esc: Go back
+    - m/r/h/d: Edit operations
+    - w: Review and commit
+    - ←/→: Navigate time periods
+    - y/t/a: Year/month/all time
+
+    **Architecture**:
+    Business logic has been extracted to testable service classes:
+    - ViewPresenter: Presentation logic (formatting, flags)
+    - TimeNavigator: Date calculations
+    - CommitOrchestrator: DataFrame updates after commits
+
+    This allows the UI layer to focus on rendering and user interaction
+    while keeping complex logic fully tested.
+    """
 
     # Use Path object to properly resolve CSS file location
     # __file__ is moneyflow/app.py, so parent/styles/monarch.tcss is correct

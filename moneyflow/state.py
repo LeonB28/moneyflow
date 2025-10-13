@@ -1,5 +1,9 @@
 """
 App state management with change tracking and undo/redo support.
+
+This module contains the central AppState class that holds all application state
+including view mode, filters, selections, and pending edits. State should be data,
+not operations - complex operations belong in separate service classes.
 """
 
 from dataclasses import dataclass, field
@@ -7,6 +11,8 @@ from datetime import datetime, date
 from enum import Enum
 from typing import Any, Optional, List, Dict
 import polars as pl
+
+from .time_navigator import TimeNavigator
 
 
 class ViewMode(Enum):
@@ -60,7 +66,20 @@ class TransactionEdit:
 @dataclass
 class AppState:
     """
-    Central app state with undo/redo support.
+    Central application state container.
+
+    This class holds all state for the TUI application including:
+    - Transaction data (Polars DataFrame)
+    - View configuration (mode, sorting, time filters)
+    - Navigation state (selected items, drill-down context)
+    - Pending edits (before commit to API)
+    - Search and filter settings
+
+    The state is designed to be serializable and supports view state
+    save/restore for complex navigation workflows (e.g., during commit review).
+
+    Note: This class should primarily hold DATA, not implement complex operations.
+    Business logic belongs in service classes (DataManager, FilterService, etc.).
     """
 
     # Data
@@ -172,28 +191,39 @@ class AppState:
         timeframe: TimeFrame,
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
-    ):
-        """Set the time frame for filtering transactions."""
+    ) -> None:
+        """
+        Set the time frame for filtering transactions.
+
+        Uses TimeNavigator for date calculations to avoid duplication
+        and ensure consistency with tested logic.
+
+        Args:
+            timeframe: The time frame to set
+            start_date: Start date for CUSTOM timeframe
+            end_date: End date for CUSTOM timeframe
+
+        Examples:
+            >>> state = AppState()
+            >>> state.set_timeframe(TimeFrame.THIS_YEAR)
+            >>> state.start_date.month == 1  # January
+            True
+            >>> state.end_date.month == 12  # December
+            True
+        """
         self.time_frame = timeframe
 
         if timeframe == TimeFrame.CUSTOM:
             self.start_date = start_date
             self.end_date = end_date
         elif timeframe == TimeFrame.THIS_YEAR:
-            today = date.today()
-            self.start_date = date(today.year, 1, 1)
-            self.end_date = date(today.year, 12, 31)
+            date_range = TimeNavigator.get_current_year_range()
+            self.start_date = date_range.start_date
+            self.end_date = date_range.end_date
         elif timeframe == TimeFrame.THIS_MONTH:
-            today = date.today()
-            self.start_date = date(today.year, today.month, 1)
-            # Last day of month
-            if today.month == 12:
-                self.end_date = date(today.year, 12, 31)
-            else:
-                next_month = date(today.year, today.month + 1, 1)
-                from datetime import timedelta
-
-                self.end_date = next_month - timedelta(days=1)
+            date_range = TimeNavigator.get_current_month_range()
+            self.start_date = date_range.start_date
+            self.end_date = date_range.end_date
         else:  # ALL_TIME
             self.start_date = None
             self.end_date = None
@@ -254,7 +284,23 @@ class AppState:
         return ""
 
     def get_filtered_df(self) -> Optional[pl.DataFrame]:
-        """Get filtered DataFrame based on current state."""
+        """
+        Get filtered DataFrame based on current state.
+
+        Applies multiple filters in sequence:
+        1. Time range filter (start_date/end_date)
+        2. Search query filter (merchant/category text search)
+        3. Group filter (hide Transfers unless enabled)
+        4. Hidden transactions filter (hide if show_hidden=False)
+        5. Drill-down filter (if viewing specific merchant/category/etc)
+
+        Returns:
+            Filtered DataFrame or None if no data loaded
+
+        Note: This method contains business logic (Polars operations) that
+        ideally should be extracted to a FilterService for better testability.
+        See SECOND_PASS_ANALYSIS.md for refactoring plan.
+        """
         if self.transactions_df is None:
             return None
 
@@ -295,11 +341,26 @@ class AppState:
 
     def drill_down(self, item_name: str, cursor_position: int = 0) -> None:
         """
-        Drill down into a specific item based on current view mode.
+        Drill down from aggregate view into transaction detail view.
+
+        When viewing an aggregate (e.g., Merchants view) and user presses Enter
+        on a row, this method saves the current view context to navigation history
+        and transitions to DETAIL view filtered to that item.
 
         Args:
-            item_name: The item to drill down into
-            cursor_position: Current cursor position to save for restoration
+            item_name: The merchant/category/group/account name to drill into
+            cursor_position: Current cursor row position to save for go_back()
+
+        Examples:
+            >>> state = AppState()
+            >>> state.view_mode = ViewMode.MERCHANT
+            >>> state.drill_down("Amazon", cursor_position=5)
+            >>> state.view_mode
+            <ViewMode.DETAIL: 'detail'>
+            >>> state.selected_merchant
+            'Amazon'
+            >>> state.navigation_history[-1]
+            (<ViewMode.MERCHANT: 'merchant'>, 5)
         """
         # Save current state to history (view mode + cursor position)
         self.navigation_history.append((self.view_mode, cursor_position))
