@@ -465,7 +465,7 @@ class QuitConfirmationScreen(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Container(id="quit-dialog"):
-            yield Label("⚠️  Quit Monarch TUI?", id="quit-title")
+            yield Label("⚠️  Quit moneyflow?", id="quit-title")
 
             if self.has_unsaved_changes:
                 yield Static(

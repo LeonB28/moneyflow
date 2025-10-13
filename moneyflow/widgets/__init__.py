@@ -1,4 +1,4 @@
-"""Custom Textual widgets for Monarch TUI."""
+"""Custom Textual widgets for moneyflow TUI."""
 
 from .help_screen import HelpScreen
 

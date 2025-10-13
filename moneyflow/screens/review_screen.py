@@ -86,7 +86,7 @@ class ReviewChangesScreen(Screen):
             with Container(id="review-footer"):
                 yield Static("c=Commit | Esc=Cancel", classes="footer-instructions")
                 with Container(id="button-container"):
-                    yield Button("Commit to Monarch (C)", variant="primary", id="commit-button")
+                    yield Button("Commit Changes (C)", variant="primary", id="commit-button")
                     yield Button("Cancel (Esc)", variant="default", id="cancel-button")
 
     async def on_mount(self) -> None:
