@@ -4,16 +4,39 @@
 
 1. **PyPI Account**: Create accounts on [PyPI](https://pypi.org/account/register/) and [TestPyPI](https://test.pypi.org/account/register/)
 2. **API Tokens**: Generate API tokens for both (Account Settings → API tokens)
-3. **Build Tools**: Install build tools with `uv pip install build twine`
+3. **Configure PyPI credentials**:
+   ```bash
+   # Create/edit ~/.pypirc
+   cat > ~/.pypirc << 'EOF'
+   [distutils]
+   index-servers =
+       pypi
+       testpypi
+
+   [pypi]
+   username = __token__
+   password = pypi-YOUR_TOKEN_HERE
+
+   [testpypi]
+   repository = https://test.pypi.org/legacy/
+   username = __token__
+   password = pypi-YOUR_TESTPYPI_TOKEN_HERE
+   EOF
+
+   chmod 600 ~/.pypirc
+   ```
 
 ## Build the Package
 
 ```bash
 # Clean old builds
-rm -rf dist/ build/ *.egg-info
+rm -rf dist/ build/ *.egg-info moneyflow.egg-info
 
-# Build distribution packages
-uv run python -m build
+# Build using uv (includes build tools automatically)
+uv build
+
+# Or use traditional build
+uvx --from build pyproject-build --installer uv
 
 # This creates:
 # - dist/moneyflow-0.1.0-py3-none-any.whl (wheel)
@@ -23,17 +46,17 @@ uv run python -m build
 ## Test on TestPyPI First
 
 ```bash
-# Upload to TestPyPI
-uv run twine upload --repository testpypi dist/*
+# Upload to TestPyPI using uvx (no permanent install needed)
+uvx twine upload --repository testpypi dist/*
+# Enter your TestPyPI token when prompted (or uses ~/.pypirc)
 
-# Test installation from TestPyPI
+# Test installation from TestPyPI in a fresh environment
+uvx --from moneyflow --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ moneyflow --demo
+
+# Or install and test
 pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ moneyflow
-
-# Test that it works
 moneyflow --demo
-
-# Test with uvx
-uvx --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ moneyflow --demo
+pip uninstall moneyflow  # Clean up
 ```
 
 ## Publish to PyPI
@@ -42,16 +65,16 @@ Once tested on TestPyPI:
 
 ```bash
 # Upload to real PyPI
-uv run twine upload dist/*
+uvx twine upload dist/*
+# Or if you have ~/.pypirc configured:
+uvx twine upload --repository pypi dist/*
 
-# Test installation
-pip install moneyflow
-
-# Test command works
-moneyflow --demo
-
-# Test with uvx (no installation needed!)
+# Test installation (use a fresh terminal or different machine)
 uvx moneyflow --demo
+
+# Or install permanently
+pip install moneyflow
+moneyflow --demo
 ```
 
 ## Version Bumping
@@ -74,9 +97,21 @@ git push && git push --tags
 
 # Build and publish
 rm -rf dist/
-uv run python -m build
-uv run twine upload dist/*
+uv build
+uvx twine upload dist/*
 ```
+
+## Pre-Release Checklist
+
+Before publishing a new version:
+
+- [ ] All tests passing: `uv run pytest`
+- [ ] Version bumped in `pyproject.toml`
+- [ ] CHANGELOG updated (if you have one)
+- [ ] README is current
+- [ ] Works in demo mode: `uv run moneyflow --demo`
+- [ ] Git tag created: `git tag v0.x.x`
+- [ ] Committed and pushed to main
 
 ## uvx Compatibility
 
@@ -96,19 +131,64 @@ This works because pyproject.toml defines:
 - All dependencies properly listed
 - Python >=3.11 requirement
 
+**Testing uvx before publishing:**
+```bash
+# After building, test the wheel directly
+uvx --from ./dist/moneyflow-0.1.0-py3-none-any.whl moneyflow --demo
+```
+
+## Recommended Publishing Workflow
+
+```bash
+# 1. Bump version in pyproject.toml (e.g., 0.1.0 → 0.1.1)
+
+# 2. Run tests
+uv run pytest
+
+# 3. Clean and build
+rm -rf dist/ build/ *.egg-info
+uv build
+
+# 4. Test the built package locally with uvx
+uvx --from ./dist/moneyflow-0.1.1-py3-none-any.whl moneyflow --demo
+
+# 5. Upload to TestPyPI first
+uvx twine upload --repository testpypi dist/*
+
+# 6. Test from TestPyPI
+uvx --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ moneyflow --demo
+
+# 7. If all looks good, upload to PyPI
+uvx twine upload dist/*
+
+# 8. Test from real PyPI
+uvx moneyflow --demo
+
+# 9. Tag and push
+git tag v0.1.1
+git push && git push --tags
+```
+
 ## Troubleshooting
 
 ### "Invalid distribution" error
 - Make sure `README.md` and `LICENSE` files exist
-- Check pyproject.toml syntax with `uv run python -m build --check`
+- Check pyproject.toml syntax: `uv build --check`
 
 ### "Filename has already been used" error
-- You can't re-upload the same version
+- You can't re-upload the same version to PyPI
 - Bump the version number in pyproject.toml
+- TestPyPI allows re-uploads (for testing)
 
 ### uvx can't find the command
 - Make sure `[project.scripts]` is correct in pyproject.toml
 - Verify entry point: `moneyflow = "moneyflow.app:main"`
+- Check the wheel was built correctly: `unzip -l dist/moneyflow-*.whl | grep __main__`
+
+### Build fails
+- Run `uv sync` to ensure all dependencies are installed
+- Check for syntax errors in pyproject.toml
+- Try: `uv build --verbose` for detailed error messages
 
 ## PyPI Package Page
 
