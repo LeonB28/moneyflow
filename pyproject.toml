@@ -2,13 +2,16 @@
 name = "moneyflow"
 version = "0.1.0"
 description = "Track your moneyflow - A powerful terminal UI for Monarch Money"
-readme = "README.md"
+readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.11"
-license = {text = "MIT"}
+license = {file = "LICENSE"}
 authors = [
-    {name = "Wes McKinney"},
+    {name = "Wes McKinney", email = "info@wesmckinney.com"},
 ]
-keywords = ["monarch-money", "finance", "tui", "terminal", "transactions", "budget", "cashflow"]
+maintainers = [
+    {name = "Wes McKinney", email = "info@wesmckinney.com"},
+]
+keywords = ["monarch-money", "finance", "tui", "terminal", "transactions", "budget", "cashflow", "personal-finance"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
