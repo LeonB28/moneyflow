@@ -591,17 +591,21 @@ class FilterScreen(ModalScreen):
     def on_key(self, event: Key) -> None:
         """Handle keyboard shortcuts for filter modal."""
         if event.key == "escape":
+            event.stop()  # Prevent propagation
             self.dismiss(None)
         elif event.key in ("enter", "space"):
+            event.stop()  # Prevent propagation to parent
             # Apply filters
             show_hidden = self.query_one("#show-hidden-checkbox", Checkbox).value
             show_transfers = self.query_one("#show-transfers-checkbox", Checkbox).value
             self.dismiss({"show_hidden": show_hidden, "show_transfers": show_transfers})
         elif event.key == "h":
+            event.stop()  # Prevent propagation
             # Toggle hidden checkbox
             checkbox = self.query_one("#show-hidden-checkbox", Checkbox)
             checkbox.value = not checkbox.value
         elif event.key == "t":
+            event.stop()  # Prevent propagation
             # Toggle transfers checkbox
             checkbox = self.query_one("#show-transfers-checkbox", Checkbox)
             checkbox.value = not checkbox.value
