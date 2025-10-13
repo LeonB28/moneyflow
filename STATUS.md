@@ -252,7 +252,7 @@ This session added/fixed:
 
 ## Ready for Production
 
-The application is feature-complete and well-tested for managing Monarch Money transactions:
+The application is feature-complete and well-tested for managing personal finance transactions (currently supports Monarch Money backend, with more platforms planned):
 
 ✅ **All core workflows tested**
 ✅ **No PII in repository**

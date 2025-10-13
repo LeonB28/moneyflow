@@ -1,8 +1,9 @@
 """
-Secure credential management for Monarch Money.
+Secure credential management for finance backend authentication.
 
 Stores encrypted credentials in ~/.moneyflow/credentials.enc
 Uses Fernet symmetric encryption with a user-provided password.
+Supports multiple backends (Monarch Money, YNAB, etc.).
 """
 
 import json
@@ -19,10 +20,11 @@ import base64
 
 class CredentialManager:
     """
-    Manages encrypted Monarch Money credentials.
+    Manages encrypted credentials for finance backends.
 
     Credentials are stored in ~/.moneyflow/credentials.enc
     and encrypted with a user-provided password using Fernet.
+    Supports multiple backends (Monarch Money, YNAB, etc.).
     """
 
     def __init__(self, config_dir: Optional[Path] = None):

@@ -1,7 +1,7 @@
 site_name: moneyflow
 site_url: https://moneyflow.dev
 site_author: Wes McKinney
-site_description: Track your moneyflow - A powerful terminal UI for Monarch Money
+site_description: Track your moneyflow - A powerful terminal UI for personal finance management
 repo_url: https://github.com/wesm/moneyflow
 repo_name: wesm/moneyflow
 edit_uri: edit/main/docs/

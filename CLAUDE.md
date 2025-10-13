@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-moneyflow is a terminal-based UI for power users to manage Monarch Money transactions efficiently. Built with Python using Textual for the UI and Polars for data processing.
+moneyflow is a terminal-based UI for power users to manage personal finance transactions efficiently. Built with Python using Textual for the UI and Polars for data processing. Supports multiple backends including Monarch Money, with more platforms planned (YNAB, Lunch Money, etc.).
 
 ## Development Setup
 

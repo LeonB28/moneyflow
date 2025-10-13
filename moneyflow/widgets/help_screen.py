@@ -55,7 +55,7 @@ class HelpScreen(ModalScreen):
     def compose(self) -> ComposeResult:
         """Compose the help screen."""
         with Container(id="help-dialog"):
-            yield Static("Monarch Money TUI - Help", id="help-title")
+            yield Static("moneyflow - Help", id="help-title")
             with VerticalScroll(id="help-content"):
                 yield Static(get_help_text())
             yield Static("Esc=Close", id="help-footer")
