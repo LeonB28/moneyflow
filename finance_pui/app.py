@@ -74,8 +74,8 @@ class MonarchTUI(App):
         Binding("slash", "search", "Search", show=True, key_display="/"),
         Binding("escape", "go_back", "Back", show=False),
         Binding("w", "review_and_commit", "Commit", show=True),
-        # Binding("q", "quit_app", "Quit", show=True),  # TEMPORARILY DISABLED FOR DEBUGGING
-        Binding("ctrl+q", "quit_app", "Quit", show=True),  # Use Ctrl+Q instead temporarily
+        Binding("q", "quit_app", "Quit", show=True),
+        Binding("ctrl+c", "quit_app", "Force Quit", show=False),  # Also allow Ctrl+C
     ]
 
     # Reactive state
@@ -250,7 +250,7 @@ class MonarchTUI(App):
                 loading_status.update(f"🔄 Initializing {backend_type} backend...")
                 self.mm = get_backend(backend_type)
 
-                # Login with credentials
+                # Login with credentials - try saved session first to avoid lockout
                 loading_status.update(f"🔐 Logging in to {backend_type.capitalize()}...")
                 print(f"[LOGIN] About to call mm.login()", file=sys.stderr, flush=True)
                 print(f"[LOGIN] Backend type: {backend_type}", file=sys.stderr, flush=True)
@@ -258,11 +258,11 @@ class MonarchTUI(App):
                 print(f"[LOGIN] Has MFA secret: {bool(creds.get('mfa_secret'))}", file=sys.stderr, flush=True)
 
                 try:
-                    print(f"[LOGIN] Calling await self.mm.login()...", file=sys.stderr, flush=True)
+                    print(f"[LOGIN] Calling await self.mm.login() with use_saved_session=True...", file=sys.stderr, flush=True)
                     await self.mm.login(
                         email=creds["email"],
                         password=creds["password"],
-                        use_saved_session=False,
+                        use_saved_session=True,  # Use saved session to avoid lockouts!
                         save_session=True,
                         mfa_secret_key=creds["mfa_secret"],
                     )
@@ -272,36 +272,62 @@ class MonarchTUI(App):
                     loading_status.update("✅ Logged in successfully!")
                     print(f"[LOGIN] Updated status to 'Logged in successfully'", file=sys.stderr, flush=True)
                 except (RequireMFAException, LoginFailedException) as e:
-                    # Login failed - credentials may be invalid
-                    error_msg = f"Login failed: {e}"
-                    loading_status.update(f"❌ {error_msg}")
-                    self.notify(error_msg, severity="error", timeout=10)
-                    self.notify("Your credentials may be incorrect. Exiting...", timeout=10)
-                    # Print to stderr for visibility even when TUI crashes
-                    print(f"\n{'='*70}", file=sys.stderr)
-                    print("LOGIN FAILED", file=sys.stderr)
-                    print(f"{'='*70}", file=sys.stderr)
-                    print(f"Error: {e}", file=sys.stderr)
-                    print(f"Type: {type(e).__name__}", file=sys.stderr)
-                    print(f"{'='*70}\n", file=sys.stderr)
-                    traceback.print_exc(file=sys.stderr)
-                    self.exit()
-                    return
+                    # Login failed - check if it's a 401 (expired session)
+                    error_str = str(e).lower()
+                    if "401" in error_str or "unauthorized" in error_str:
+                        # Session expired - delete it and retry with fresh login
+                        print(f"[LOGIN] 401/Unauthorized - deleting expired session and retrying", file=sys.stderr, flush=True)
+                        self.mm.delete_session()
+                        try:
+                            await self.mm.login(
+                                email=creds["email"],
+                                password=creds["password"],
+                                use_saved_session=False,  # Force fresh login
+                                save_session=True,
+                                mfa_secret_key=creds["mfa_secret"],
+                            )
+                            print(f"[LOGIN] Retry succeeded!", file=sys.stderr, flush=True)
+                            self.stored_credentials = creds
+                            loading_status.update("✅ Logged in successfully!")
+                            print(f"[LOGIN] Updated status to 'Logged in successfully'", file=sys.stderr, flush=True)
+                        except Exception as retry_error:
+                            # Retry failed too
+                            error_msg = f"Login failed: {retry_error}"
+                            loading_status.update(f"❌ {error_msg}\n\nPress Ctrl+Q to quit")
+                            print(f"\n{'='*70}", file=sys.stderr, flush=True)
+                            print("LOGIN RETRY FAILED", file=sys.stderr, flush=True)
+                            print(f"{'='*70}", file=sys.stderr, flush=True)
+                            print(f"Error: {retry_error}", file=sys.stderr, flush=True)
+                            traceback.print_exc(file=sys.stderr)
+                            print(f"{'='*70}\n", file=sys.stderr, flush=True)
+                            # Allow quitting with Ctrl+Q
+                            return
+                    else:
+                        # Other login failure
+                        error_msg = f"Login failed: {e}"
+                        loading_status.update(f"❌ {error_msg}\n\nPress Ctrl+Q to quit")
+                        print(f"\n{'='*70}", file=sys.stderr, flush=True)
+                        print("LOGIN FAILED", file=sys.stderr, flush=True)
+                        print(f"{'='*70}", file=sys.stderr, flush=True)
+                        print(f"Error: {e}", file=sys.stderr, flush=True)
+                        print(f"Type: {type(e).__name__}", file=sys.stderr, flush=True)
+                        print(f"{'='*70}", file=sys.stderr, flush=True)
+                        traceback.print_exc(file=sys.stderr)
+                        print(f"{'='*70}\n", file=sys.stderr, flush=True)
+                        return
                 except Exception as e:
                     # Catch ANY other exception during login (network errors, etc.)
                     error_msg = f"Unexpected login error: {e}"
-                    loading_status.update(f"❌ {error_msg}")
-                    self.notify(error_msg, severity="error", timeout=10)
-                    # Print to stderr for visibility even when TUI crashes
-                    print(f"\n{'='*70}", file=sys.stderr)
-                    print("UNEXPECTED LOGIN ERROR", file=sys.stderr)
-                    print(f"{'='*70}", file=sys.stderr)
-                    print(f"Error: {e}", file=sys.stderr)
-                    print(f"Type: {type(e).__name__}", file=sys.stderr)
-                    print(f"{'='*70}", file=sys.stderr)
+                    loading_status.update(f"❌ {error_msg}\n\nPress Ctrl+Q to quit")
+                    # Print to stderr for visibility
+                    print(f"\n{'='*70}", file=sys.stderr, flush=True)
+                    print("UNEXPECTED LOGIN ERROR", file=sys.stderr, flush=True)
+                    print(f"{'='*70}", file=sys.stderr, flush=True)
+                    print(f"Error: {e}", file=sys.stderr, flush=True)
+                    print(f"Type: {type(e).__name__}", file=sys.stderr, flush=True)
+                    print(f"{'='*70}", file=sys.stderr, flush=True)
                     traceback.print_exc(file=sys.stderr)
-                    print(f"{'='*70}\n", file=sys.stderr)
-                    self.exit()
+                    print(f"{'='*70}\n", file=sys.stderr, flush=True)
                     return
             else:
                 # Demo mode - no authentication needed
@@ -434,18 +460,34 @@ class MonarchTUI(App):
 
         except Exception as e:
             loading_status = self.query_one("#loading-status", Static)
-            error_msg = f"Failed to load data: {e}"
-            loading_status.update(f"❌ {error_msg}")
-            self.notify(error_msg, severity="error", timeout=10)
+            error_str = str(e).lower()
+
+            # Check if it's a 401/unauthorized error
+            if "401" in error_str or "unauthorized" in error_str:
+                print(f"[ERROR] 401/Unauthorized detected - clearing bad session", file=sys.stderr, flush=True)
+                # Delete the bad session automatically
+                try:
+                    if self.mm:
+                        self.mm.delete_session()
+                        print(f"[ERROR] Session deleted successfully", file=sys.stderr, flush=True)
+                except Exception as del_err:
+                    print(f"[ERROR] Failed to delete session: {del_err}", file=sys.stderr, flush=True)
+                loading_status.update(f"❌ Session expired. Cleared bad session automatically.\n\nPlease restart the app to login fresh.\n\nPress 'q' to quit")
+            else:
+                error_msg = f"Failed to load data: {e}"
+                loading_status.update(f"❌ {error_msg}\n\nPress 'q' to quit")
+
             # Print detailed error to stderr for debugging
-            print(f"\n{'='*70}", file=sys.stderr)
-            print("DATA LOADING ERROR", file=sys.stderr)
-            print(f"{'='*70}", file=sys.stderr)
-            print(f"Error: {e}", file=sys.stderr)
-            print(f"Type: {type(e).__name__}", file=sys.stderr)
-            print(f"{'='*70}", file=sys.stderr)
+            print(f"\n{'='*70}", file=sys.stderr, flush=True)
+            print("DATA LOADING ERROR", file=sys.stderr, flush=True)
+            print(f"{'='*70}", file=sys.stderr, flush=True)
+            print(f"Error: {e}", file=sys.stderr, flush=True)
+            print(f"Type: {type(e).__name__}", file=sys.stderr, flush=True)
+            print(f"{'='*70}", file=sys.stderr, flush=True)
             traceback.print_exc(file=sys.stderr)
-            print(f"{'='*70}\n", file=sys.stderr)
+            if "401" in error_str or "unauthorized" in error_str:
+                print(f"\nSession has been deleted. Restart the app to login fresh.", file=sys.stderr, flush=True)
+            print(f"{'='*70}\n", file=sys.stderr, flush=True)
 
         finally:
             self.loading = False
@@ -1718,6 +1760,12 @@ class MonarchTUI(App):
 
     def action_quit_app(self) -> None:
         """Quit the application - show confirmation first."""
+        print("[QUIT] quit_app action called", file=sys.stderr, flush=True)
+        # If we're in an error state (no data_manager), just exit immediately
+        if self.data_manager is None:
+            print("[QUIT] No data_manager, exiting immediately", file=sys.stderr, flush=True)
+            self.exit()
+            return
         # Show confirmation in a worker (required for push_screen with wait_for_dismiss)
         self.run_worker(self._confirm_and_quit(), exclusive=False)
 

@@ -144,3 +144,12 @@ class MonarchBackend(FinanceBackend):
             Exception: If transaction not found or deletion fails
         """
         return await self.client.delete_transaction(transaction_id)
+
+    def delete_session(self, filename: Optional[str] = None) -> None:
+        """
+        Delete the saved session file.
+
+        Args:
+            filename: Optional path to session file (uses default if not provided)
+        """
+        self.client.delete_session(filename)
