@@ -415,22 +415,31 @@ class AppState:
         return False, 0
 
     def save_view_state(self) -> dict:
-        """Save current view state for later restoration."""
+        """
+        Save current view state for later restoration.
+
+        Used during commit review workflow to preserve the user's view
+        (including sort settings) and return to it after commit.
+        """
         return {
             "view_mode": self.view_mode,
             "selected_merchant": self.selected_merchant,
             "selected_category": self.selected_category,
             "selected_group": self.selected_group,
             "selected_account": self.selected_account,
+            "sort_by": self.sort_by,
+            "sort_direction": self.sort_direction,
         }
 
     def restore_view_state(self, saved_state: dict) -> None:
-        """Restore previously saved view state."""
+        """Restore previously saved view state including sort settings."""
         self.view_mode = saved_state["view_mode"]
         self.selected_merchant = saved_state["selected_merchant"]
         self.selected_category = saved_state["selected_category"]
         self.selected_group = saved_state["selected_group"]
         self.selected_account = saved_state.get("selected_account")
+        self.sort_by = saved_state.get("sort_by", self.sort_by)
+        self.sort_direction = saved_state.get("sort_direction", self.sort_direction)
 
     def get_breadcrumb(self) -> str:
         """Get breadcrumb string showing current navigation path."""

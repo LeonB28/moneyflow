@@ -869,6 +869,9 @@ class MoneyflowTUI(App):
         self.state.selected_category = None
         self.state.selected_group = None
         self.state.selected_account = None
+        # Set default sort for all transactions: Date descending (newest first)
+        self.state.sort_by = SortMode.DATE
+        self.state.sort_direction = SortDirection.DESC
         self.refresh_view()
         self.notify("Viewing all transactions (ungrouped)", timeout=1)
 
