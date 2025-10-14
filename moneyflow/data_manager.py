@@ -581,10 +581,20 @@ class DataManager:
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 failure_count += 1
-                # Log the error to stderr for debugging
+                # Log the error LOUDLY to multiple outputs
                 import sys
-                print(f"[COMMIT ERROR] Transaction update {i+1} failed: {result}", file=sys.stderr, flush=True)
-                print(f"[COMMIT ERROR] Error type: {type(result).__name__}", file=sys.stderr, flush=True)
+                error_msg = f"[COMMIT ERROR] Update {i+1}/{len(results)} FAILED: {result}"
+                error_type = f"[COMMIT ERROR] Error type: {type(result).__name__}"
+
+                # Print to stderr
+                print(f"\n{'='*70}", file=sys.stderr, flush=True)
+                print(error_msg, file=sys.stderr, flush=True)
+                print(error_type, file=sys.stderr, flush=True)
+                print(f"{'='*70}\n", file=sys.stderr, flush=True)
+
+                # ALSO print to stdout (in case stderr is redirected)
+                print(error_msg, flush=True)
+                print(error_type, flush=True)
             else:
                 success_count += 1
 
