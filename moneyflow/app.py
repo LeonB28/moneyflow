@@ -687,8 +687,10 @@ class MoneyflowTUI(App):
             view = ViewPresenter.prepare_aggregation_view(
                 agg, group_by_field, self.state.sort_by, self.state.sort_direction
             )
-            for col in view["columns"]:
-                table.add_column(col["label"], key=col["key"], width=col["width"])
+            # Add columns only if not already present
+            if table.column_count == 0:
+                for col in view["columns"]:
+                    table.add_column(col["label"], key=col["key"], width=col["width"])
             return
 
         # Apply sorting
@@ -707,9 +709,10 @@ class MoneyflowTUI(App):
             agg, group_by_field, self.state.sort_by, self.state.sort_direction
         )
 
-        # Add columns
-        for col in view["columns"]:
-            table.add_column(col["label"], key=col["key"], width=col["width"])
+        # Add columns only if table has no columns yet (avoid DuplicateKey error)
+        if table.column_count == 0:
+            for col in view["columns"]:
+                table.add_column(col["label"], key=col["key"], width=col["width"])
 
         # Add rows
         for row in view["rows"]:
@@ -775,9 +778,10 @@ class MoneyflowTUI(App):
             pending_txn_ids,
         )
 
-        # Add columns
-        for col in view["columns"]:
-            table.add_column(col["label"], key=col["key"], width=col["width"])
+        # Add columns only if table has no columns yet (avoid DuplicateKey error)
+        if table.column_count == 0:
+            for col in view["columns"]:
+                table.add_column(col["label"], key=col["key"], width=col["width"])
 
         # Add rows
         for row in view["rows"]:
