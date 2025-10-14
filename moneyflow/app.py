@@ -164,14 +164,7 @@ class MoneyflowTUI(App):
         cache_path: Optional[str] = None,
         force_refresh: bool = False,
     ):
-        print("[INIT] MoneyflowTUI.__init__ called", file=sys.stderr, flush=True)
-        try:
-            super().__init__()
-            print("[INIT] super().__init__() completed", file=sys.stderr, flush=True)
-        except Exception as e:
-            print(f"[INIT ERROR] Exception in super().__init__: {e}", file=sys.stderr, flush=True)
-            traceback.print_exc(file=sys.stderr)
-            raise
+        super().__init__()
         self.demo_mode = demo_mode
         self.start_year = start_year
         # Backend will be initialized in initialize_data() based on credentials
@@ -194,14 +187,7 @@ class MoneyflowTUI(App):
 
     def compose(self) -> ComposeResult:
         """Compose the main UI."""
-        print("[COMPOSE] compose() called", file=sys.stderr, flush=True)
-        try:
-            yield Header(show_clock=True)
-            print("[COMPOSE] Header yielded", file=sys.stderr, flush=True)
-        except Exception as e:
-            print(f"[COMPOSE ERROR] Exception yielding Header: {e}", file=sys.stderr, flush=True)
-            traceback.print_exc(file=sys.stderr)
-            raise
+        yield Header(show_clock=True)
 
         with Container(id="app-body"):
             # Top status bar
@@ -220,19 +206,10 @@ class MoneyflowTUI(App):
                 yield Static("", id="action-hints")
                 yield Static("", id="pending-changes")
 
-        try:
-            print("[COMPOSE] About to yield Footer", file=sys.stderr, flush=True)
-            yield Footer()
-            print("[COMPOSE] compose() complete", file=sys.stderr, flush=True)
-        except Exception as e:
-            print(f"[COMPOSE ERROR] Exception in compose: {e}", file=sys.stderr, flush=True)
-            traceback.print_exc(file=sys.stderr)
-            raise
+        yield Footer()
 
     async def on_mount(self) -> None:
         """Initialize the app after mounting."""
-        print("[STARTUP] on_mount called", file=sys.stderr, flush=True)
-
         try:
             # Set up data table
             table = self.query_one("#data-table", DataTable)
@@ -243,14 +220,10 @@ class MoneyflowTUI(App):
             self.query_one("#loading", LoadingIndicator).display = False
             self.query_one("#loading-status", Static).display = False
 
-            print("[STARTUP] Starting initialize_data worker", file=sys.stderr, flush=True)
-
             # Attempt to use saved session or show login prompt
             # Must run in a worker to use push_screen with wait_for_dismiss
             self.run_worker(self.initialize_data(), exclusive=True)
         except Exception as e:
-            print(f"[STARTUP ERROR] Exception in on_mount: {e}", file=sys.stderr, flush=True)
-            traceback.print_exc(file=sys.stderr)
             # Try to show error to user
             try:
                 loading_status = self.query_one("#loading-status", Static)
@@ -262,7 +235,9 @@ class MoneyflowTUI(App):
 
     async def initialize_data(self) -> None:
         """Load data from backend API or cache."""
-        print("[INIT] initialize_data started", file=sys.stderr, flush=True)
+        from .logging_config import get_logger
+        logger = get_logger(__name__)
+        logger.debug("initialize_data started")
         has_error = False  # Track if we encountered an error
 
         try:
@@ -270,24 +245,17 @@ class MoneyflowTUI(App):
             self.query_one("#loading", LoadingIndicator).display = True
             loading_status = self.query_one("#loading-status", Static)
             loading_status.display = True
-            print("[INIT] UI initialized", file=sys.stderr, flush=True)
         except Exception as e:
-            print(f"[INIT ERROR] Failed to initialize UI: {e}", file=sys.stderr, flush=True)
-            traceback.print_exc(file=sys.stderr)
+            logger.error(f"Failed to initialize UI: {e}", exc_info=True)
             raise
 
         if self.demo_mode:
-            print("[INIT] Demo mode enabled", file=sys.stderr, flush=True)
             loading_status.update("🎮 DEMO MODE - Loading sample data...")
         else:
-            print("[INIT] Production mode, connecting to backend", file=sys.stderr, flush=True)
             loading_status.update("🔄 Connecting to backend...")
 
         try:
-            print("[INIT] Entering main try block", file=sys.stderr, flush=True)
             if not self.demo_mode:
-                print("[INIT] Not demo mode, loading credentials", file=sys.stderr, flush=True)
-
                 # Try to use encrypted credentials first
                 from .credentials import CredentialManager
                 from .monarchmoney import RequireMFAException, LoginFailedException
@@ -298,23 +266,14 @@ class MoneyflowTUI(App):
                 )
                 from .backends import get_backend
 
-                print("[INIT] Imports successful", file=sys.stderr, flush=True)
-
                 cred_manager = CredentialManager()
                 creds = None
 
-                print(f"[INIT] Credentials exist: {cred_manager.credentials_exist()}", file=sys.stderr, flush=True)
+                logger.debug(f"Credentials exist: {cred_manager.credentials_exist()}")
 
                 if cred_manager.credentials_exist():
                     # Show unlock screen
-                    print(f"[INIT] Showing CredentialUnlockScreen", file=sys.stderr, flush=True)
-                    try:
-                        result = await self.push_screen(CredentialUnlockScreen(), wait_for_dismiss=True)
-                        print(f"[INIT] CredentialUnlockScreen returned: {result is not None}", file=sys.stderr, flush=True)
-                    except Exception as screen_err:
-                        print(f"[INIT ERROR] Exception in CredentialUnlockScreen: {screen_err}", file=sys.stderr, flush=True)
-                        traceback.print_exc(file=sys.stderr)
-                        raise
+                    result = await self.push_screen(CredentialUnlockScreen(), wait_for_dismiss=True)
 
                     if result is None:
                         # User chose to reset - show backend selection then setup screen
@@ -357,13 +316,11 @@ class MoneyflowTUI(App):
                 # Login with credentials using retry logic for robustness
                 loading_status.update(f"🔐 Logging in to {backend_type.capitalize()}...")
 
-                from .logging_config import get_logger
                 from .retry_logic import retry_with_backoff, RetryAborted
-                logger = get_logger(__name__)
 
-                logger.info(f"Starting login flow for {backend_type}")
-                logger.info(f"Email: {creds['email']}")
-                logger.info(f"Has MFA secret: {bool(creds.get('mfa_secret'))}")
+                logger.debug(f"Starting login flow for {backend_type}")
+                logger.debug(f"Email: {creds['email']}")
+                logger.debug(f"Has MFA secret: {bool(creds.get('mfa_secret'))}")
 
                 def on_login_retry(attempt: int, wait_seconds: float) -> None:
                     """Show retry progress during login."""
@@ -374,7 +331,7 @@ class MoneyflowTUI(App):
                 async def login_operation():
                     """Login with automatic retry on session expiration."""
                     try:
-                        logger.info("Attempting login with saved session...")
+                        logger.debug("Attempting login with saved session...")
                         await self.mm.login(
                             email=creds["email"],
                             password=creds["password"],
@@ -382,14 +339,14 @@ class MoneyflowTUI(App):
                             save_session=True,
                             mfa_secret_key=creds["mfa_secret"],
                         )
-                        logger.info("Login succeeded!")
+                        logger.debug("Login succeeded!")
                         return True
                     except Exception as e:
                         logger.warning(f"Login failed: {e}", exc_info=True)
                         error_str = str(e).lower()
                         # Check if it's a stale session
                         if "401" in error_str or "unauthorized" in error_str:
-                            logger.info("Detected stale session, deleting and retrying with fresh login")
+                            logger.debug("Detected stale session, deleting and retrying with fresh login")
                             self.mm.delete_session()
                             # Retry with fresh login
                             await self.mm.login(
@@ -399,7 +356,7 @@ class MoneyflowTUI(App):
                                 save_session=True,
                                 mfa_secret_key=creds["mfa_secret"],
                             )
-                            logger.info("Fresh login succeeded!")
+                            logger.debug("Fresh login succeeded!")
                             return True
                         # Not a session issue, re-raise for retry logic
                         raise
@@ -415,10 +372,10 @@ class MoneyflowTUI(App):
                     # Store credentials for automatic session refresh if needed
                     self.stored_credentials = creds
                     loading_status.update("✅ Logged in successfully!")
-                    logger.info("Login flow completed successfully")
+                    logger.debug("Login flow completed successfully")
                 except RetryAborted:
                     # User pressed Ctrl-C
-                    logger.info("Login cancelled by user")
+                    logger.debug("Login cancelled by user")
                     loading_status.update("Login cancelled by user. Press 'q' to quit.")
                     has_error = True
                     return
@@ -522,9 +479,7 @@ class MoneyflowTUI(App):
                     loading_status.update(f"📊 {msg}")
 
                 # Fetch data with retry logic for network resilience
-                from .logging_config import get_logger
                 from .retry_logic import retry_with_backoff, RetryAborted
-                logger = get_logger(__name__)
 
                 def on_fetch_retry(attempt: int, wait_seconds: float) -> None:
                     """Show retry progress during data fetch."""
@@ -535,18 +490,18 @@ class MoneyflowTUI(App):
                 async def fetch_operation():
                     """Fetch data with automatic error logging."""
                     try:
-                        logger.info(f"Fetching transactions (start={start_date}, end={end_date})")
+                        logger.debug(f"Fetching transactions (start={start_date}, end={end_date})")
                         result = await self.data_manager.fetch_all_data(
                             start_date=start_date, end_date=end_date, progress_callback=update_progress
                         )
-                        logger.info(f"Data fetch succeeded - loaded {len(result[0])} transactions")
+                        logger.debug(f"Data fetch succeeded - loaded {len(result[0])} transactions")
                         return result
                     except Exception as e:
                         logger.error(f"Data fetch failed: {e}", exc_info=True)
                         # Check if session expiration
                         error_str = str(e).lower()
                         if ("401" in error_str or "unauthorized" in error_str) and self.stored_credentials:
-                            logger.info("Session expired during fetch, re-authenticating...")
+                            logger.debug("Session expired during fetch, re-authenticating...")
                             loading_status.update("🔄 Session expired. Re-authenticating...")
                             await self.mm.login(
                                 email=self.stored_credentials["email"],
@@ -555,12 +510,12 @@ class MoneyflowTUI(App):
                                 save_session=True,
                                 mfa_secret_key=self.stored_credentials["mfa_secret"],
                             )
-                            logger.info("Re-authenticated, retrying fetch immediately")
+                            logger.debug("Re-authenticated, retrying fetch immediately")
                             loading_status.update("✅ Re-authenticated. Retrying fetch...")
                             result = await self.data_manager.fetch_all_data(
                                 start_date=start_date, end_date=end_date, progress_callback=update_progress
                             )
-                            logger.info(f"Retry succeeded - loaded {len(result[0])} transactions")
+                            logger.debug(f"Retry succeeded - loaded {len(result[0])} transactions")
                             return result
                         # Not auth error, re-raise for retry logic
                         raise
@@ -574,7 +529,7 @@ class MoneyflowTUI(App):
                         on_retry=on_fetch_retry
                     )
                 except RetryAborted:
-                    logger.info("Data fetch cancelled by user")
+                    logger.debug("Data fetch cancelled by user")
                     loading_status.update("Data fetch cancelled. Press 'q' to quit.")
                     has_error = True
                     return
@@ -623,15 +578,15 @@ class MoneyflowTUI(App):
 
             # Check if it's a 401/unauthorized error
             if "401" in error_str or "unauthorized" in error_str:
-                print(f"[ERROR] 401/Unauthorized in outer handler - recovery already attempted", file=sys.stderr, flush=True)
+                logger.error("401/Unauthorized in outer handler - recovery already attempted")
                 # If we get here, session recovery already failed in the fetch block above
                 # Delete the bad session
                 try:
                     if self.mm:
                         self.mm.delete_session()
-                        print(f"[ERROR] Session deleted", file=sys.stderr, flush=True)
+                        logger.debug("Session deleted")
                 except Exception as del_err:
-                    print(f"[ERROR] Failed to delete session: {del_err}", file=sys.stderr, flush=True)
+                    logger.error(f"Failed to delete session: {del_err}")
 
                 # Show helpful error
                 loading_status.update(
@@ -644,17 +599,8 @@ class MoneyflowTUI(App):
                 error_msg = f"Failed to load data: {e}"
                 loading_status.update(f"❌ {error_msg}\n\nPress 'q' to quit")
 
-            # Print detailed error to stderr for debugging
-            print(f"\n{'='*70}", file=sys.stderr, flush=True)
-            print("DATA LOADING ERROR", file=sys.stderr, flush=True)
-            print(f"{'='*70}", file=sys.stderr, flush=True)
-            print(f"Error: {e}", file=sys.stderr, flush=True)
-            print(f"Type: {type(e).__name__}", file=sys.stderr, flush=True)
-            print(f"{'='*70}", file=sys.stderr, flush=True)
-            traceback.print_exc(file=sys.stderr)
-            if "401" in error_str or "unauthorized" in error_str:
-                print(f"\nSession has been deleted. Restart the app to login fresh.", file=sys.stderr, flush=True)
-            print(f"{'='*70}\n", file=sys.stderr, flush=True)
+            # Log detailed error for debugging
+            logger.error(f"DATA LOADING ERROR: {e} (Type: {type(e).__name__})", exc_info=True)
             has_error = True
 
         finally:
@@ -1377,16 +1323,23 @@ class MoneyflowTUI(App):
     async def _bulk_recategorize_from_aggregate(self) -> None:
         """Recategorize all transactions in selected category/group."""
         from .screens.edit_screens import SelectCategoryScreen
+        from .logging_config import get_logger
+        logger = get_logger(__name__)
+
+        logger.debug(f"_bulk_recategorize_from_aggregate called, view_mode={self.state.view_mode}")
 
         if self.state.current_data is None:
+            logger.warning("current_data is None, returning")
             return
 
         table = self.query_one("#data-table", DataTable)
         if table.cursor_row < 0:
+            logger.warning(f"cursor_row < 0 ({table.cursor_row}), returning")
             return
 
         # Get the category/group from current row
         row_data = self.state.current_data.row(table.cursor_row, named=True)
+        logger.debug(f"row_data keys: {list(row_data.keys())}")
 
         if self.state.view_mode == ViewMode.CATEGORY:
             category_name = row_data["category"]
@@ -1711,7 +1664,7 @@ class MoneyflowTUI(App):
             return False
 
         try:
-            logger.info("Session expired - attempting to re-authenticate")
+            logger.debug("Session expired - attempting to re-authenticate")
             self._notify(NotificationHelper.session_refreshing())
             await self.mm.login(
                 email=self.stored_credentials["email"],
@@ -1720,7 +1673,7 @@ class MoneyflowTUI(App):
                 save_session=True,
                 mfa_secret_key=self.stored_credentials["mfa_secret"],
             )
-            logger.info("Session refresh succeeded")
+            logger.debug("Session refresh succeeded")
             self._notify(NotificationHelper.session_refresh_success())
             return True
         except Exception as e:
@@ -1762,12 +1715,12 @@ class MoneyflowTUI(App):
                 # Check if it's an auth error (session expired)
                 error_msg = str(e).lower()
                 if "401" in error_msg or "unauthorized" in error_msg or "token" in error_msg:
-                    logger.info(f"Commit failed with auth error, attempting session refresh")
+                    logger.debug(f"Commit failed with auth error, attempting session refresh")
                     # Show clear message to user
                     self._notify(NotificationHelper.session_expired())
                     # Try to refresh session once
                     if await self._refresh_session():
-                        logger.info("Session refreshed, retrying commit immediately")
+                        logger.debug("Session refreshed, retrying commit immediately")
                         # Session refreshed - try commit again immediately
                         return await self.data_manager.commit_pending_edits(edits)
                     else:
@@ -1789,7 +1742,7 @@ class MoneyflowTUI(App):
             )
         except RetryAborted:
             # User pressed Ctrl-C
-            logger.info("Commit retry cancelled by user")
+            logger.debug("Commit retry cancelled by user")
             self._notify(NotificationHelper.retry_cancelled())
             raise
         except Exception as e:
@@ -1893,10 +1846,8 @@ class MoneyflowTUI(App):
 
     def action_quit_app(self) -> None:
         """Quit the application - show confirmation first."""
-        print("[QUIT] quit_app action called", file=sys.stderr, flush=True)
         # If we're in an error state (no data_manager), just exit immediately
         if self.data_manager is None:
-            print("[QUIT] No data_manager, exiting immediately", file=sys.stderr, flush=True)
             self.exit()
             return
         # Show confirmation in a worker (required for push_screen with wait_for_dismiss)
@@ -1979,16 +1930,11 @@ def main():
         action="store_true",
         help="Run in demo mode with sample data (no authentication required)",
     )
-    parser.add_argument(
-        "--dev",
-        action="store_true",
-        help="Enable dev mode with console logging and better error messages",
-    )
 
     args = parser.parse_args()
 
-    # Initialize logging with console output only in --dev mode
-    logger = setup_logging(console_output=args.dev)
+    # Initialize logging (file only - Textual swallows console output anyway)
+    logger = setup_logging(console_output=False)
     logger.info("Starting moneyflow application")
 
     # Determine start year or date range
@@ -2012,8 +1958,6 @@ def main():
     cache_path = args.cache if hasattr(args, "cache") and args.cache is not None else None
 
     try:
-        print(f"[MAIN] Creating MoneyflowTUI instance (demo={args.demo})", file=sys.stderr, flush=True)
-
         app = MoneyflowTUI(
             start_year=start_year,
             custom_start_date=custom_start_date,
@@ -2022,41 +1966,7 @@ def main():
             force_refresh=args.refresh,
         )
 
-        print("[MAIN] Starting app.run()", file=sys.stderr, flush=True)
-        print(f"[MAIN] Terminal: TERM={os.environ.get('TERM', 'not set')}", file=sys.stderr, flush=True)
-        print(f"[MAIN] CSS_PATH set to: {app.CSS_PATH}", file=sys.stderr, flush=True)
-        if app.CSS_PATH:
-            print(f"[MAIN] CSS file exists: {os.path.exists(app.CSS_PATH)}", file=sys.stderr, flush=True)
-        else:
-            print(f"[MAIN] CSS_PATH is None (disabled)", file=sys.stderr, flush=True)
-
-        # Enable dev mode if requested
-        if args.dev:
-            # Textual will show detailed tracebacks in dev mode with console
-            print("[MAIN] Running in dev mode", file=sys.stderr, flush=True)
-            print("[MAIN] Enabling Textual devtools - run 'textual console' to see logs", file=sys.stderr, flush=True)
-            # Enable devtools to connect to textual console
-            os.environ["TEXTUAL_DEVTOOLS"] = "1"
-            try:
-                # Don't use inline parameter - let Textual decide
-                app.run()
-            except Exception as e:
-                print(f"[MAIN ERROR] Exception during app.run(): {e}", file=sys.stderr, flush=True)
-                traceback.print_exc(file=sys.stderr)
-                raise
-            except KeyboardInterrupt:
-                print(f"[MAIN] KeyboardInterrupt received", file=sys.stderr, flush=True)
-                raise
-        else:
-            print("[MAIN] Running in normal mode", file=sys.stderr, flush=True)
-            try:
-                app.run()
-            except Exception as e:
-                print(f"[MAIN ERROR] Exception during app.run(): {e}", file=sys.stderr, flush=True)
-                traceback.print_exc(file=sys.stderr)
-                raise
-
-        print("[MAIN] app.run() exited normally", file=sys.stderr, flush=True)
+        app.run()
     except Exception as e:
         # Print full traceback to console
         print("\n" + "=" * 80, file=sys.stderr)
