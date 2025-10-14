@@ -1325,13 +1325,13 @@ class MoneyflowTUI(App):
 
         logger.debug(f"action_recategorize called, view_mode={self.state.view_mode}")
 
-        # Check if in aggregate view (CATEGORY or GROUP) or detail view
-        if self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP]:
+        # Check if in aggregate view (MERCHANT, CATEGORY or GROUP) or detail view
+        if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP]:
             logger.debug("Calling _bulk_recategorize_from_aggregate()")
-            # Aggregate view - recategorize all transactions for this category/group
+            # Aggregate view - recategorize all transactions for this merchant/category/group
             self.run_worker(self._bulk_recategorize_from_aggregate(), exclusive=False)
         else:
-            logger.debug(f"Calling _recategorize() - view_mode {self.state.view_mode} not in [CATEGORY, GROUP]")
+            logger.debug(f"Calling _recategorize() - view_mode {self.state.view_mode} not in aggregate views")
             # Detail view - recategorize selected transaction(s)
             self.run_worker(self._recategorize(), exclusive=False)
 
@@ -1352,11 +1352,48 @@ class MoneyflowTUI(App):
             logger.warning(f"cursor_row < 0 ({table.cursor_row}), returning")
             return
 
-        # Get the category/group from current row
+        # Get the merchant/category/group from current row
         row_data = self.state.current_data.row(table.cursor_row, named=True)
         logger.debug(f"row_data keys: {list(row_data.keys())}")
 
-        if self.state.view_mode == ViewMode.CATEGORY:
+        if self.state.view_mode == ViewMode.MERCHANT:
+            merchant_name = row_data["merchant"]
+            transaction_count = row_data["count"]
+
+            # Show category selection for all transactions from this merchant
+            new_category_id = await self.push_screen(
+                SelectCategoryScreen(
+                    self.data_manager.categories,
+                    None,  # No current category (transactions may have different categories)
+                    None  # No transaction details for bulk
+                ),
+                wait_for_dismiss=True,
+            )
+
+            if new_category_id:
+                # Get all transactions for this merchant
+                filtered_df = self.state.get_filtered_df()
+                merchant_txns = self.data_manager.filter_by_merchant(filtered_df, merchant_name)
+
+                # Add edits for all transactions
+                for txn in merchant_txns.iter_rows(named=True):
+                    self.data_manager.pending_edits.append(
+                        TransactionEdit(
+                            transaction_id=txn["id"],
+                            field="category",
+                            old_value=txn["category_id"],
+                            new_value=new_category_id,
+                            timestamp=datetime.now(),
+                        )
+                    )
+
+                new_cat_name = self.data_manager.categories.get(new_category_id, {}).get("name", "Unknown")
+                self.notify(
+                    f"Queued {len(merchant_txns)} transactions from {merchant_name} to recategorize to {new_cat_name}. Press w to commit.",
+                    timeout=3
+                )
+                self.refresh_view()
+        elif self.state.view_mode == ViewMode.CATEGORY:
             category_name = row_data["category"]
             category_id = row_data["category_id"]
             transaction_count = row_data["count"]
