@@ -165,3 +165,14 @@ class FinanceBackend(ABC):
         Default implementation does nothing.
         """
         pass  # Default: no-op
+
+    def clear_auth(self) -> None:
+        """
+        Clear all authentication state (in-memory tokens, headers, etc.).
+
+        This should be called before a fresh login to ensure no stale auth data
+        is present. Backends should override this to clear their specific auth state.
+
+        Default implementation does nothing.
+        """
+        pass  # Default: no-op

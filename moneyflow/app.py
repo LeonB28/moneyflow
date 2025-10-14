@@ -1404,6 +1404,8 @@ class MoneyflowTUI(App):
 
         logger.info("Deleting stale session and performing fresh login")
         self.backend.delete_session()
+        self.backend.clear_auth()  # Clear in-memory token/headers
+
         await self.backend.login(
             email=creds["email"],
             password=creds["password"],

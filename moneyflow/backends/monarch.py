@@ -153,3 +153,14 @@ class MonarchBackend(FinanceBackend):
             filename: Optional path to session file (uses default if not provided)
         """
         self.client.delete_session(filename)
+
+    def clear_auth(self) -> None:
+        """
+        Clear all authentication state (token, headers).
+
+        This clears both the in-memory token and Authorization header,
+        ensuring no stale auth data is used on next login.
+        """
+        self.client.set_token(None)
+        if "Authorization" in self.client._headers:
+            del self.client._headers["Authorization"]
