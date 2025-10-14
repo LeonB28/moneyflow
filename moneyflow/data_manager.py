@@ -584,14 +584,27 @@ class DataManager:
         success_count = 0
         failure_count = 0
 
+        # Check for auth errors that should trigger retry
+        auth_errors = []
+
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 failure_count += 1
                 logger.error(f"Transaction update {i+1}/{len(results)} FAILED: {result}", exc_info=result)
+
+                # Check if it's a 401/auth error
+                error_str = str(result).lower()
+                if "401" in error_str or "unauthorized" in error_str:
+                    auth_errors.append(result)
             else:
                 success_count += 1
 
         logger.info(f"Commit completed: {success_count} succeeded, {failure_count} failed")
+
+        # If ALL failures were auth errors, raise one so retry logic can kick in
+        if failure_count > 0 and len(auth_errors) == failure_count:
+            logger.warning("All failures were auth errors - raising to trigger retry")
+            raise auth_errors[0]  # Raise first auth error to trigger retry
 
         return success_count, failure_count
 

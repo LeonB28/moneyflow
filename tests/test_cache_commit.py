@@ -109,11 +109,9 @@ class TestCacheAndCommit:
 
         edits = [TransactionEdit("txn_1", "merchant", "Old", "New", datetime.now())]
 
-        # Should fail on first attempt
-        success, failure = await data_manager.commit_pending_edits(edits)
+        # With new logic: if ALL commits fail with 401, exception is raised
+        # This allows _commit_with_retry() to catch it and retry
+        with pytest.raises(Exception, match="401 Unauthorized"):
+            await data_manager.commit_pending_edits(edits)
 
-        # Mock backend doesn't auto-retry, so this will show 1 failure
-        assert failure == 1
-
-        # But in real app, _commit_with_retry() wrapper should handle this
-        # This test shows we need to ensure retry logic is in place
+        # The exception being raised is GOOD - it triggers retry logic in app.py
