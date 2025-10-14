@@ -746,56 +746,31 @@ class MoneyflowTUI(App):
         self.controller.refresh_view(force_rebuild=force_rebuild)
 
     # Actions
-    def _switch_to_aggregate_view(self, view_mode: ViewMode) -> None:
-        """
-        Helper to switch to an aggregate view.
-
-        Clears selections, resets sort field to valid aggregate column, and refreshes.
-        """
-        self.state.view_mode = view_mode
-        self.state.selected_merchant = None
-        self.state.selected_category = None
-        self.state.selected_group = None
-        self.state.selected_account = None
-        # Reset sort to valid field for aggregate views
-        if self.state.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
-            self.state.sort_by = SortMode.AMOUNT
-        self.refresh_view()
-
     def action_view_merchants(self) -> None:
         """Switch to merchant view."""
-        self._switch_to_aggregate_view(ViewMode.MERCHANT)
+        self.controller.switch_to_merchant_view()
 
     def action_view_categories(self) -> None:
         """Switch to category view."""
-        self._switch_to_aggregate_view(ViewMode.CATEGORY)
+        self.controller.switch_to_category_view()
 
     def action_view_groups(self) -> None:
         """Switch to group view."""
-        self._switch_to_aggregate_view(ViewMode.GROUP)
+        self.controller.switch_to_group_view()
 
     def action_view_accounts(self) -> None:
         """Switch to account view."""
-        self._switch_to_aggregate_view(ViewMode.ACCOUNT)
+        self.controller.switch_to_account_view()
 
     def action_cycle_grouping(self) -> None:
         """Cycle through aggregation views (Merchant → Category → Group → Account)."""
-        view_name = self.state.cycle_grouping()
+        view_name = self.controller.cycle_grouping()
         if view_name:
-            self.refresh_view()
             self._notify(NotificationHelper.view_changed(view_name))
 
     def action_view_ungrouped(self) -> None:
         """Switch to ungrouped transactions view (all transactions in reverse chronological order)."""
-        self.state.view_mode = ViewMode.DETAIL
-        self.state.selected_merchant = None
-        self.state.selected_category = None
-        self.state.selected_group = None
-        self.state.selected_account = None
-        # Set default sort for all transactions: Date descending (newest first)
-        self.state.sort_by = SortMode.DATE
-        self.state.sort_direction = SortDirection.DESC
-        self.refresh_view()
+        self.controller.switch_to_detail_view(set_default_sort=True)
         self._notify(NotificationHelper.all_transactions_view())
 
     def action_find_duplicates(self) -> None:

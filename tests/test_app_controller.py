@@ -785,3 +785,110 @@ class TestSortFieldCycling:
 
             sort2, _ = controller.get_next_sort_field(view_mode, sort1)
             assert sort2 == SortMode.COUNT
+
+
+class TestViewModeSwitching:
+    """
+    Test view mode switching facade methods.
+
+    These methods encapsulate the state mutations for switching views,
+    making app.py simpler and the logic testable.
+    """
+
+    async def test_switch_to_merchant_view(self, controller, mock_view):
+        """Test switching to merchant view."""
+        controller.switch_to_merchant_view()
+
+        assert controller.state.view_mode == ViewMode.MERCHANT
+        assert controller.state.selected_merchant is None
+        assert controller.state.selected_category is None
+        assert controller.state.selected_group is None
+        assert controller.state.selected_account is None
+        # Should reset sort to valid aggregate field
+        assert controller.state.sort_by in [SortMode.COUNT, SortMode.AMOUNT]
+        # Should have refreshed view
+        assert len(mock_view.table_updates) == 1
+
+    async def test_switch_to_category_view(self, controller, mock_view):
+        """Test switching to category view."""
+        controller.switch_to_category_view()
+
+        assert controller.state.view_mode == ViewMode.CATEGORY
+        assert controller.state.selected_category is None
+
+    async def test_switch_to_group_view(self, controller, mock_view):
+        """Test switching to group view."""
+        controller.switch_to_group_view()
+
+        assert controller.state.view_mode == ViewMode.GROUP
+        assert controller.state.selected_group is None
+
+    async def test_switch_to_account_view(self, controller, mock_view):
+        """Test switching to account view."""
+        controller.switch_to_account_view()
+
+        assert controller.state.view_mode == ViewMode.ACCOUNT
+        assert controller.state.selected_account is None
+
+    async def test_switch_to_detail_view_with_default_sort(self, controller, mock_view):
+        """Test switching to detail view with default sort."""
+        controller.switch_to_detail_view(set_default_sort=True)
+
+        assert controller.state.view_mode == ViewMode.DETAIL
+        assert controller.state.sort_by == SortMode.DATE
+        assert controller.state.sort_direction == SortDirection.DESC
+
+    async def test_switch_to_detail_view_preserve_sort(self, controller, mock_view):
+        """Test switching to detail view preserving current sort."""
+        # Set non-default sort
+        controller.state.sort_by = SortMode.AMOUNT
+        controller.state.sort_direction = SortDirection.ASC
+
+        controller.switch_to_detail_view(set_default_sort=False)
+
+        assert controller.state.view_mode == ViewMode.DETAIL
+        # Sort should be preserved
+        assert controller.state.sort_by == SortMode.AMOUNT
+        assert controller.state.sort_direction == SortDirection.ASC
+
+    async def test_view_switch_clears_selections(self, controller, mock_view):
+        """Test that switching views clears all drill-down selections."""
+        # Set up some selections
+        controller.state.selected_merchant = "Amazon"
+        controller.state.selected_category = "Shopping"
+
+        controller.switch_to_merchant_view()
+
+        # All selections should be cleared
+        assert controller.state.selected_merchant is None
+        assert controller.state.selected_category is None
+        assert controller.state.selected_group is None
+        assert controller.state.selected_account is None
+
+    async def test_aggregate_view_resets_invalid_sort(self, controller, mock_view):
+        """Test that switching to aggregate view resets invalid sort fields."""
+        # Set sort to DATE (invalid for aggregate views)
+        controller.state.sort_by = SortMode.DATE
+
+        controller.switch_to_merchant_view()
+
+        # Should be reset to AMOUNT (valid aggregate field)
+        assert controller.state.sort_by == SortMode.AMOUNT
+
+    async def test_aggregate_view_preserves_valid_sort(self, controller, mock_view):
+        """Test that valid sort fields are preserved."""
+        controller.state.sort_by = SortMode.COUNT
+
+        controller.switch_to_merchant_view()
+
+        # COUNT is valid for aggregates, should be preserved
+        assert controller.state.sort_by == SortMode.COUNT
+
+    async def test_cycle_grouping_returns_view_name(self, controller, mock_view):
+        """Test cycle_grouping returns view name and refreshes."""
+        controller.state.view_mode = ViewMode.MERCHANT
+
+        view_name = controller.cycle_grouping()
+
+        assert view_name is not None  # Should return next view name
+        assert len(mock_view.table_updates) == 1  # Should refresh

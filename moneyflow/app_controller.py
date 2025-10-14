@@ -19,7 +19,7 @@ The controller does NOT:
 
 from typing import Optional, List
 from .view_interface import IViewPresenter
-from .state import AppState, ViewMode, SortMode, TransactionEdit
+from .state import AppState, ViewMode, SortMode, SortDirection, TransactionEdit
 from .data_manager import DataManager
 from .formatters import ViewPresenter
 from .commit_orchestrator import CommitOrchestrator
@@ -218,6 +218,81 @@ class AppController:
         return ViewPresenter.prepare_aggregation_view(
             agg, field_name, self.state.sort_by, self.state.sort_direction
         )
+
+    # View mode switching operations
+    def switch_to_merchant_view(self):
+        """Switch to merchant aggregation view."""
+        self.state.view_mode = ViewMode.MERCHANT
+        self.state.selected_merchant = None
+        self.state.selected_category = None
+        self.state.selected_group = None
+        self.state.selected_account = None
+        # Reset sort to valid field for aggregate views
+        if self.state.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
+            self.state.sort_by = SortMode.AMOUNT
+        self.refresh_view()
+
+    def switch_to_category_view(self):
+        """Switch to category aggregation view."""
+        self.state.view_mode = ViewMode.CATEGORY
+        self.state.selected_merchant = None
+        self.state.selected_category = None
+        self.state.selected_group = None
+        self.state.selected_account = None
+        if self.state.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
+            self.state.sort_by = SortMode.AMOUNT
+        self.refresh_view()
+
+    def switch_to_group_view(self):
+        """Switch to group aggregation view."""
+        self.state.view_mode = ViewMode.GROUP
+        self.state.selected_merchant = None
+        self.state.selected_category = None
+        self.state.selected_group = None
+        self.state.selected_account = None
+        if self.state.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
+            self.state.sort_by = SortMode.AMOUNT
+        self.refresh_view()
+
+    def switch_to_account_view(self):
+        """Switch to account aggregation view."""
+        self.state.view_mode = ViewMode.ACCOUNT
+        self.state.selected_merchant = None
+        self.state.selected_category = None
+        self.state.selected_group = None
+        self.state.selected_account = None
+        if self.state.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
+            self.state.sort_by = SortMode.AMOUNT
+        self.refresh_view()
+
+    def switch_to_detail_view(self, set_default_sort: bool = True):
+        """
+        Switch to transaction detail view (ungrouped).
+
+        Args:
+            set_default_sort: If True, set default sort (Date descending)
+        """
+        self.state.view_mode = ViewMode.DETAIL
+        self.state.selected_merchant = None
+        self.state.selected_category = None
+        self.state.selected_group = None
+        self.state.selected_account = None
+        if set_default_sort:
+            self.state.sort_by = SortMode.DATE
+            self.state.sort_direction = SortDirection.DESC
+        self.refresh_view()
+
+    def cycle_grouping(self) -> Optional[str]:
+        """
+        Cycle through aggregation views (Merchant → Category → Group → Account).
+
+        Returns:
+            View name if changed, None if at end of cycle
+        """
+        view_name = self.state.cycle_grouping()
+        if view_name:
+            self.refresh_view()
+        return view_name
 
     def get_next_sort_field(self, view_mode: ViewMode, current_sort: SortMode) -> tuple[SortMode, str]:
         """
