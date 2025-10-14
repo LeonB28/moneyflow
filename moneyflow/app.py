@@ -1317,14 +1317,21 @@ class MoneyflowTUI(App):
 
     def action_recategorize(self) -> None:
         """Change category for current selection (works in aggregate and detail views)."""
+        from .logging_config import get_logger
+        logger = get_logger(__name__)
+
         if self.data_manager is None:
             return
 
+        logger.debug(f"action_recategorize called, view_mode={self.state.view_mode}")
+
         # Check if in aggregate view (CATEGORY or GROUP) or detail view
         if self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP]:
+            logger.debug("Calling _bulk_recategorize_from_aggregate()")
             # Aggregate view - recategorize all transactions for this category/group
             self.run_worker(self._bulk_recategorize_from_aggregate(), exclusive=False)
         else:
+            logger.debug(f"Calling _recategorize() - view_mode {self.state.view_mode} not in [CATEGORY, GROUP]")
             # Detail view - recategorize selected transaction(s)
             self.run_worker(self._recategorize(), exclusive=False)
 
