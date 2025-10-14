@@ -6,6 +6,7 @@ All errors and important events are logged to ~/.moneyflow/moneyflow.log
 """
 
 import logging
+import sys
 from pathlib import Path
 
 
