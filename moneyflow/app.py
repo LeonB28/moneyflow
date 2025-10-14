@@ -354,35 +354,44 @@ class MoneyflowTUI(App):
                 loading_status.update(f"🔄 Initializing {backend_type} backend...")
                 self.mm = get_backend(backend_type)
 
-                # Login with credentials - try saved session first to avoid lockout
+                # Login with credentials using retry logic for robustness
                 loading_status.update(f"🔐 Logging in to {backend_type.capitalize()}...")
-                print(f"[LOGIN] About to call mm.login()", file=sys.stderr, flush=True)
-                print(f"[LOGIN] Backend type: {backend_type}", file=sys.stderr, flush=True)
-                print(f"[LOGIN] Email: {creds['email']}", file=sys.stderr, flush=True)
-                print(f"[LOGIN] Has MFA secret: {bool(creds.get('mfa_secret'))}", file=sys.stderr, flush=True)
 
-                try:
-                    print(f"[LOGIN] Calling await self.mm.login() with use_saved_session=True...", file=sys.stderr, flush=True)
-                    await self.mm.login(
-                        email=creds["email"],
-                        password=creds["password"],
-                        use_saved_session=True,  # Use saved session to avoid lockouts!
-                        save_session=True,
-                        mfa_secret_key=creds["mfa_secret"],
+                from .logging_config import get_logger
+                from .retry_logic import retry_with_backoff, RetryAborted
+                logger = get_logger(__name__)
+
+                logger.info(f"Starting login flow for {backend_type}")
+                logger.info(f"Email: {creds['email']}")
+                logger.info(f"Has MFA secret: {bool(creds.get('mfa_secret'))}")
+
+                def on_login_retry(attempt: int, wait_seconds: float) -> None:
+                    """Show retry progress during login."""
+                    loading_status.update(
+                        f"⚠ Login failed. Retrying in {wait_seconds:.0f}s (attempt {attempt + 1}/5). Press Ctrl-C to abort."
                     )
-                    print(f"[LOGIN] mm.login() returned successfully!", file=sys.stderr, flush=True)
-                    # Store credentials for automatic session refresh if needed
-                    self.stored_credentials = creds
-                    loading_status.update("✅ Logged in successfully!")
-                    print(f"[LOGIN] Updated status to 'Logged in successfully'", file=sys.stderr, flush=True)
-                except (RequireMFAException, LoginFailedException) as e:
-                    # Login failed - check if it's a 401 (expired session)
-                    error_str = str(e).lower()
-                    if "401" in error_str or "unauthorized" in error_str:
-                        # Session expired - delete it and retry with fresh login
-                        print(f"[LOGIN] 401/Unauthorized - deleting expired session and retrying", file=sys.stderr, flush=True)
-                        self.mm.delete_session()
-                        try:
+
+                async def login_operation():
+                    """Login with automatic retry on session expiration."""
+                    try:
+                        logger.info("Attempting login with saved session...")
+                        await self.mm.login(
+                            email=creds["email"],
+                            password=creds["password"],
+                            use_saved_session=True,  # Try saved session first
+                            save_session=True,
+                            mfa_secret_key=creds["mfa_secret"],
+                        )
+                        logger.info("Login succeeded!")
+                        return True
+                    except Exception as e:
+                        logger.warning(f"Login failed: {e}", exc_info=True)
+                        error_str = str(e).lower()
+                        # Check if it's a stale session
+                        if "401" in error_str or "unauthorized" in error_str:
+                            logger.info("Detected stale session, deleting and retrying with fresh login")
+                            self.mm.delete_session()
+                            # Retry with fresh login
                             await self.mm.login(
                                 email=creds["email"],
                                 password=creds["password"],
@@ -390,50 +399,34 @@ class MoneyflowTUI(App):
                                 save_session=True,
                                 mfa_secret_key=creds["mfa_secret"],
                             )
-                            print(f"[LOGIN] Retry succeeded!", file=sys.stderr, flush=True)
-                            self.stored_credentials = creds
-                            loading_status.update("✅ Logged in successfully!")
-                            print(f"[LOGIN] Updated status to 'Logged in successfully'", file=sys.stderr, flush=True)
-                        except Exception as retry_error:
-                            # Retry failed too
-                            error_msg = f"Login failed: {retry_error}"
-                            loading_status.update(f"❌ {error_msg}\n\nPress Ctrl+Q to quit")
-                            print(f"\n{'='*70}", file=sys.stderr, flush=True)
-                            print("LOGIN RETRY FAILED", file=sys.stderr, flush=True)
-                            print(f"{'='*70}", file=sys.stderr, flush=True)
-                            print(f"Error: {retry_error}", file=sys.stderr, flush=True)
-                            traceback.print_exc(file=sys.stderr)
-                            print(f"{'='*70}\n", file=sys.stderr, flush=True)
-                            # Allow quitting with Ctrl+Q
-                            has_error = True
-                            return
-                    else:
-                        # Other login failure
-                        error_msg = f"Login failed: {e}"
-                        loading_status.update(f"❌ {error_msg}\n\nPress Ctrl+Q to quit")
-                        print(f"\n{'='*70}", file=sys.stderr, flush=True)
-                        print("LOGIN FAILED", file=sys.stderr, flush=True)
-                        print(f"{'='*70}", file=sys.stderr, flush=True)
-                        print(f"Error: {e}", file=sys.stderr, flush=True)
-                        print(f"Type: {type(e).__name__}", file=sys.stderr, flush=True)
-                        print(f"{'='*70}", file=sys.stderr, flush=True)
-                        traceback.print_exc(file=sys.stderr)
-                        print(f"{'='*70}\n", file=sys.stderr, flush=True)
-                        has_error = True
-                        return
+                            logger.info("Fresh login succeeded!")
+                            return True
+                        # Not a session issue, re-raise for retry logic
+                        raise
+
+                try:
+                    await retry_with_backoff(
+                        operation=login_operation,
+                        operation_name="Login to backend",
+                        max_retries=5,
+                        initial_wait=60.0,
+                        on_retry=on_login_retry
+                    )
+                    # Store credentials for automatic session refresh if needed
+                    self.stored_credentials = creds
+                    loading_status.update("✅ Logged in successfully!")
+                    logger.info("Login flow completed successfully")
+                except RetryAborted:
+                    # User pressed Ctrl-C
+                    logger.info("Login cancelled by user")
+                    loading_status.update("Login cancelled by user. Press 'q' to quit.")
+                    has_error = True
+                    return
                 except Exception as e:
-                    # Catch ANY other exception during login (network errors, etc.)
-                    error_msg = f"Unexpected login error: {e}"
-                    loading_status.update(f"❌ {error_msg}\n\nPress Ctrl+Q to quit")
-                    # Print to stderr for visibility
-                    print(f"\n{'='*70}", file=sys.stderr, flush=True)
-                    print("UNEXPECTED LOGIN ERROR", file=sys.stderr, flush=True)
-                    print(f"{'='*70}", file=sys.stderr, flush=True)
-                    print(f"Error: {e}", file=sys.stderr, flush=True)
-                    print(f"Type: {type(e).__name__}", file=sys.stderr, flush=True)
-                    print(f"{'='*70}", file=sys.stderr, flush=True)
-                    traceback.print_exc(file=sys.stderr)
-                    print(f"{'='*70}\n", file=sys.stderr, flush=True)
+                    # All retries exhausted
+                    logger.error(f"Login failed after all retries: {e}", exc_info=True)
+                    error_msg = f"Login failed: {e}"
+                    loading_status.update(f"❌ {error_msg}\n\nCheck ~/.moneyflow/moneyflow.log for details.\n\nPress 'q' to quit")
                     has_error = True
                     return
             else:
