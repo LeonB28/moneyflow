@@ -1336,7 +1336,7 @@ class MoneyflowTUI(App):
             self.run_worker(self._recategorize(), exclusive=False)
 
     async def _bulk_recategorize_from_aggregate(self) -> None:
-        """Recategorize all transactions in selected category/group."""
+        """Recategorize all transactions in selected merchant/category/group."""
         from .screens.edit_screens import SelectCategoryScreen
         from .logging_config import get_logger
         logger = get_logger(__name__)
@@ -1356,120 +1356,59 @@ class MoneyflowTUI(App):
         row_data = self.state.current_data.row(table.cursor_row, named=True)
         logger.debug(f"row_data keys: {list(row_data.keys())}")
 
+        # Determine what field we're grouping by and get transactions
         if self.state.view_mode == ViewMode.MERCHANT:
-            merchant_name = row_data["merchant"]
-            transaction_count = row_data["count"]
-
-            # Show category selection for all transactions from this merchant
-            new_category_id = await self.push_screen(
-                SelectCategoryScreen(
-                    self.data_manager.categories,
-                    None,  # No current category (transactions may have different categories)
-                    None  # No transaction details for bulk
-                ),
-                wait_for_dismiss=True,
-            )
-
-            if new_category_id:
-                # Get all transactions for this merchant
-                filtered_df = self.state.get_filtered_df()
-                merchant_txns = self.data_manager.filter_by_merchant(filtered_df, merchant_name)
-
-                # Add edits for all transactions
-                for txn in merchant_txns.iter_rows(named=True):
-                    self.data_manager.pending_edits.append(
-                        TransactionEdit(
-                            transaction_id=txn["id"],
-                            field="category",
-                            old_value=txn["category_id"],
-                            new_value=new_category_id,
-                            timestamp=datetime.now(),
-                        )
-                    )
-
-                new_cat_name = self.data_manager.categories.get(new_category_id, {}).get("name", "Unknown")
-                self.notify(
-                    f"Queued {len(merchant_txns)} transactions from {merchant_name} to recategorize to {new_cat_name}. Press w to commit.",
-                    timeout=3
-                )
-                self.refresh_view()
+            field_name = row_data["merchant"]
+            current_category_id = None  # Merchants can have mixed categories
+            filter_func = self.data_manager.filter_by_merchant
         elif self.state.view_mode == ViewMode.CATEGORY:
-            category_name = row_data["category"]
-            category_id = row_data["category_id"]
-            transaction_count = row_data["count"]
-            total_amount = row_data["total"]
-
-            # Show category selection
-            new_category_id = await self.push_screen(
-                SelectCategoryScreen(
-                    self.data_manager.categories,
-                    category_id,
-                    None  # No transaction details for bulk
-                ),
-                wait_for_dismiss=True,
-            )
-
-            if new_category_id and new_category_id != category_id:
-                # Get all transactions for this category
-                filtered_df = self.state.get_filtered_df()
-                category_txns = self.data_manager.filter_by_category(filtered_df, category_name)
-
-                # Add edits for all transactions
-                for txn in category_txns.iter_rows(named=True):
-                    self.data_manager.pending_edits.append(
-                        TransactionEdit(
-                            transaction_id=txn["id"],
-                            field="category",
-                            old_value=category_id,
-                            new_value=new_category_id,
-                            timestamp=datetime.now(),
-                        )
-                    )
-
-                new_cat_name = self.data_manager.categories.get(new_category_id, {}).get("name", "Unknown")
-                self.notify(
-                    f"Queued {len(category_txns)} transactions to recategorize: {category_name} → {new_cat_name}. Press w to commit.",
-                    timeout=3
-                )
-                self.refresh_view()
+            field_name = row_data["category"]
+            current_category_id = row_data["category_id"]
+            filter_func = self.data_manager.filter_by_category
         elif self.state.view_mode == ViewMode.GROUP:
-            group_name = row_data["group"]
-            transaction_count = row_data["count"]
+            field_name = row_data["group"]
+            current_category_id = None  # Groups can have mixed categories
+            filter_func = self.data_manager.filter_by_group
+        else:
+            return
 
-            # For group view, show category picker
-            # (groups don't have IDs, so we pick a category from that group)
-            new_category_id = await self.push_screen(
-                SelectCategoryScreen(
-                    self.data_manager.categories,
-                    None,  # No current category
-                    None  # No transaction details
-                ),
-                wait_for_dismiss=True,
+        # Show category selection modal
+        new_category_id = await self.push_screen(
+            SelectCategoryScreen(
+                self.data_manager.categories,
+                current_category_id,
+                None  # No transaction details for bulk operations
+            ),
+            wait_for_dismiss=True,
+        )
+
+        # If user cancelled or selected same category, do nothing
+        if not new_category_id or (current_category_id and new_category_id == current_category_id):
+            return
+
+        # Get all transactions for this merchant/category/group
+        filtered_df = self.state.get_filtered_df()
+        matching_txns = filter_func(filtered_df, field_name)
+
+        # Add edits for all matching transactions
+        for txn in matching_txns.iter_rows(named=True):
+            self.data_manager.pending_edits.append(
+                TransactionEdit(
+                    transaction_id=txn["id"],
+                    field="category",
+                    old_value=txn["category_id"],
+                    new_value=new_category_id,
+                    timestamp=datetime.now(),
+                )
             )
 
-            if new_category_id:
-                # Get all transactions for this group
-                filtered_df = self.state.get_filtered_df()
-                group_txns = self.data_manager.filter_by_group(filtered_df, group_name)
-
-                # Add edits for all transactions
-                for txn in group_txns.iter_rows(named=True):
-                    self.data_manager.pending_edits.append(
-                        TransactionEdit(
-                            transaction_id=txn["id"],
-                            field="category",
-                            old_value=txn["category_id"],
-                            new_value=new_category_id,
-                            timestamp=datetime.now(),
-                        )
-                    )
-
-                new_cat_name = self.data_manager.categories.get(new_category_id, {}).get("name", "Unknown")
-                self.notify(
-                    f"Queued {len(group_txns)} transactions from {group_name} to recategorize to {new_cat_name}. Press w to commit.",
-                    timeout=3
-                )
-                self.refresh_view()
+        # Show success notification
+        new_cat_name = self.data_manager.categories.get(new_category_id, {}).get("name", "Unknown")
+        self.notify(
+            f"Queued {len(matching_txns)} transactions from {field_name} to recategorize to {new_cat_name}. Press w to commit.",
+            timeout=3
+        )
+        self.refresh_view()
 
     async def _recategorize(self) -> None:
         """Show category selection and apply (for detail view)."""
