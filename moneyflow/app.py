@@ -404,17 +404,9 @@ class MoneyflowTUI(App):
                 error_str = str(e).lower()
                 # Check if it's a stale session
                 if "401" in error_str or "unauthorized" in error_str:
-                    logger.debug("Detected stale session, deleting and retrying with fresh login")
-                    self.mm.delete_session()
-                    # Retry with fresh login
-                    await self.mm.login(
-                        email=creds["email"],
-                        password=creds["password"],
-                        use_saved_session=False,  # Force fresh login
-                        save_session=True,
-                        mfa_secret_key=creds["mfa_secret"],
-                    )
-                    logger.debug("Fresh login succeeded!")
+                    logger.debug("Detected stale session, performing fresh login")
+                    # Use centralized fresh login logic
+                    await self._do_fresh_login(creds)
                     return True
                 # Not a session issue, re-raise for retry logic
                 raise
@@ -552,18 +544,9 @@ class MoneyflowTUI(App):
                 if ("401" in error_str or "unauthorized" in error_str) and creds:
                     logger.info("Session expired during fetch, attempting fresh login...")
                     loading_status.update("🔄 Session expired. Re-authenticating...")
-                    # Delete stale session and force fresh login
+                    # Use centralized fresh login logic
                     try:
-                        self.mm.delete_session()
-                        logger.info("Deleted stale session, attempting fresh login")
-                        await self.mm.login(
-                            email=creds["email"],
-                            password=creds["password"],
-                            use_saved_session=False,  # Force fresh login
-                            save_session=True,
-                            mfa_secret_key=creds["mfa_secret"],
-                        )
-                        logger.info("Fresh login succeeded, retrying fetch")
+                        await self._do_fresh_login(creds)
                         loading_status.update("✅ Re-authenticated. Retrying fetch...")
                         result = await self.data_manager.fetch_all_data(
                             start_date=start_date, end_date=end_date, progress_callback=update_progress
@@ -1556,6 +1539,34 @@ class MoneyflowTUI(App):
             if cursor_position >= 0 and cursor_position < table.row_count:
                 table.move_cursor(row=cursor_position)
 
+    async def _do_fresh_login(self, creds):
+        """
+        Delete stale session and perform fresh login.
+
+        This is the common pattern used in 3 places (login, fetch, commit).
+        Extracted to eliminate duplication while preserving the exact logic
+        that evolved through multiple bug fixes.
+
+        Args:
+            creds: Credentials dict with email, password, mfa_secret
+
+        Raises:
+            Exception: If login fails
+        """
+        from .logging_config import get_logger
+        logger = get_logger(__name__)
+
+        logger.info("Deleting stale session and performing fresh login")
+        self.mm.delete_session()
+        await self.mm.login(
+            email=creds["email"],
+            password=creds["password"],
+            use_saved_session=False,  # Force fresh login
+            save_session=True,
+            mfa_secret_key=creds["mfa_secret"]
+        )
+        logger.info("Fresh login succeeded")
+
     async def _refresh_session(self) -> bool:
         """Refresh expired session by re-authenticating with stored credentials."""
         from .logging_config import get_logger
@@ -1566,18 +1577,10 @@ class MoneyflowTUI(App):
             return False
 
         try:
-            logger.info("Session expired - deleting stale session and re-authenticating")
+            logger.info("Session expired - attempting to refresh")
             self._notify(NotificationHelper.session_refreshing())
-            # CRITICAL: Delete stale session first (same as fetch_operation)
-            self.mm.delete_session()
-            logger.info("Deleted stale session, attempting fresh login")
-            await self.mm.login(
-                email=self.stored_credentials["email"],
-                password=self.stored_credentials["password"],
-                use_saved_session=False,  # Force fresh login
-                save_session=True,
-                mfa_secret_key=self.stored_credentials["mfa_secret"],
-            )
+            # Use centralized fresh login logic
+            await self._do_fresh_login(self.stored_credentials)
             logger.info("Session refresh succeeded")
             self._notify(NotificationHelper.session_refresh_success())
             return True
