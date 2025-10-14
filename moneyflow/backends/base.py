@@ -2,7 +2,7 @@
 Abstract base class for finance backend implementations.
 
 This defines the interface that all finance backends (Monarch, YNAB, etc.) must implement
-to be compatible with the PUI.
+to be compatible with moneyflow.
 """
 
 from abc import ABC, abstractmethod
@@ -13,7 +13,7 @@ class FinanceBackend(ABC):
     """
     Abstract base class for finance backend implementations.
 
-    All backends must implement these methods to be compatible with the PUI.
+    All backends must implement these methods to be compatible with moneyflow.
     This allows the UI layer to work with any supported finance platform.
     """
 

@@ -1,7 +1,7 @@
 """
 Finance backend abstraction layer.
 
-This module provides a pluggable backend system that allows the PUI to work
+This module provides a pluggable backend system that allows moneyflow to work
 with different finance platforms (Monarch Money, YNAB, etc.) through a
 common interface.
 

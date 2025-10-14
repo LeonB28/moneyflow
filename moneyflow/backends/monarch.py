@@ -14,7 +14,7 @@ class MonarchBackend(FinanceBackend):
     Monarch Money backend implementation.
 
     This wraps the MonarchMoney GraphQL client to provide a standardized
-    FinanceBackend interface for the PUI.
+    FinanceBackend interface for moneyflow.
     """
 
     def __init__(self):

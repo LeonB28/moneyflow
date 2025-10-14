@@ -161,9 +161,9 @@ class MoneyflowTUI(App):
         self.mm = None
         if demo_mode:
             self.mm = DemoBackend(year=start_year or 2025)
-            self.title = "Finance PUI [DEMO MODE]"
+            self.title = "moneyflow [DEMO MODE]"
         else:
-            self.title = "Finance PUI"
+            self.title = "moneyflow"
         self.data_manager: Optional[DataManager] = None
         self.state = AppState()
         self.loading = False
