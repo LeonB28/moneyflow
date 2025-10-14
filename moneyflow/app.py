@@ -1670,20 +1670,23 @@ class MoneyflowTUI(App):
             return False
 
         try:
-            logger.debug("Session expired - attempting to re-authenticate")
+            logger.info("Session expired - deleting stale session and re-authenticating")
             self._notify(NotificationHelper.session_refreshing())
+            # CRITICAL: Delete stale session first (same as fetch_operation)
+            self.mm.delete_session()
+            logger.info("Deleted stale session, attempting fresh login")
             await self.mm.login(
                 email=self.stored_credentials["email"],
                 password=self.stored_credentials["password"],
-                use_saved_session=False,
+                use_saved_session=False,  # Force fresh login
                 save_session=True,
                 mfa_secret_key=self.stored_credentials["mfa_secret"],
             )
-            logger.debug("Session refresh succeeded")
+            logger.info("Session refresh succeeded")
             self._notify(NotificationHelper.session_refresh_success())
             return True
         except Exception as e:
-            logger.error(f"Failed to refresh session: {e}", exc_info=True)
+            logger.error(f"Session refresh failed: {e}", exc_info=True)
             self._notify(NotificationHelper.session_refresh_failed(str(e)))
             return False
 
