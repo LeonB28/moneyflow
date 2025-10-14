@@ -43,6 +43,8 @@ from .view_presenter import ViewPresenter, AggregationField
 from .time_navigator import TimeNavigator
 from .commit_orchestrator import CommitOrchestrator
 from .logging_config import setup_logging
+from .notification_helper import NotificationHelper
+from .modal_helper import ModalHelper
 
 
 class MoneyflowTUI(App):
@@ -894,7 +896,8 @@ class MoneyflowTUI(App):
         view_name = self.state.cycle_grouping()
         if view_name:
             self.refresh_view()
-            self.notify(f"Viewing: {view_name}", timeout=1)
+            msg, severity, timeout = NotificationHelper.view_changed(view_name)
+            self.notify(msg, severity=severity, timeout=timeout)
 
     def action_view_ungrouped(self) -> None:
         """Switch to ungrouped transactions view (all transactions in reverse chronological order)."""
@@ -907,7 +910,8 @@ class MoneyflowTUI(App):
         self.state.sort_by = SortMode.DATE
         self.state.sort_direction = SortDirection.DESC
         self.refresh_view()
-        self.notify("Viewing all transactions (ungrouped)", timeout=1)
+        msg, severity, timeout = NotificationHelper.all_transactions_view()
+        self.notify(msg, severity=severity, timeout=timeout)
 
     def action_find_duplicates(self) -> None:
         """Find and display duplicate transactions."""
@@ -1226,9 +1230,8 @@ class MoneyflowTUI(App):
                         )
                     )
 
-                self.notify(
-                    f"Queued {len(merchant_txns)} edits. Press w to review and commit.", timeout=3
-                )
+                msg, severity, timeout = NotificationHelper.edit_queued(len(merchant_txns))
+                self.notify(msg, severity=severity, timeout=timeout)
                 self.refresh_view()
         else:
             self.notify("Edit merchant only works from Merchant view", timeout=2)
@@ -1315,7 +1318,8 @@ class MoneyflowTUI(App):
                     )
                 )
 
-                self.notify("Merchant changed. Press w to review and commit.", timeout=2)
+                msg, severity, timeout = NotificationHelper.merchant_changed()
+                self.notify(msg, severity=severity, timeout=timeout)
                 # Refresh to show * marker, stays in detail view since view_mode unchanged
                 self.refresh_view()
                 # Restore cursor position
@@ -1673,7 +1677,8 @@ class MoneyflowTUI(App):
 
         try:
             logger.info("Session expired - attempting to re-authenticate")
-            self.notify("Session expired, re-authenticating...", timeout=2)
+            msg, severity, timeout = NotificationHelper.session_refreshing()
+            self.notify(msg, severity=severity, timeout=timeout)
             await self.mm.login(
                 email=self.stored_credentials["email"],
                 password=self.stored_credentials["password"],
@@ -1682,11 +1687,13 @@ class MoneyflowTUI(App):
                 mfa_secret_key=self.stored_credentials["mfa_secret"],
             )
             logger.info("Session refresh succeeded")
-            self.notify("Session refreshed successfully", severity="information", timeout=2)
+            msg, severity, timeout = NotificationHelper.session_refresh_success()
+            self.notify(msg, severity=severity, timeout=timeout)
             return True
         except Exception as e:
             logger.error(f"Failed to refresh session: {e}", exc_info=True)
-            self.notify(f"Failed to refresh session: {e}", severity="error", timeout=5)
+            msg, severity, timeout = NotificationHelper.session_refresh_failed(str(e))
+            self.notify(msg, severity=severity, timeout=timeout)
             return False
 
     async def _commit_with_retry(self, edits):
@@ -1713,11 +1720,8 @@ class MoneyflowTUI(App):
 
             Called AFTER the first failure and BEFORE waiting to retry.
             """
-            self.notify(
-                f"⚠ Retrying commit in {wait_seconds:.0f}s (attempt {attempt + 1}/5). Press Ctrl-C to abort.",
-                severity="warning",
-                timeout=int(wait_seconds)
-            )
+            msg, severity, timeout = NotificationHelper.retry_waiting(attempt, wait_seconds)
+            self.notify(msg, severity=severity, timeout=timeout)
 
         async def commit_operation():
             """Wrapper to commit and re-authenticate if needed."""
@@ -1729,7 +1733,8 @@ class MoneyflowTUI(App):
                 if "401" in error_msg or "unauthorized" in error_msg or "token" in error_msg:
                     logger.info(f"Commit failed with auth error, attempting session refresh")
                     # Show clear message to user
-                    self.notify("Session expired during commit. Refreshing...", timeout=2)
+                    msg, severity, timeout = NotificationHelper.session_expired()
+                    self.notify(msg, severity=severity, timeout=timeout)
                     # Try to refresh session once
                     if await self._refresh_session():
                         logger.info("Session refreshed, retrying commit immediately")
@@ -1755,7 +1760,8 @@ class MoneyflowTUI(App):
         except RetryAborted:
             # User pressed Ctrl-C
             logger.info("Commit retry cancelled by user")
-            self.notify("Commit cancelled by user", severity="warning", timeout=3)
+            msg, severity, timeout = NotificationHelper.retry_cancelled()
+            self.notify(msg, severity=severity, timeout=timeout)
             raise
         except Exception as e:
             # All retries exhausted
@@ -1769,7 +1775,8 @@ class MoneyflowTUI(App):
 
         count = self.data_manager.get_stats()["pending_changes"]
         if count == 0:
-            self.notify("No pending changes to commit", timeout=2)
+            msg, severity, timeout = NotificationHelper.no_pending_changes()
+            self.notify(msg, severity=severity, timeout=timeout)
             return
 
         # Show review screen
@@ -1790,24 +1797,19 @@ class MoneyflowTUI(App):
 
         if should_commit:
             count = len(self.data_manager.pending_edits)
-            self.notify(f"Committing {count} change(s) to backend...", timeout=2)
+            msg, severity, timeout = NotificationHelper.commit_starting(count)
+            self.notify(msg, severity=severity, timeout=timeout)
 
             try:
                 success_count, failure_count = await self._commit_with_retry(
                     self.data_manager.pending_edits
                 )
                 if failure_count > 0:
-                    self.notify(
-                        f"✅ Saved {success_count}, ❌ {failure_count} failed. Check terminal (run with --dev to see errors)",
-                        severity="warning",
-                        timeout=8,
-                    )
+                    msg, severity, timeout = NotificationHelper.commit_partial(success_count, failure_count)
+                    self.notify(msg, severity=severity, timeout=timeout)
                 else:
-                    self.notify(
-                        f"✅ Committed {success_count} change(s) successfully!",
-                        severity="information",
-                        timeout=3,
-                    )
+                    msg, severity, timeout = NotificationHelper.commit_success(success_count)
+                    self.notify(msg, severity=severity, timeout=timeout)
 
                 # Apply edits to local DataFrames for instant UI update
                 # Use CommitOrchestrator to apply all edits (fully tested)
@@ -1848,7 +1850,8 @@ class MoneyflowTUI(App):
                 self.state.restore_view_state(saved_state)
                 self.refresh_view()
             except Exception as e:
-                self.notify(f"❌ Error committing: {e}", severity="error", timeout=5)
+                msg, severity, timeout = NotificationHelper.commit_error(str(e))
+                self.notify(msg, severity=severity, timeout=timeout)
                 # Restore view state even on error
                 self.state.restore_view_state(saved_state)
                 self.refresh_view()
