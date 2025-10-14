@@ -102,7 +102,7 @@ class MoneyflowApp(App):
         Binding("D", "find_duplicates", "Duplicates", show=True, key_display="D"),
         # Hidden direct access bindings (still available in aggregate views, not shown in footer)
         # Note: 'm' conflicts with edit_merchant in detail view, so view_merchants removed
-        Binding("c", "view_categories", "Categories", show=False),
+        # Note: 'c' removed - conflicts with commit confirmation in review screen
         Binding("A", "view_accounts", "Accounts", show=False, key_display="A"),
         # Time navigation
         Binding("y", "this_year", "Year", show=True),
@@ -1504,9 +1504,12 @@ class MoneyflowApp(App):
     async def _review_and_commit(self) -> None:
         """Show review screen and commit if confirmed."""
         from .screens.review_screen import ReviewChangesScreen
+        from .logging_config import get_logger
+        logger = get_logger(__name__)
 
         # Save view state before showing review screen
         saved_state = self.state.save_view_state()
+        logger.debug(f"Saved view state: view_mode={saved_state['view_mode']}, selected_category={saved_state.get('selected_category')}")
 
         # Show review screen with category names for readable display
         should_commit = await self.push_screen(
@@ -1515,6 +1518,13 @@ class MoneyflowApp(App):
         )
 
         if should_commit:
+            # Restore view IMMEDIATELY after review screen dismisses to avoid flash
+            # User should see their original view while commits are happening
+            logger.debug(f"Before restore: view_mode={self.state.view_mode}")
+            self.state.restore_view_state(saved_state)
+            logger.debug(f"After restore: view_mode={self.state.view_mode}, selected_category={self.state.selected_category}")
+            self.refresh_view(force_rebuild=False)
+
             count = len(self.data_manager.pending_edits)
             self._notify(NotificationHelper.commit_starting(count))
 
@@ -1530,7 +1540,7 @@ class MoneyflowApp(App):
                     self._notify(NotificationHelper.commit_success(success_count))
 
                 # Delegate to controller for data integrity logic
-                # Controller handles: apply edits if success, preserve state if failure
+                # Controller handles: apply edits if success, keep current view if failure
                 cache_filters = (
                     {"year": self.cache_year_filter, "since": self.cache_since_filter}
                     if self.cache_manager
@@ -1546,8 +1556,7 @@ class MoneyflowApp(App):
                 )
             except Exception as e:
                 self._notify(NotificationHelper.commit_error(str(e)))
-                # Restore view state even on error
-                self.state.restore_view_state(saved_state)
+                # View already restored above, just refresh to show current state
                 self.refresh_view(force_rebuild=False)
         else:
             # User pressed Escape - restore view state and refresh to go back to where they were

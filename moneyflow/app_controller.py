@@ -706,8 +706,10 @@ class AppController:
             logger.warning(f"Commit had {failure_count} failures - NOT applying edits locally")
             # Some or all commits failed - DO NOT apply to local state
             # This prevents data corruption where UI shows changes that didn't save
-            self.state.restore_view_state(saved_state)
-            self.refresh_view(force_rebuild=False)  # Smooth update, same view
+            # Note: View already restored in app.py before commit started
+            # Just refresh to ensure UI shows current (unchanged) state
+            logger.debug(f"Failure path - refreshing view (state already restored in app.py)")
+            self.refresh_view(force_rebuild=False)
         else:
             logger.info("All commits succeeded - applying edits locally")
             # All commits succeeded - safe to apply to local state
@@ -749,6 +751,8 @@ class AppController:
                     # Cache update failed - not critical, just log
                     logger.warning(f"Cache update failed: {e}", exc_info=True)
 
-            # Restore view state and refresh to show updated data (smooth, no flash)
-            self.state.restore_view_state(saved_state)
+            # Refresh to show updated data (smooth update)
+            # Note: View already restored in app.py before commit started
+            logger.debug(f"Success path - refreshing to show updated data. Current view_mode={self.state.view_mode}, selected_category={self.state.selected_category}")
             self.refresh_view(force_rebuild=False)
+            logger.debug(f"After refresh: view_mode={self.state.view_mode}")

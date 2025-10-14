@@ -490,20 +490,21 @@ class TestCommitHandling:
         # VERIFY: force_rebuild=False (no flash)
         mock_view.assert_force_rebuild(False)
 
-    async def test_commit_failure_restores_view_state(self, controller, mock_view):
-        """Failed commit should restore saved view state."""
+    async def test_commit_failure_refreshes_view(self, controller, mock_view):
+        """Failed commit should refresh view to show unchanged data."""
         from moneyflow.state import TransactionEdit
 
-        # Set up specific view state
+        # Set up initial state
         controller.state.view_mode = ViewMode.DETAIL
-        controller.state.sort_by = SortMode.AMOUNT
+        initial_merchant = controller.data_manager.df.filter(pl.col("id") == "txn_1")["merchant"][0]
+
+        # Create edits (that will fail)
+        edits = [TransactionEdit("txn_1", "merchant", initial_merchant, "NewMerchant", datetime.now())]
+        controller.data_manager.pending_edits = edits.copy()
+
         saved_state = controller.state.save_view_state()
 
-        # Change state after saving
-        controller.state.sort_by = SortMode.DATE
-
-        edits = [TransactionEdit("txn_1", "merchant", "Old", "New", datetime.now())]
-
+        # Simulate failure
         controller.handle_commit_result(
             success_count=0,
             failure_count=1,
@@ -511,8 +512,16 @@ class TestCommitHandling:
             saved_state=saved_state
         )
 
-        # VERIFY: State restored
-        assert controller.state.sort_by == SortMode.AMOUNT, "State should be restored"
+        # VERIFY: DataFrame unchanged (edits NOT applied)
+        current_merchant = controller.data_manager.df.filter(pl.col("id") == "txn_1")["merchant"][0]
+        assert current_merchant == initial_merchant, "Edits should NOT be applied on failure"
+
+        # VERIFY: Pending edits preserved
+        assert len(controller.data_manager.pending_edits) == 1, "Pending edits should be preserved"
+
+        # VERIFY: View refreshed (with force_rebuild=False)
+        assert len(mock_view.table_updates) > 0, "View should be refreshed"
+        mock_view.assert_force_rebuild(False)
 
 
 class TestEditQueueing:

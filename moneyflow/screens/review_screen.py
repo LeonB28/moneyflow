@@ -135,6 +135,8 @@ class ReviewChangesScreen(Screen):
     def on_key(self, event: Key) -> None:
         """Handle keyboard shortcuts."""
         if event.key == "escape":
+            event.stop()  # Prevent event from bubbling to parent
             self.dismiss(False)  # Cancel
         elif event.key == "c":
+            event.stop()  # Prevent 'c' from triggering action_view_categories
             self.dismiss(True)  # Commit

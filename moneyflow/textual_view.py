@@ -40,12 +40,18 @@ class TextualViewPresenter(IViewPresenter):
             for col in columns:
                 table.add_column(col["label"], key=col["key"], width=col["width"])
         else:
-            # Smooth update - keep columns, clear rows only
-            table.clear()
-            # Add columns only if not already present (edge case)
-            if table.column_count == 0:
+            # Smooth update - preserve columns if they match, rebuild if they don't
+            expected_keys = [col["key"] for col in columns]
+            current_keys = list(table.columns.keys())
+
+            if current_keys != expected_keys:
+                # Column mismatch - need full rebuild
+                table.clear(columns=True)
                 for col in columns:
                     table.add_column(col["label"], key=col["key"], width=col["width"])
+            else:
+                # Columns match - just clear rows (smooth, no flash)
+                table.clear(columns=False)
 
         # Add rows
         for row in rows:

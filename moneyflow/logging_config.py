@@ -36,7 +36,7 @@ def setup_logging(console_output: bool = False):
         handlers.append(logging.StreamHandler())
 
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=handlers,
         force=True,  # Override any existing config
