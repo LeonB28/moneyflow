@@ -28,10 +28,7 @@ class TextualViewPresenter(IViewPresenter):
         self.app = app
 
     def update_table(
-        self,
-        columns: List[Dict[str, Any]],
-        rows: List[tuple],
-        force_rebuild: bool = True
+        self, columns: List[Dict[str, Any]], rows: List[tuple], force_rebuild: bool = True
     ) -> None:
         """Update the main data table."""
         table = self.app.query_one("#data-table", DataTable)
@@ -55,10 +52,7 @@ class TextualViewPresenter(IViewPresenter):
             table.add_row(*row)
 
     def show_notification(
-        self,
-        message: str,
-        severity: NotificationSeverity = "information",
-        timeout: int = 3
+        self, message: str, severity: NotificationSeverity = "information", timeout: int = 3
     ) -> None:
         """Show a notification using Textual's notify system."""
         self.app.notify(message, severity=severity, timeout=timeout)

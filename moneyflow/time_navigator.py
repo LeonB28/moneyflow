@@ -233,9 +233,7 @@ class TimeNavigator:
         else:
             # Navigate to previous month
             prev_month_start = start_date.replace(day=1) - relativedelta(months=1)
-            return TimeNavigator.get_month_range(
-                prev_month_start.year, prev_month_start.month
-            )
+            return TimeNavigator.get_month_range(prev_month_start.year, prev_month_start.month)
 
     @staticmethod
     def next_period(start_date: date, end_date: date) -> DateRange:
@@ -273,9 +271,7 @@ class TimeNavigator:
         else:
             # Navigate to next month
             next_month_start = start_date.replace(day=1) + relativedelta(months=1)
-            return TimeNavigator.get_month_range(
-                next_month_start.year, next_month_start.month
-            )
+            return TimeNavigator.get_month_range(next_month_start.year, next_month_start.month)
 
     @staticmethod
     def get_month_name(month: int) -> str:

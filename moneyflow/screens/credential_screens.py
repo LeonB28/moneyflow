@@ -559,7 +559,10 @@ class FilterScreen(ModalScreen):
         with Container(id="filter-dialog"):
             yield Label("🔍 Filter Options", id="filter-title")
 
-            yield Static("h=Toggle hidden | t=Toggle transfers | Enter=Apply | Esc=Cancel", id="filter-instructions")
+            yield Static(
+                "h=Toggle hidden | t=Toggle transfers | Enter=Apply | Esc=Cancel",
+                id="filter-instructions",
+            )
 
             yield Checkbox(
                 "Show hidden from reports transactions (H)",

@@ -176,9 +176,7 @@ class CommitOrchestrator:
             ValueError: If edit.field is unknown
         """
         if edit.field == "merchant":
-            return CommitOrchestrator.apply_merchant_edit(
-                df, edit.transaction_id, edit.new_value
-            )
+            return CommitOrchestrator.apply_merchant_edit(df, edit.transaction_id, edit.new_value)
         elif edit.field == "category":
             # Lookup category name
             cat_name = categories.get(edit.new_value, {}).get("name", "Unknown")

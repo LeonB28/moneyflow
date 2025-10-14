@@ -2849,10 +2849,15 @@ class MonarchMoney(object):
             if mfa_secret_key:
                 data["totp"] = oathtool.generate_otp(mfa_secret_key)
 
-            print(f"[DEBUG] Attempting login to {MonarchMoneyEndpoints.getLoginEndpoint()}", file=sys.stderr)
+            print(
+                f"[DEBUG] Attempting login to {MonarchMoneyEndpoints.getLoginEndpoint()}",
+                file=sys.stderr,
+            )
 
             async with ClientSession(headers=self._headers) as session:
-                async with session.post(MonarchMoneyEndpoints.getLoginEndpoint(), json=data) as resp:
+                async with session.post(
+                    MonarchMoneyEndpoints.getLoginEndpoint(), json=data
+                ) as resp:
                     print(f"[DEBUG] Login response status: {resp.status}", file=sys.stderr)
 
                     if resp.status == 403:
@@ -2878,9 +2883,12 @@ class MonarchMoney(object):
         except Exception as e:
             # Wrap any other exception with context
             import traceback
+
             print(f"\n[DEBUG] Exception during _login_user:", file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
-            raise LoginFailedException(f"Unexpected error during login: {type(e).__name__}: {e}") from e
+            raise LoginFailedException(
+                f"Unexpected error during login: {type(e).__name__}: {e}"
+            ) from e
 
     async def _multi_factor_authenticate(self, email: str, password: str, code: str) -> None:
         """

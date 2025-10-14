@@ -34,12 +34,9 @@ CATEGORY_GROUPS = {
         "Business Utilities & Communication",
         "Office Supplies",
         "Office Supplies & Expenses",
-        "Postage & Shipping"
+        "Postage & Shipping",
     ],
-    "Cash & ATM": [
-        "Cash & ATM",
-        "ATM"
-    ],
+    "Cash & ATM": ["Cash & ATM", "ATM"],
     "Food & Dining": [
         "Restaurants & Bars",
         "Coffee Shops",
@@ -57,7 +54,7 @@ CATEGORY_GROUPS = {
         "Public Transit",
         "Luggage",
         "Travel Services",
-        "Travel & Vacation"
+        "Travel & Vacation",
     ],
     "Automotive": [
         "Gas",
@@ -65,15 +62,15 @@ CATEGORY_GROUPS = {
         "Auto Payment",
         "Auto Maintenance",
     ],
-    "Services": ["Internet & Cable", "Streaming", "Laundry & Dry Cleaning", "Home Services", "Software", "Child Care"],
-    "Housing": [
-        "Gas & Electric",
-        "Mortgage",
-        "Rent",
-        "Home Improvement",
-        "Water",
-        "Garbage"
+    "Services": [
+        "Internet & Cable",
+        "Streaming",
+        "Laundry & Dry Cleaning",
+        "Home Services",
+        "Software",
+        "Child Care",
     ],
+    "Housing": ["Gas & Electric", "Mortgage", "Rent", "Home Improvement", "Water", "Garbage"],
     "Shopping": [
         "Shopping",
         "Clothing",
@@ -85,14 +82,10 @@ CATEGORY_GROUPS = {
         "Video Games",
         "Hobbies",
         "Books",
-        "Membership"
+        "Membership",
     ],
-    "Entertainment": [
-        "Entertainment & Recreation"
-    ],
-    "Education": [
-        "Education"
-    ],
+    "Entertainment": ["Entertainment & Recreation"],
+    "Education": ["Education"],
     "Health & Fitness": [
         "Medical",
         "Dentist",
@@ -103,7 +96,7 @@ CATEGORY_GROUPS = {
         "Hearing",
         "Supplements",
         "Workout Classes",
-        "Health & Wellness"
+        "Health & Wellness",
     ],
     "Gifts & Charity": ["Gifts", "Charity"],
     "Bills & Utilities": ["Phone", "Insurance"],
@@ -112,7 +105,7 @@ CATEGORY_GROUPS = {
         "Financial Fees",
         "Loan Repayment",
         "Student Loans",
-        "Taxes"
+        "Taxes",
     ],
     "Personal Care": ["Chiropractic & Massage", "Hair", "Personal Care"],
     "Income": ["Paychecks", "Interest", "Business Income", "Other Income"],
@@ -408,7 +401,7 @@ class DataManager:
         df: pl.DataFrame,
         group_field: str,
         include_id: bool = True,
-        include_group: bool = False
+        include_group: bool = False,
     ) -> pl.DataFrame:
         """
         Generic aggregation method to eliminate duplication.
@@ -591,7 +584,9 @@ class DataManager:
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 failure_count += 1
-                logger.error(f"Transaction update {i+1}/{len(results)} FAILED: {result}", exc_info=result)
+                logger.error(
+                    f"Transaction update {i + 1}/{len(results)} FAILED: {result}", exc_info=result
+                )
 
                 # Check if it's a 401/auth error
                 error_str = str(result).lower()

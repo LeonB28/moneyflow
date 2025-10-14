@@ -3,7 +3,7 @@ Main moneyflow TUI Application.
 
 A fast, keyboard-driven terminal interface for personal finance management.
 
-This is the main application module containing the MoneyflowTUI class which:
+This is the main application module containing the MoneyflowApp class which:
 - Coordinates all UI components (screens, widgets, data table)
 - Handles keyboard bindings and user actions
 - Manages application state and data loading
@@ -49,7 +49,7 @@ from .app_controller import AppController
 from .textual_view import TextualViewPresenter
 
 
-class MoneyflowTUI(App):
+class MoneyflowApp(App):
     """
     Main application class for the moneyflow terminal UI.
 
@@ -108,15 +108,6 @@ class MoneyflowTUI(App):
         Binding("y", "this_year", "Year", show=True),
         Binding("t", "this_month", "Month", show=True),
         Binding("a", "all_time", "All", show=True),
-        Binding("1", "select_month_1", "Jan", show=False),
-        Binding("2", "select_month_2", "Feb", show=False),
-        Binding("3", "select_month_3", "Mar", show=False),
-        Binding("4", "select_month_4", "Apr", show=False),
-        Binding("5", "select_month_5", "May", show=False),
-        Binding("6", "select_month_6", "Jun", show=False),
-        Binding("7", "select_month_7", "Jul", show=False),
-        Binding("8", "select_month_8", "Aug", show=False),
-        Binding("9", "select_month_9", "Sep", show=False),
         # Sorting
         Binding("s", "toggle_sort_field", "Sort", show=True),
         Binding("v", "reverse_sort", "↕ Reverse", show=True),
@@ -252,6 +243,7 @@ class MoneyflowTUI(App):
         # Initialize cache manager only if user requested caching
         if self.cache_path is not None:
             from .cache_manager import CacheManager
+
             self.cache_manager = CacheManager(cache_dir=self.cache_path)
 
         # Initialize controller with view presenter pattern
@@ -317,6 +309,7 @@ class MoneyflowTUI(App):
         cred_manager = CredentialManager()
 
         from .logging_config import get_logger
+
         logger = get_logger(__name__)
         logger.debug(f"Credentials exist: {cred_manager.credentials_exist()}")
 
@@ -344,9 +337,7 @@ class MoneyflowTUI(App):
                 return result
         else:
             # No credentials - show backend selection first, then setup screen
-            backend_type = await self.push_screen(
-                BackendSelectionScreen(), wait_for_dismiss=True
-            )
+            backend_type = await self.push_screen(BackendSelectionScreen(), wait_for_dismiss=True)
             if not backend_type:
                 self.exit()
                 return None
@@ -371,6 +362,7 @@ class MoneyflowTUI(App):
         """
         from .retry_logic import retry_with_backoff, RetryAborted
         from .logging_config import get_logger
+
         logger = get_logger(__name__)
 
         backend_type = creds.get("backend_type", "monarch")
@@ -417,7 +409,7 @@ class MoneyflowTUI(App):
                 operation_name="Login to backend",
                 max_retries=5,
                 initial_wait=60.0,
-                on_retry=on_login_retry
+                on_retry=on_login_retry,
             )
             # Store credentials for automatic session refresh if needed
             self.stored_credentials = creds
@@ -433,7 +425,9 @@ class MoneyflowTUI(App):
             # All retries exhausted
             logger.error(f"Login failed after all retries: {e}", exc_info=True)
             error_msg = f"Login failed: {e}"
-            loading_status.update(f"❌ {error_msg}\n\nCheck ~/.moneyflow/moneyflow.log for details.\n\nPress 'q' to quit")
+            loading_status.update(
+                f"❌ {error_msg}\n\nCheck ~/.moneyflow/moneyflow.log for details.\n\nPress 'q' to quit"
+            )
             return False
 
     async def _check_and_load_cache(self, loading_status):
@@ -449,7 +443,9 @@ class MoneyflowTUI(App):
         if (
             self.cache_manager
             and not self.force_refresh
-            and self.cache_manager.is_cache_valid(year=self.cache_year_filter, since=self.cache_since_filter)
+            and self.cache_manager.is_cache_valid(
+                year=self.cache_year_filter, since=self.cache_since_filter
+            )
         ):
             # Cache is valid - show prompt
             cache_info = self.cache_manager.get_cache_info()
@@ -497,6 +493,7 @@ class MoneyflowTUI(App):
         """
         from .retry_logic import retry_with_backoff, RetryAborted
         from .logging_config import get_logger
+
         logger = get_logger(__name__)
 
         # Update status based on date range
@@ -505,15 +502,11 @@ class MoneyflowTUI(App):
                 f"📊 Fetching transactions from {self.custom_start_date} onwards..."
             )
         elif self.start_year:
-            loading_status.update(
-                f"📊 Fetching transactions from {self.start_year} onwards..."
-            )
+            loading_status.update(f"📊 Fetching transactions from {self.start_year} onwards...")
         else:
             loading_status.update("📊 Fetching ALL transaction data from backend...")
 
-        loading_status.update(
-            "⏳ This may take a minute for large accounts (10k+ transactions)..."
-        )
+        loading_status.update("⏳ This may take a minute for large accounts (10k+ transactions)...")
         loading_status.update(
             "💡 TIP: This is a one-time download. Future operations will be instant!"
         )
@@ -549,7 +542,9 @@ class MoneyflowTUI(App):
                         await self._do_fresh_login(creds)
                         loading_status.update("✅ Re-authenticated. Retrying fetch...")
                         result = await self.data_manager.fetch_all_data(
-                            start_date=start_date, end_date=end_date, progress_callback=update_progress
+                            start_date=start_date,
+                            end_date=end_date,
+                            progress_callback=update_progress,
                         )
                         logger.info(f"Fetch retry succeeded - loaded {len(result[0])} transactions")
                         return result
@@ -566,7 +561,7 @@ class MoneyflowTUI(App):
                 operation_name="Fetch transaction data",
                 max_retries=5,
                 initial_wait=60.0,
-                on_retry=on_fetch_retry
+                on_retry=on_fetch_retry,
             )
 
             # Save to cache for next time (only if --cache was passed)
@@ -590,7 +585,9 @@ class MoneyflowTUI(App):
             return None
         except Exception as e:
             logger.error(f"Data fetch failed after all retries: {e}", exc_info=True)
-            loading_status.update(f"❌ Failed to load data: {e}\n\nCheck ~/.moneyflow/moneyflow.log for details.\n\nPress 'q' to quit")
+            loading_status.update(
+                f"❌ Failed to load data: {e}\n\nCheck ~/.moneyflow/moneyflow.log for details.\n\nPress 'q' to quit"
+            )
             return None
 
     async def _handle_init_error(self, error, loading_status):
@@ -601,6 +598,7 @@ class MoneyflowTUI(App):
             loading_status: Loading status widget
         """
         from .logging_config import get_logger
+
         logger = get_logger(__name__)
 
         error_str = str(error).lower()
@@ -644,6 +642,7 @@ class MoneyflowTUI(App):
         6. Error handling and cleanup
         """
         from .logging_config import get_logger
+
         logger = get_logger(__name__)
         logger.debug("initialize_data started")
         has_error = False  # Track if we encountered an error
@@ -690,7 +689,9 @@ class MoneyflowTUI(App):
             self._initialize_managers()
 
             # Step 4: Determine date range
-            start_date, end_date, self.cache_year_filter, self.cache_since_filter = self._determine_date_range()
+            start_date, end_date, self.cache_year_filter, self.cache_since_filter = (
+                self._determine_date_range()
+            )
 
             # Step 5: Check and load cache
             cached_data = await self._check_and_load_cache(loading_status)
@@ -699,7 +700,9 @@ class MoneyflowTUI(App):
                 df, categories, category_groups = cached_data
             else:
                 # Step 6: Fetch from API with retry logic
-                fetch_result = await self._fetch_data_with_retry(creds, start_date, end_date, loading_status)
+                fetch_result = await self._fetch_data_with_retry(
+                    creds, start_date, end_date, loading_status
+                )
                 if fetch_result is None:
                     has_error = True
                     return
@@ -812,42 +815,6 @@ class MoneyflowTUI(App):
         """Switch to current month view."""
         self.controller.set_timeframe_this_month()
         self.notify("Viewing: This Month", timeout=1)
-
-    def action_select_month_1(self) -> None:
-        """View January of current year."""
-        self._select_month(1, "January")
-
-    def action_select_month_2(self) -> None:
-        """View February of current year."""
-        self._select_month(2, "February")
-
-    def action_select_month_3(self) -> None:
-        """View March of current year."""
-        self._select_month(3, "March")
-
-    def action_select_month_4(self) -> None:
-        """View April of current year."""
-        self._select_month(4, "April")
-
-    def action_select_month_5(self) -> None:
-        """View May of current year."""
-        self._select_month(5, "May")
-
-    def action_select_month_6(self) -> None:
-        """View June of current year."""
-        self._select_month(6, "June")
-
-    def action_select_month_7(self) -> None:
-        """View July of current year."""
-        self._select_month(7, "July")
-
-    def action_select_month_8(self) -> None:
-        """View August of current year."""
-        self._select_month(8, "August")
-
-    def action_select_month_9(self) -> None:
-        """View September of current year."""
-        self._select_month(9, "September")
 
     def _select_month(self, month: int, month_name: str) -> None:
         """Helper to select a specific month of the current year."""
@@ -1028,7 +995,9 @@ class MoneyflowTUI(App):
                 merchant_txns = self.data_manager.filter_by_merchant(filtered_df, merchant_name)
 
                 # Use controller helper to queue edits
-                count = self.controller.queue_merchant_edits(merchant_txns, merchant_name, new_merchant)
+                count = self.controller.queue_merchant_edits(
+                    merchant_txns, merchant_name, new_merchant
+                )
 
                 self._notify(NotificationHelper.edit_queued(count))
                 self.refresh_view()
@@ -1065,13 +1034,15 @@ class MoneyflowTUI(App):
 
             if new_merchant:
                 # Use controller helper to queue edits for all selected transactions
-                selected_txns = self.state.current_data.filter(pl.col("id").is_in(list(self.state.selected_ids)))
-                count = self.controller.queue_merchant_edits(selected_txns, current_merchant, new_merchant)
+                selected_txns = self.state.current_data.filter(
+                    pl.col("id").is_in(list(self.state.selected_ids))
+                )
+                count = self.controller.queue_merchant_edits(
+                    selected_txns, current_merchant, new_merchant
+                )
 
                 self.state.clear_selection()
-                self.notify(
-                    f"Queued {count} edits. Press w to review and commit.", timeout=3
-                )
+                self.notify(f"Queued {count} edits. Press w to review and commit.", timeout=3)
                 # Refresh to update the * markers but stay in current view
                 self.refresh_view()
         else:
@@ -1106,6 +1077,7 @@ class MoneyflowTUI(App):
     def action_recategorize(self) -> None:
         """Change category for current selection (works in aggregate and detail views)."""
         from .logging_config import get_logger
+
         logger = get_logger(__name__)
 
         if self.data_manager is None:
@@ -1119,7 +1091,9 @@ class MoneyflowTUI(App):
             # Aggregate view - recategorize all transactions for this merchant/category/group
             self.run_worker(self._bulk_recategorize_from_aggregate(), exclusive=False)
         else:
-            logger.debug(f"Calling _recategorize() - view_mode {self.state.view_mode} not in aggregate views")
+            logger.debug(
+                f"Calling _recategorize() - view_mode {self.state.view_mode} not in aggregate views"
+            )
             # Detail view - recategorize selected transaction(s)
             self.run_worker(self._recategorize(), exclusive=False)
 
@@ -1127,6 +1101,7 @@ class MoneyflowTUI(App):
         """Recategorize all transactions in selected merchant/category/group."""
         from .screens.edit_screens import SelectCategoryScreen
         from .logging_config import get_logger
+
         logger = get_logger(__name__)
 
         logger.debug(f"_bulk_recategorize_from_aggregate called, view_mode={self.state.view_mode}")
@@ -1165,7 +1140,7 @@ class MoneyflowTUI(App):
             SelectCategoryScreen(
                 self.data_manager.categories,
                 current_category_id,
-                None  # No transaction details for bulk operations
+                None,  # No transaction details for bulk operations
             ),
             wait_for_dismiss=True,
         )
@@ -1185,7 +1160,7 @@ class MoneyflowTUI(App):
         new_cat_name = self.data_manager.categories.get(new_category_id, {}).get("name", "Unknown")
         self.notify(
             f"Queued {count} transactions from {field_name} to recategorize to {new_cat_name}. Press w to commit.",
-            timeout=3
+            timeout=3,
         )
         self.refresh_view()
 
@@ -1221,7 +1196,9 @@ class MoneyflowTUI(App):
 
                 if new_category_id:
                     # Use controller helper to queue edits for all selected transactions
-                    selected_txns = self.state.current_data.filter(pl.col("id").is_in(list(self.state.selected_ids)))
+                    selected_txns = self.state.current_data.filter(
+                        pl.col("id").is_in(list(self.state.selected_ids))
+                    )
                     count = self.controller.queue_category_edits(selected_txns, new_category_id)
 
                     self.state.clear_selection()
@@ -1281,7 +1258,9 @@ class MoneyflowTUI(App):
         # Check if multi-select is active
         if len(self.state.selected_ids) > 0:
             # Use controller helper to queue toggle edits for all selected
-            selected_txns = self.state.current_data.filter(pl.col("id").is_in(list(self.state.selected_ids)))
+            selected_txns = self.state.current_data.filter(
+                pl.col("id").is_in(list(self.state.selected_ids))
+            )
             count = self.controller.queue_hide_toggle_edits(selected_txns)
 
             self.state.clear_selection()
@@ -1400,6 +1379,7 @@ class MoneyflowTUI(App):
             Exception: If login fails
         """
         from .logging_config import get_logger
+
         logger = get_logger(__name__)
 
         logger.info("Deleting stale session and performing fresh login")
@@ -1411,13 +1391,14 @@ class MoneyflowTUI(App):
             password=creds["password"],
             use_saved_session=False,  # Force fresh login
             save_session=True,
-            mfa_secret_key=creds["mfa_secret"]
+            mfa_secret_key=creds["mfa_secret"],
         )
         logger.info("Fresh login succeeded")
 
     async def _refresh_session(self) -> bool:
         """Refresh expired session by re-authenticating with stored credentials."""
         from .logging_config import get_logger
+
         logger = get_logger(__name__)
 
         if self.stored_credentials is None:
@@ -1453,6 +1434,7 @@ class MoneyflowTUI(App):
         """
         from .retry_logic import retry_with_backoff, RetryAborted
         from .logging_config import get_logger
+
         logger = get_logger(__name__)
 
         def on_retry_notification(attempt: int, wait_seconds: float) -> None:
@@ -1494,7 +1476,7 @@ class MoneyflowTUI(App):
                 operation_name="Commit changes",
                 max_retries=5,
                 initial_wait=60.0,
-                on_retry=on_retry_notification
+                on_retry=on_retry_notification,
             )
         except RetryAborted:
             # User pressed Ctrl-C
@@ -1549,17 +1531,18 @@ class MoneyflowTUI(App):
 
                 # Delegate to controller for data integrity logic
                 # Controller handles: apply edits if success, preserve state if failure
-                cache_filters = {
-                    "year": self.cache_year_filter,
-                    "since": self.cache_since_filter
-                } if self.cache_manager else None
+                cache_filters = (
+                    {"year": self.cache_year_filter, "since": self.cache_since_filter}
+                    if self.cache_manager
+                    else None
+                )
 
                 self.controller.handle_commit_result(
                     success_count=success_count,
                     failure_count=failure_count,
                     edits=self.data_manager.pending_edits,
                     saved_state=saved_state,
-                    cache_filters=cache_filters
+                    cache_filters=cache_filters,
                 )
             except Exception as e:
                 self._notify(NotificationHelper.commit_error(str(e)))
@@ -1671,6 +1654,7 @@ def main():
     if args.mtd:
         # Month-to-date: Load from 1st of current month to today
         from datetime import date as date_type
+
         today = date_type.today()
         first_of_month = date_type(today.year, today.month, 1)
         custom_start_date = first_of_month.strftime("%Y-%m-%d")
@@ -1685,7 +1669,7 @@ def main():
     cache_path = args.cache if hasattr(args, "cache") and args.cache is not None else None
 
     try:
-        app = MoneyflowTUI(
+        app = MoneyflowApp(
             start_year=start_year,
             custom_start_date=custom_start_date,
             demo_mode=args.demo,

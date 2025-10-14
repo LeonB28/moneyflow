@@ -33,7 +33,7 @@ class ModalHelper:
         transaction_count: int,
         all_merchants: list[str],
         bulk_summary: Optional[Dict[str, Any]] = None,
-        txn_details: Optional[Dict[str, Any]] = None
+        txn_details: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Prepare parameters for Edit Merchant modal.
@@ -68,7 +68,7 @@ class ModalHelper:
     def select_category_params(
         categories: dict,
         current_category_id: Optional[str] = None,
-        txn_details: Optional[Dict[str, Any]] = None
+        txn_details: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Prepare parameters for Category Selection modal.
@@ -94,10 +94,7 @@ class ModalHelper:
     # ==================== Review Changes ====================
 
     @staticmethod
-    def review_changes_params(
-        edits: list,
-        categories: dict
-    ) -> Dict[str, Any]:
+    def review_changes_params(edits: list, categories: dict) -> Dict[str, Any]:
         """
         Prepare parameters for Review Changes modal.
 
@@ -150,10 +147,7 @@ class ModalHelper:
     # ==================== Filter Settings ====================
 
     @staticmethod
-    def filter_params(
-        show_transfers: bool,
-        show_hidden: bool
-    ) -> Dict[str, Any]:
+    def filter_params(show_transfers: bool, show_hidden: bool) -> Dict[str, Any]:
         """
         Prepare parameters for Filter Settings modal.
 
@@ -189,11 +183,7 @@ class ModalHelper:
     # ==================== Cache Prompt ====================
 
     @staticmethod
-    def cache_prompt_params(
-        age: str,
-        transaction_count: int,
-        filter_desc: str
-    ) -> Dict[str, Any]:
+    def cache_prompt_params(age: str, transaction_count: int, filter_desc: str) -> Dict[str, Any]:
         """
         Prepare parameters for Cache Prompt modal.
 
@@ -232,9 +222,7 @@ class ModalHelper:
 
     @staticmethod
     def duplicates_params(
-        duplicates_df: pl.DataFrame,
-        duplicate_groups: list,
-        all_transactions_df: pl.DataFrame
+        duplicates_df: pl.DataFrame, duplicate_groups: list, all_transactions_df: pl.DataFrame
     ) -> Dict[str, Any]:
         """
         Prepare parameters for Duplicates modal.

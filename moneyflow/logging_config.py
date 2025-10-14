@@ -37,12 +37,12 @@ def setup_logging(console_output: bool = False):
 
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=handlers,
-        force=True  # Override any existing config
+        force=True,  # Override any existing config
     )
 
-    logger = logging.getLogger('moneyflow')
+    logger = logging.getLogger("moneyflow")
 
     # Print ONCE to console to tell user where logs are
     # This is okay because it happens before Textual starts
@@ -53,6 +53,6 @@ def setup_logging(console_output: bool = False):
     return logger
 
 
-def get_logger(name: str = 'moneyflow'):
+def get_logger(name: str = "moneyflow"):
     """Get a logger instance."""
     return logging.getLogger(name)

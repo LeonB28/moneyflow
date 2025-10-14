@@ -28,10 +28,7 @@ class IViewPresenter(ABC):
 
     @abstractmethod
     def update_table(
-        self,
-        columns: List[Dict[str, Any]],
-        rows: List[tuple],
-        force_rebuild: bool = True
+        self, columns: List[Dict[str, Any]], rows: List[tuple], force_rebuild: bool = True
     ) -> None:
         """
         Update the main data table.
@@ -50,10 +47,7 @@ class IViewPresenter(ABC):
 
     @abstractmethod
     def show_notification(
-        self,
-        message: str,
-        severity: NotificationSeverity = "information",
-        timeout: int = 3
+        self, message: str, severity: NotificationSeverity = "information", timeout: int = 3
     ) -> None:
         """
         Show a notification to the user.

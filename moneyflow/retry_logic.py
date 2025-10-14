@@ -11,11 +11,12 @@ from .logging_config import get_logger
 
 logger = get_logger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class RetryAborted(Exception):
     """User aborted the retry process."""
+
     pass
 
 
@@ -24,7 +25,7 @@ async def retry_with_backoff(
     operation_name: str,
     max_retries: int = 5,
     initial_wait: float = 60.0,
-    on_retry: Optional[Callable[[int, float], None]] = None
+    on_retry: Optional[Callable[[int, float], None]] = None,
 ) -> T:
     """
     Retry an async operation with exponential backoff.
@@ -70,7 +71,7 @@ async def retry_with_backoff(
                 break
 
             # Calculate wait time with exponential backoff
-            wait_seconds = initial_wait * (2 ** attempt)
+            wait_seconds = initial_wait * (2**attempt)
 
             # Notify UI if callback provided
             if on_retry:

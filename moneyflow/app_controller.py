@@ -41,11 +41,7 @@ class AppController:
     """
 
     def __init__(
-        self,
-        view: IViewPresenter,
-        state: AppState,
-        data_manager: DataManager,
-        cache_manager = None
+        self, view: IViewPresenter, state: AppState, data_manager: DataManager, cache_manager=None
     ):
         """
         Initialize controller.
@@ -86,7 +82,12 @@ class AppController:
             return
 
         # Prepare view data based on current state
-        if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
+        if self.state.view_mode in [
+            ViewMode.MERCHANT,
+            ViewMode.CATEGORY,
+            ViewMode.GROUP,
+            ViewMode.ACCOUNT,
+        ]:
             # All aggregate views use the same pattern
             view_data = self._prepare_aggregate_view(self.state.view_mode)
             if view_data is None:
@@ -99,9 +100,13 @@ class AppController:
 
             # Apply drill-down filters
             if self.state.selected_merchant:
-                txns = self.data_manager.filter_by_merchant(filtered_df, self.state.selected_merchant)
+                txns = self.data_manager.filter_by_merchant(
+                    filtered_df, self.state.selected_merchant
+                )
             elif self.state.selected_category:
-                txns = self.data_manager.filter_by_category(filtered_df, self.state.selected_category)
+                txns = self.data_manager.filter_by_category(
+                    filtered_df, self.state.selected_category
+                )
             elif self.state.selected_group:
                 txns = self.data_manager.filter_by_group(filtered_df, self.state.selected_group)
             elif self.state.selected_account:
@@ -134,9 +139,7 @@ class AppController:
 
         # Delegate rendering to view - it handles the details of clearing/rebuilding
         self.view.update_table(
-            columns=view_data["columns"],
-            rows=view_data["rows"],
-            force_rebuild=force_rebuild
+            columns=view_data["columns"], rows=view_data["rows"], force_rebuild=force_rebuild
         )
 
         # Update other UI elements
@@ -148,6 +151,7 @@ class AppController:
             # Exclude hidden from totals
             non_hidden_df = filtered_df.filter(filtered_df["hideFromReports"] == False)
             import polars as pl
+
             income_df = non_hidden_df.filter(pl.col("group") == "Income")
             total_income = float(income_df["amount"].sum()) if not income_df.is_empty() else 0.0
             expense_df = non_hidden_df.filter(
@@ -322,18 +326,21 @@ class AppController:
     def set_timeframe_this_year(self):
         """Set view to current year."""
         from .state import TimeFrame
+
         self.state.set_timeframe(TimeFrame.THIS_YEAR)
         self.refresh_view()
 
     def set_timeframe_all_time(self):
         """Set view to all time."""
         from .state import TimeFrame
+
         self.state.set_timeframe(TimeFrame.ALL_TIME)
         self.refresh_view()
 
     def set_timeframe_this_month(self):
         """Set view to current month."""
         from .state import TimeFrame
+
         self.state.set_timeframe(TimeFrame.THIS_MONTH)
         self.refresh_view()
 
@@ -355,9 +362,7 @@ class AppController:
         date_range = TimeNavigator.get_month_range(today.year, month)
 
         self.state.set_timeframe(
-            TimeFrame.CUSTOM,
-            start_date=date_range.start_date,
-            end_date=date_range.end_date
+            TimeFrame.CUSTOM, start_date=date_range.start_date, end_date=date_range.end_date
         )
         self.refresh_view()
         return date_range.description
@@ -380,9 +385,7 @@ class AppController:
 
         date_range = TimeNavigator.previous_period(self.state.start_date, self.state.end_date)
         self.state.set_timeframe(
-            TimeFrame.CUSTOM,
-            start_date=date_range.start_date,
-            end_date=date_range.end_date
+            TimeFrame.CUSTOM, start_date=date_range.start_date, end_date=date_range.end_date
         )
         self.refresh_view()
         return (False, date_range.description)
@@ -405,9 +408,7 @@ class AppController:
 
         date_range = TimeNavigator.next_period(self.state.start_date, self.state.end_date)
         self.state.set_timeframe(
-            TimeFrame.CUSTOM,
-            start_date=date_range.start_date,
-            end_date=date_range.end_date
+            TimeFrame.CUSTOM, start_date=date_range.start_date, end_date=date_range.end_date
         )
         self.refresh_view()
         return (False, date_range.description)
@@ -520,7 +521,9 @@ class AppController:
             self.refresh_view()
         return (success, cursor_position)
 
-    def get_next_sort_field(self, view_mode: ViewMode, current_sort: SortMode) -> tuple[SortMode, str]:
+    def get_next_sort_field(
+        self, view_mode: ViewMode, current_sort: SortMode
+    ) -> tuple[SortMode, str]:
         """
         Determine the next sort field when user toggles sorting.
 
@@ -586,6 +589,7 @@ class AppController:
             int: Number of edits queued
         """
         from datetime import datetime
+
         count = 0
         for txn in transactions_df.iter_rows(named=True):
             self.data_manager.pending_edits.append(
@@ -615,6 +619,7 @@ class AppController:
             int: Number of edits queued
         """
         from datetime import datetime
+
         count = 0
         for txn in transactions_df.iter_rows(named=True):
             self.data_manager.pending_edits.append(
@@ -643,6 +648,7 @@ class AppController:
             int: Number of edits queued
         """
         from datetime import datetime
+
         count = 0
         for txn in transactions_df.iter_rows(named=True):
             current_hidden = txn.get("hideFromReports", False)
@@ -664,7 +670,7 @@ class AppController:
         failure_count: int,
         edits: List[TransactionEdit],
         saved_state: dict,
-        cache_filters: dict = None
+        cache_filters: dict = None,
     ) -> None:
         """
         Handle commit results and update local state accordingly.

@@ -44,7 +44,7 @@ class NotificationHelper:
         return (
             f"✅ Saved {success}, ❌ {failure} failed. Check terminal (run with --dev to see errors)",
             "warning",
-            8
+            8,
         )
 
     @staticmethod
@@ -87,7 +87,7 @@ class NotificationHelper:
         return (
             f"⚠ Retrying commit in {wait_seconds:.0f}s (attempt {attempt + 1}/{max_retries}). Press Ctrl-C to abort.",
             "warning",
-            int(wait_seconds)
+            int(wait_seconds),
         )
 
     @staticmethod
@@ -118,7 +118,7 @@ class NotificationHelper:
         return (
             f"Queued {count} transactions to recategorize: {old_cat} → {new_cat}. Press w to commit.",
             "information",
-            3
+            3,
         )
 
     @staticmethod
@@ -127,7 +127,7 @@ class NotificationHelper:
         return (
             f"Queued {count} transactions from {group} to recategorize to {new_cat}. Press w to commit.",
             "information",
-            3
+            3,
         )
 
     @staticmethod
@@ -138,7 +138,11 @@ class NotificationHelper:
     @staticmethod
     def hide_toggled_bulk(count: int) -> NotificationTuple:
         """Multiple transactions hidden/unhidden."""
-        return (f"Toggled hide/unhide for {count} transactions. Press w to commit.", "information", 3)
+        return (
+            f"Toggled hide/unhide for {count} transactions. Press w to commit.",
+            "information",
+            3,
+        )
 
     # ==================== Navigation & Views ====================
 

@@ -52,9 +52,7 @@ class ViewPresenter:
     """
 
     @staticmethod
-    def get_sort_arrow(
-        sort_by: SortMode, sort_direction: SortDirection, field: SortMode
-    ) -> str:
+    def get_sort_arrow(sort_by: SortMode, sort_direction: SortDirection, field: SortMode) -> str:
         """
         Get sort arrow for a column header.
 
@@ -81,9 +79,7 @@ class ViewPresenter:
         return "↓" if sort_direction == SortDirection.DESC else "↑"
 
     @staticmethod
-    def should_sort_descending(
-        sort_field: str, sort_direction: SortDirection
-    ) -> bool:
+    def should_sort_descending(sort_field: str, sort_direction: SortDirection) -> bool:
         """
         Determine if sorting should be descending.
 
@@ -149,9 +145,7 @@ class ViewPresenter:
 
         # Get arrows
         count_arrow = ViewPresenter.get_sort_arrow(sort_by, sort_direction, SortMode.COUNT)
-        amount_arrow = ViewPresenter.get_sort_arrow(
-            sort_by, sort_direction, SortMode.AMOUNT
-        )
+        amount_arrow = ViewPresenter.get_sort_arrow(sort_by, sort_direction, SortMode.AMOUNT)
 
         # Build column specs
         columns: list[ColumnSpec] = [
@@ -233,9 +227,7 @@ class ViewPresenter:
             >>> len(view["columns"])
             3
         """
-        columns = ViewPresenter.prepare_aggregation_columns(
-            group_by_field, sort_by, sort_direction
-        )
+        columns = ViewPresenter.prepare_aggregation_columns(group_by_field, sort_by, sort_direction)
 
         if df.is_empty():
             return PreparedView(columns=columns, rows=[], empty=True)
@@ -269,18 +261,10 @@ class ViewPresenter:
         """
         # Get arrows for each field
         date_arrow = ViewPresenter.get_sort_arrow(sort_by, sort_direction, SortMode.DATE)
-        merchant_arrow = ViewPresenter.get_sort_arrow(
-            sort_by, sort_direction, SortMode.MERCHANT
-        )
-        category_arrow = ViewPresenter.get_sort_arrow(
-            sort_by, sort_direction, SortMode.CATEGORY
-        )
-        account_arrow = ViewPresenter.get_sort_arrow(
-            sort_by, sort_direction, SortMode.ACCOUNT
-        )
-        amount_arrow = ViewPresenter.get_sort_arrow(
-            sort_by, sort_direction, SortMode.AMOUNT
-        )
+        merchant_arrow = ViewPresenter.get_sort_arrow(sort_by, sort_direction, SortMode.MERCHANT)
+        category_arrow = ViewPresenter.get_sort_arrow(sort_by, sort_direction, SortMode.CATEGORY)
+        account_arrow = ViewPresenter.get_sort_arrow(sort_by, sort_direction, SortMode.ACCOUNT)
+        amount_arrow = ViewPresenter.get_sort_arrow(sort_by, sort_direction, SortMode.AMOUNT)
 
         columns: list[ColumnSpec] = [
             {"label": f"Date {date_arrow}".strip(), "key": "date", "width": 12},

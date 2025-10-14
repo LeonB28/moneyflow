@@ -66,24 +66,80 @@ class DemoDataGenerator:
         """
         # Start with categories used in transaction generation (must keep these IDs for tests)
         base_categories = [
-            {"id": "cat_groceries", "name": "Groceries", "group": {"id": "grp_food", "type": "expense"}},
-            {"id": "cat_restaurants", "name": "Restaurants & Bars", "group": {"id": "grp_food", "type": "expense"}},
-            {"id": "cat_coffee", "name": "Coffee Shops", "group": {"id": "grp_food", "type": "expense"}},
+            {
+                "id": "cat_groceries",
+                "name": "Groceries",
+                "group": {"id": "grp_food", "type": "expense"},
+            },
+            {
+                "id": "cat_restaurants",
+                "name": "Restaurants & Bars",
+                "group": {"id": "grp_food", "type": "expense"},
+            },
+            {
+                "id": "cat_coffee",
+                "name": "Coffee Shops",
+                "group": {"id": "grp_food", "type": "expense"},
+            },
             {"id": "cat_gas", "name": "Gas", "group": {"id": "grp_transport", "type": "expense"}},
-            {"id": "cat_parking", "name": "Parking & Tolls", "group": {"id": "grp_transport", "type": "expense"}},
-            {"id": "cat_uber", "name": "Taxi & Ride Shares", "group": {"id": "grp_transport", "type": "expense"}},
+            {
+                "id": "cat_parking",
+                "name": "Parking & Tolls",
+                "group": {"id": "grp_transport", "type": "expense"},
+            },
+            {
+                "id": "cat_uber",
+                "name": "Taxi & Ride Shares",
+                "group": {"id": "grp_transport", "type": "expense"},
+            },
             {"id": "cat_rent", "name": "Rent", "group": {"id": "grp_home", "type": "expense"}},
-            {"id": "cat_utilities", "name": "Gas & Electric", "group": {"id": "grp_home", "type": "expense"}},
-            {"id": "cat_internet", "name": "Internet & Cable", "group": {"id": "grp_home", "type": "expense"}},
-            {"id": "cat_shopping", "name": "Shopping", "group": {"id": "grp_shopping", "type": "expense"}},
-            {"id": "cat_amazon", "name": "Amazon", "group": {"id": "grp_shopping", "type": "expense"}},
-            {"id": "cat_streaming", "name": "Entertainment & Recreation", "group": {"id": "grp_entertainment", "type": "expense"}},
+            {
+                "id": "cat_utilities",
+                "name": "Gas & Electric",
+                "group": {"id": "grp_home", "type": "expense"},
+            },
+            {
+                "id": "cat_internet",
+                "name": "Internet & Cable",
+                "group": {"id": "grp_home", "type": "expense"},
+            },
+            {
+                "id": "cat_shopping",
+                "name": "Shopping",
+                "group": {"id": "grp_shopping", "type": "expense"},
+            },
+            {
+                "id": "cat_amazon",
+                "name": "Amazon",
+                "group": {"id": "grp_shopping", "type": "expense"},
+            },
+            {
+                "id": "cat_streaming",
+                "name": "Entertainment & Recreation",
+                "group": {"id": "grp_entertainment", "type": "expense"},
+            },
             {"id": "cat_gym", "name": "Fitness", "group": {"id": "grp_health", "type": "expense"}},
-            {"id": "cat_medical", "name": "Medical", "group": {"id": "grp_health", "type": "expense"}},
+            {
+                "id": "cat_medical",
+                "name": "Medical",
+                "group": {"id": "grp_health", "type": "expense"},
+            },
             {"id": "cat_phone", "name": "Phone", "group": {"id": "grp_bills", "type": "expense"}},
-            {"id": "cat_insurance", "name": "Insurance", "group": {"id": "grp_bills", "type": "expense"}},
-            {"id": "cat_paycheck", "name": "Paychecks", "group": {"id": "grp_income", "type": "income"}},
-            {"id": "cat_transfer", "name": "Transfer", "group": {"id": "grp_transfers", "type": "transfer"}},
+            {
+                "id": "cat_insurance",
+                "name": "Insurance",
+                "group": {"id": "grp_bills", "type": "expense"},
+            },
+            {
+                "id": "cat_paycheck",
+                "name": "Paychecks",
+                "group": {"id": "grp_income", "type": "income"},
+            },
+            {
+                "id": "cat_transfer",
+                "name": "Transfer",
+                "group": {"id": "grp_transfers", "type": "transfer"},
+            },
         ]
 
         # Get set of names we've already added
@@ -118,7 +174,11 @@ class DemoDataGenerator:
         cat_id_counter = 100  # Start at 100 to avoid conflicts with hardcoded IDs
         for group_name, category_list in CATEGORY_GROUPS.items():
             group_id = group_id_map.get(group_name, f"grp_{group_name.lower().replace(' ', '_')}")
-            group_type = "income" if group_name == "Income" else ("transfer" if group_name == "Transfers" else "expense")
+            group_type = (
+                "income"
+                if group_name == "Income"
+                else ("transfer" if group_name == "Transfers" else "expense")
+            )
 
             for cat_name in category_list:
                 # Skip if already in base categories
@@ -129,11 +189,9 @@ class DemoDataGenerator:
                 cat_id = f"cat_{cat_id_counter:03d}"
                 cat_id_counter += 1
 
-                base_categories.append({
-                    "id": cat_id,
-                    "name": cat_name,
-                    "group": {"id": group_id, "type": group_type}
-                })
+                base_categories.append(
+                    {"id": cat_id, "name": cat_name, "group": {"id": group_id, "type": group_type}}
+                )
 
         return base_categories
 

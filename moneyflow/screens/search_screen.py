@@ -59,10 +59,14 @@ class SearchScreen(ModalScreen):
             yield Static(
                 "Type to search merchant or category names\n"
                 "Press Enter with empty search to clear filter",
-                id="search-help"
+                id="search-help",
             )
 
-            yield Input(placeholder="Search... (Enter to apply, Esc to cancel)", value=self.current_query, id="search-input")
+            yield Input(
+                placeholder="Search... (Enter to apply, Esc to cancel)",
+                value=self.current_query,
+                id="search-input",
+            )
 
             yield Static("", id="search-stats")
 
