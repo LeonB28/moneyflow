@@ -223,10 +223,13 @@ class EditMerchantScreen(ModalScreen):
             event.stop()  # Prevent propagation to parent
             self.dismiss(None)
         elif event.key == "down":
-            event.stop()  # Prevent propagation
-            # Move focus to suggestions list
+            # Only intercept if focus is NOT on the suggestions list
+            # (allow normal navigation within the list)
             if self.all_merchants:
-                self.query_one("#suggestions", OptionList).focus()
+                option_list = self.query_one("#suggestions", OptionList)
+                if not option_list.has_focus:
+                    event.stop()  # Stop only when moving TO the list
+                    option_list.focus()
 
 
 class SelectCategoryScreen(ModalScreen):
@@ -374,9 +377,12 @@ class SelectCategoryScreen(ModalScreen):
             event.stop()  # Prevent propagation to parent
             self.dismiss(None)
         elif event.key == "down":
-            event.stop()  # Prevent propagation
-            # Move focus from input to list
-            self.query_one("#category-list", OptionList).focus()
+            # Only intercept if focus is NOT on the category list
+            # (allow normal navigation within the list)
+            category_list = self.query_one("#category-list", OptionList)
+            if not category_list.has_focus:
+                event.stop()  # Stop only when moving TO the list
+                category_list.focus()
         elif event.key == "slash":
             event.stop()  # Prevent propagation
             # Focus search input when user presses /
