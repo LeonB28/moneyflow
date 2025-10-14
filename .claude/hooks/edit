@@ -5,5 +5,6 @@ FILE="$1"
 
 # Only format Python files
 if [[ "$FILE" == *.py ]]; then
-    uv run ruff format "$FILE" 2>&1 | grep -v "1 file reformatted" || true
+    echo "Formatting $FILE with ruff..."
+    uv run ruff format "$FILE"
 fi
