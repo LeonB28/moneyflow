@@ -437,7 +437,8 @@ class DataManager:
 
         agg_exprs = [
             pl.count("id").alias("count"),
-            pl.sum("amount").alias("total"),
+            # Exclude hidden transactions from totals
+            pl.col("amount").filter(~pl.col("hideFromReports")).sum().alias("total"),
         ]
 
         if include_id:

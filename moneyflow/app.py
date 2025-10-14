@@ -806,13 +806,16 @@ class MoneyflowTUI(App):
             stats_widget.update("0 txns | No data in view")
             return
 
-        # Calculate stats on filtered data
-        # Income (from Income group, excluding Transfers)
-        income_df = filtered_df.filter(pl.col("group") == "Income")
+        # Calculate stats on filtered data (excluding hidden transactions)
+        # Hidden transactions are excluded from totals even if shown in the view
+        non_hidden_df = filtered_df.filter(pl.col("hideFromReports") == False)
+
+        # Income (from Income group, excluding Transfers and hidden)
+        income_df = non_hidden_df.filter(pl.col("group") == "Income")
         total_income = float(income_df["amount"].sum()) if not income_df.is_empty() else 0.0
 
-        # Expenses (all non-Income, non-Transfer transactions)
-        expense_df = filtered_df.filter(
+        # Expenses (all non-Income, non-Transfer, non-hidden transactions)
+        expense_df = non_hidden_df.filter(
             (pl.col("group") != "Income") & (pl.col("group") != "Transfers")
         )
         total_expenses = float(expense_df["amount"].sum()) if not expense_df.is_empty() else 0.0
