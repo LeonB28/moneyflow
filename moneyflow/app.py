@@ -521,18 +521,33 @@ class MoneyflowTUI(App):
                     """Update the loading status display."""
                     loading_status.update(f"📊 {msg}")
 
-                # Fetch with retry on session expiration
-                try:
-                    df, categories, category_groups = await self.data_manager.fetch_all_data(
-                        start_date=start_date, end_date=end_date, progress_callback=update_progress
+                # Fetch data with retry logic for network resilience
+                from .logging_config import get_logger
+                from .retry_logic import retry_with_backoff, RetryAborted
+                logger = get_logger(__name__)
+
+                def on_fetch_retry(attempt: int, wait_seconds: float) -> None:
+                    """Show retry progress during data fetch."""
+                    loading_status.update(
+                        f"⚠ Data fetch failed. Retrying in {wait_seconds:.0f}s (attempt {attempt + 1}/5). Press Ctrl-C to abort."
                     )
-                except Exception as fetch_error:
-                    # Check if it's a session expiration error
-                    fetch_error_str = str(fetch_error).lower()
-                    if ("401" in fetch_error_str or "unauthorized" in fetch_error_str) and self.stored_credentials and self.mm:
-                        # Try to recover by re-logging in
-                        loading_status.update("🔄 Session expired during fetch. Re-authenticating...")
-                        try:
+
+                async def fetch_operation():
+                    """Fetch data with automatic error logging."""
+                    try:
+                        logger.info(f"Fetching transactions (start={start_date}, end={end_date})")
+                        result = await self.data_manager.fetch_all_data(
+                            start_date=start_date, end_date=end_date, progress_callback=update_progress
+                        )
+                        logger.info(f"Data fetch succeeded - loaded {len(result[0])} transactions")
+                        return result
+                    except Exception as e:
+                        logger.error(f"Data fetch failed: {e}", exc_info=True)
+                        # Check if session expiration
+                        error_str = str(e).lower()
+                        if ("401" in error_str or "unauthorized" in error_str) and self.stored_credentials:
+                            logger.info("Session expired during fetch, re-authenticating...")
+                            loading_status.update("🔄 Session expired. Re-authenticating...")
                             await self.mm.login(
                                 email=self.stored_credentials["email"],
                                 password=self.stored_credentials["password"],
@@ -540,17 +555,34 @@ class MoneyflowTUI(App):
                                 save_session=True,
                                 mfa_secret_key=self.stored_credentials["mfa_secret"],
                             )
-                            loading_status.update("✅ Re-authenticated. Retrying data fetch...")
-                            # Retry the fetch once after successful re-login
-                            df, categories, category_groups = await self.data_manager.fetch_all_data(
+                            logger.info("Re-authenticated, retrying fetch immediately")
+                            loading_status.update("✅ Re-authenticated. Retrying fetch...")
+                            result = await self.data_manager.fetch_all_data(
                                 start_date=start_date, end_date=end_date, progress_callback=update_progress
                             )
-                        except Exception as retry_error:
-                            # Re-login or retry failed - give up and re-raise
-                            raise retry_error
-                    else:
-                        # Not a session error or can't recover - re-raise
-                        raise fetch_error
+                            logger.info(f"Retry succeeded - loaded {len(result[0])} transactions")
+                            return result
+                        # Not auth error, re-raise for retry logic
+                        raise
+
+                try:
+                    df, categories, category_groups = await retry_with_backoff(
+                        operation=fetch_operation,
+                        operation_name="Fetch transaction data",
+                        max_retries=5,
+                        initial_wait=60.0,
+                        on_retry=on_fetch_retry
+                    )
+                except RetryAborted:
+                    logger.info("Data fetch cancelled by user")
+                    loading_status.update("Data fetch cancelled. Press 'q' to quit.")
+                    has_error = True
+                    return
+                except Exception as e:
+                    logger.error(f"Data fetch failed after all retries: {e}", exc_info=True)
+                    loading_status.update(f"❌ Failed to load data: {e}\n\nCheck ~/.moneyflow/moneyflow.log for details.\n\nPress 'q' to quit")
+                    has_error = True
+                    return
 
                 # Save to cache for next time (only if --cache was passed)
                 if self.cache_manager:
@@ -1902,12 +1934,6 @@ class MoneyflowTUI(App):
 
 def main():
     """Entry point for the TUI."""
-    # Initialize logging FIRST so all errors are captured
-    logger = setup_logging()
-    logger.info("Starting moneyflow application")
-
-    print("[MAIN] Starting application", file=sys.stderr, flush=True)
-
     parser = argparse.ArgumentParser(
         description="moneyflow - Terminal UI for personal finance management"
     )
@@ -1953,6 +1979,10 @@ def main():
     )
 
     args = parser.parse_args()
+
+    # Initialize logging with console output only in --dev mode
+    logger = setup_logging(console_output=args.dev)
+    logger.info("Starting moneyflow application")
 
     # Determine start year or date range
     start_year = None
