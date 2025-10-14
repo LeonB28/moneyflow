@@ -237,157 +237,465 @@ class MoneyflowTUI(App):
                 pass
             raise
 
+    def _setup_loading_ui(self):
+        """Setup loading UI and return loading status widget."""
+        self.loading = True
+        self.query_one("#loading", LoadingIndicator).display = True
+        loading_status = self.query_one("#loading-status", Static)
+        loading_status.display = True
+        return loading_status
+
+    def _initialize_managers(self):
+        """Initialize data manager, cache manager, and controller."""
+        self.data_manager = DataManager(self.mm)
+
+        # Initialize cache manager only if user requested caching
+        if self.cache_path is not None:
+            from .cache_manager import CacheManager
+            self.cache_manager = CacheManager(cache_dir=self.cache_path)
+
+        # Initialize controller with view presenter pattern
+        view = TextualViewPresenter(self)
+        self.controller = AppController(view, self.state, self.data_manager, self.cache_manager)
+
+    def _determine_date_range(self):
+        """Determine date range based on CLI arguments.
+
+        Returns:
+            tuple: (start_date, end_date, cache_year_filter, cache_since_filter)
+        """
+        if self.custom_start_date:
+            start_date = self.custom_start_date
+            end_date = datetime.now().strftime("%Y-%m-%d")
+            cache_year_filter = None
+            cache_since_filter = self.custom_start_date
+        elif self.start_year:
+            start_date = f"{self.start_year}-01-01"
+            end_date = datetime.now().strftime("%Y-%m-%d")
+            cache_year_filter = self.start_year
+            cache_since_filter = None
+        else:
+            # Fetch ALL transactions (no date filter for offline-first approach)
+            start_date = None
+            end_date = None
+            cache_year_filter = None
+            cache_since_filter = None
+
+        return start_date, end_date, cache_year_filter, cache_since_filter
+
+    def _store_data(self, df, categories, category_groups):
+        """Store data in data manager and state."""
+        self.data_manager.df = df
+        self.data_manager.categories = categories
+        self.data_manager.category_groups = category_groups
+        self.state.transactions_df = df
+
+    def _initialize_view(self):
+        """Initialize time frame to THIS_YEAR and show initial view."""
+        from datetime import date as date_type
+
+        today = date_type.today()
+        self.state.start_date = date_type(today.year, 1, 1)
+        self.state.end_date = date_type(today.year, 12, 31)
+
+        # Show initial view (merchants)
+        self.refresh_view()
+
+    async def _handle_credentials(self):
+        """Handle credential unlock/setup flow.
+
+        Returns:
+            dict: Credentials dict or None if user exits
+        """
+        from .credentials import CredentialManager
+        from .screens.credential_screens import (
+            BackendSelectionScreen,
+            CredentialSetupScreen,
+            CredentialUnlockScreen,
+        )
+
+        cred_manager = CredentialManager()
+
+        from .logging_config import get_logger
+        logger = get_logger(__name__)
+        logger.debug(f"Credentials exist: {cred_manager.credentials_exist()}")
+
+        if cred_manager.credentials_exist():
+            # Show unlock screen
+            result = await self.push_screen(CredentialUnlockScreen(), wait_for_dismiss=True)
+
+            if result is None:
+                # User chose to reset - show backend selection then setup screen
+                backend_type = await self.push_screen(
+                    BackendSelectionScreen(), wait_for_dismiss=True
+                )
+                if not backend_type:
+                    self.exit()
+                    return None
+
+                creds = await self.push_screen(
+                    CredentialSetupScreen(backend_type=backend_type), wait_for_dismiss=True
+                )
+                if not creds:
+                    self.exit()
+                    return None
+                return creds
+            else:
+                return result
+        else:
+            # No credentials - show backend selection first, then setup screen
+            backend_type = await self.push_screen(
+                BackendSelectionScreen(), wait_for_dismiss=True
+            )
+            if not backend_type:
+                self.exit()
+                return None
+
+            creds = await self.push_screen(
+                CredentialSetupScreen(backend_type=backend_type), wait_for_dismiss=True
+            )
+            if not creds:
+                self.exit()
+                return None
+            return creds
+
+    async def _login_with_retry(self, creds, loading_status):
+        """Login with retry logic for robustness.
+
+        Args:
+            creds: Credentials dict
+            loading_status: Loading status widget
+
+        Returns:
+            bool: True on success, False on failure
+        """
+        from .retry_logic import retry_with_backoff, RetryAborted
+        from .logging_config import get_logger
+        logger = get_logger(__name__)
+
+        backend_type = creds.get("backend_type", "monarch")
+        loading_status.update(f"🔐 Logging in to {backend_type.capitalize()}...")
+
+        logger.debug(f"Starting login flow for {backend_type}")
+        logger.debug(f"Email: {creds['email']}")
+        logger.debug(f"Has MFA secret: {bool(creds.get('mfa_secret'))}")
+
+        def on_login_retry(attempt: int, wait_seconds: float) -> None:
+            """Show retry progress during login."""
+            loading_status.update(
+                f"⚠ Login failed. Retrying in {wait_seconds:.0f}s (attempt {attempt + 1}/5). Press Ctrl-C to abort."
+            )
+
+        async def login_operation():
+            """Login with automatic retry on session expiration."""
+            try:
+                logger.debug("Attempting login with saved session...")
+                await self.mm.login(
+                    email=creds["email"],
+                    password=creds["password"],
+                    use_saved_session=True,  # Try saved session first
+                    save_session=True,
+                    mfa_secret_key=creds["mfa_secret"],
+                )
+                logger.debug("Login succeeded!")
+                return True
+            except Exception as e:
+                logger.warning(f"Login failed: {e}", exc_info=True)
+                error_str = str(e).lower()
+                # Check if it's a stale session
+                if "401" in error_str or "unauthorized" in error_str:
+                    logger.debug("Detected stale session, deleting and retrying with fresh login")
+                    self.mm.delete_session()
+                    # Retry with fresh login
+                    await self.mm.login(
+                        email=creds["email"],
+                        password=creds["password"],
+                        use_saved_session=False,  # Force fresh login
+                        save_session=True,
+                        mfa_secret_key=creds["mfa_secret"],
+                    )
+                    logger.debug("Fresh login succeeded!")
+                    return True
+                # Not a session issue, re-raise for retry logic
+                raise
+
+        try:
+            await retry_with_backoff(
+                operation=login_operation,
+                operation_name="Login to backend",
+                max_retries=5,
+                initial_wait=60.0,
+                on_retry=on_login_retry
+            )
+            # Store credentials for automatic session refresh if needed
+            self.stored_credentials = creds
+            loading_status.update("✅ Logged in successfully!")
+            logger.debug("Login flow completed successfully")
+            return True
+        except RetryAborted:
+            # User pressed Ctrl-C
+            logger.debug("Login cancelled by user")
+            loading_status.update("Login cancelled by user. Press 'q' to quit.")
+            return False
+        except Exception as e:
+            # All retries exhausted
+            logger.error(f"Login failed after all retries: {e}", exc_info=True)
+            error_msg = f"Login failed: {e}"
+            loading_status.update(f"❌ {error_msg}\n\nCheck ~/.moneyflow/moneyflow.log for details.\n\nPress 'q' to quit")
+            return False
+
+    async def _check_and_load_cache(self, loading_status):
+        """Check if cache is valid and load from cache if user approves.
+
+        Args:
+            loading_status: Loading status widget
+
+        Returns:
+            tuple: (df, categories, category_groups) or None if not using cache
+        """
+        use_cache = False
+        if (
+            self.cache_manager
+            and not self.force_refresh
+            and self.cache_manager.is_cache_valid(year=self.cache_year_filter, since=self.cache_since_filter)
+        ):
+            # Cache is valid - show prompt
+            cache_info = self.cache_manager.get_cache_info()
+            if cache_info:
+                from .screens.credential_screens import CachePromptScreen
+
+                use_cache = await self.push_screen(
+                    CachePromptScreen(
+                        age=cache_info["age"],
+                        transaction_count=cache_info["transaction_count"],
+                        filter_desc=cache_info["filter"],
+                    ),
+                    wait_for_dismiss=True,
+                )
+
+        if use_cache:
+            # Load from cache
+            loading_status.update("📦 Loading from cache...")
+            result = self.cache_manager.load_cache()
+            if result:
+                df, categories, category_groups, metadata = result
+                # Apply category grouping dynamically (so CATEGORY_GROUPS changes take effect)
+                loading_status.update("🔄 Applying category groupings...")
+                df = self.data_manager.apply_category_groups(df)
+                loading_status.update(f"✅ Loaded {len(df):,} transactions from cache!")
+                return df, categories, category_groups
+            else:
+                # Cache load failed, fall back to API
+                loading_status.update("⚠ Cache load failed, fetching from API...")
+                return None
+
+        return None
+
+    async def _fetch_data_with_retry(self, creds, start_date, end_date, loading_status):
+        """Fetch data from API with retry logic.
+
+        Args:
+            creds: Credentials dict (may be None in demo mode)
+            start_date: Start date for fetch
+            end_date: End date for fetch
+            loading_status: Loading status widget
+
+        Returns:
+            tuple: (df, categories, category_groups) or None on failure
+        """
+        from .retry_logic import retry_with_backoff, RetryAborted
+        from .logging_config import get_logger
+        logger = get_logger(__name__)
+
+        # Update status based on date range
+        if self.custom_start_date:
+            loading_status.update(
+                f"📊 Fetching transactions from {self.custom_start_date} onwards..."
+            )
+        elif self.start_year:
+            loading_status.update(
+                f"📊 Fetching transactions from {self.start_year} onwards..."
+            )
+        else:
+            loading_status.update("📊 Fetching ALL transaction data from backend...")
+
+        loading_status.update(
+            "⏳ This may take a minute for large accounts (10k+ transactions)..."
+        )
+        loading_status.update(
+            "💡 TIP: This is a one-time download. Future operations will be instant!"
+        )
+
+        def update_progress(msg: str) -> None:
+            """Update the loading status display."""
+            loading_status.update(f"📊 {msg}")
+
+        def on_fetch_retry(attempt: int, wait_seconds: float) -> None:
+            """Show retry progress during data fetch."""
+            loading_status.update(
+                f"⚠ Data fetch failed. Retrying in {wait_seconds:.0f}s (attempt {attempt + 1}/5). Press Ctrl-C to abort."
+            )
+
+        async def fetch_operation():
+            """Fetch data with automatic error logging."""
+            try:
+                logger.debug(f"Fetching transactions (start={start_date}, end={end_date})")
+                result = await self.data_manager.fetch_all_data(
+                    start_date=start_date, end_date=end_date, progress_callback=update_progress
+                )
+                logger.debug(f"Data fetch succeeded - loaded {len(result[0])} transactions")
+                return result
+            except Exception as e:
+                logger.error(f"Data fetch failed: {e}", exc_info=True)
+                # Check if session expiration
+                error_str = str(e).lower()
+                if ("401" in error_str or "unauthorized" in error_str) and creds:
+                    logger.info("Session expired during fetch, attempting fresh login...")
+                    loading_status.update("🔄 Session expired. Re-authenticating...")
+                    # Delete stale session and force fresh login
+                    try:
+                        self.mm.delete_session()
+                        logger.info("Deleted stale session, attempting fresh login")
+                        await self.mm.login(
+                            email=creds["email"],
+                            password=creds["password"],
+                            use_saved_session=False,  # Force fresh login
+                            save_session=True,
+                            mfa_secret_key=creds["mfa_secret"],
+                        )
+                        logger.info("Fresh login succeeded, retrying fetch")
+                        loading_status.update("✅ Re-authenticated. Retrying fetch...")
+                        result = await self.data_manager.fetch_all_data(
+                            start_date=start_date, end_date=end_date, progress_callback=update_progress
+                        )
+                        logger.info(f"Fetch retry succeeded - loaded {len(result[0])} transactions")
+                        return result
+                    except Exception as reauth_error:
+                        logger.error(f"Re-authentication failed: {reauth_error}", exc_info=True)
+                        # Re-auth failed, let retry logic handle it with backoff
+                        raise Exception(f"Session refresh failed: {reauth_error}")
+                # Not auth error, re-raise for retry logic
+                raise
+
+        try:
+            df, categories, category_groups = await retry_with_backoff(
+                operation=fetch_operation,
+                operation_name="Fetch transaction data",
+                max_retries=5,
+                initial_wait=60.0,
+                on_retry=on_fetch_retry
+            )
+
+            # Save to cache for next time (only if --cache was passed)
+            if self.cache_manager:
+                loading_status.update("💾 Saving to cache...")
+                self.cache_manager.save_cache(
+                    transactions_df=df,
+                    categories=categories,
+                    category_groups=category_groups,
+                    year=self.cache_year_filter,
+                    since=self.cache_since_filter,
+                )
+                loading_status.update(f"✅ Loaded {len(df):,} transactions and cached!")
+            else:
+                loading_status.update(f"✅ Loaded {len(df):,} transactions!")
+
+            return df, categories, category_groups
+        except RetryAborted:
+            logger.debug("Data fetch cancelled by user")
+            loading_status.update("Data fetch cancelled. Press 'q' to quit.")
+            return None
+        except Exception as e:
+            logger.error(f"Data fetch failed after all retries: {e}", exc_info=True)
+            loading_status.update(f"❌ Failed to load data: {e}\n\nCheck ~/.moneyflow/moneyflow.log for details.\n\nPress 'q' to quit")
+            return None
+
+    async def _handle_init_error(self, error, loading_status):
+        """Handle initialization errors.
+
+        Args:
+            error: The exception that occurred
+            loading_status: Loading status widget
+        """
+        from .logging_config import get_logger
+        logger = get_logger(__name__)
+
+        error_str = str(error).lower()
+
+        # Check if it's a 401/unauthorized error
+        if "401" in error_str or "unauthorized" in error_str:
+            logger.error("401/Unauthorized in outer handler - recovery already attempted")
+            # If we get here, session recovery already failed in the fetch block above
+            # Delete the bad session
+            try:
+                if self.mm:
+                    self.mm.delete_session()
+                    logger.debug("Session deleted")
+            except Exception as del_err:
+                logger.error(f"Failed to delete session: {del_err}")
+
+            # Show helpful error
+            loading_status.update(
+                f"❌ Session error.\n\n"
+                f"Could not authenticate with backend.\n"
+                f"Please restart the app to login fresh.\n\n"
+                f"Press 'q' to quit"
+            )
+        else:
+            error_msg = f"Failed to load data: {error}"
+            loading_status.update(f"❌ {error_msg}\n\nPress 'q' to quit")
+
+        # Log detailed error for debugging
+        logger.error(f"DATA LOADING ERROR: {error} (Type: {type(error).__name__})", exc_info=True)
+
     async def initialize_data(self) -> None:
-        """Load data from backend API or cache."""
+        """
+        Load data from backend API or cache.
+
+        This is the main orchestrator for data initialization. It coordinates:
+        1. Credential handling (unlock/setup)
+        2. Backend login with retry logic
+        3. Cache checking and loading
+        4. Data fetching from API with retry logic
+        5. Data storage and view initialization
+        6. Error handling and cleanup
+        """
         from .logging_config import get_logger
         logger = get_logger(__name__)
         logger.debug("initialize_data started")
         has_error = False  # Track if we encountered an error
 
+        # Setup loading UI
         try:
-            self.loading = True
-            self.query_one("#loading", LoadingIndicator).display = True
-            loading_status = self.query_one("#loading-status", Static)
-            loading_status.display = True
+            loading_status = self._setup_loading_ui()
         except Exception as e:
             logger.error(f"Failed to initialize UI: {e}", exc_info=True)
             raise
 
+        # Set initial status
         if self.demo_mode:
             loading_status.update("🎮 DEMO MODE - Loading sample data...")
         else:
             loading_status.update("🔄 Connecting to backend...")
 
         try:
+            # Step 1: Handle credentials (if not demo mode)
+            creds = None
             if not self.demo_mode:
-                # Try to use encrypted credentials first
-                from .credentials import CredentialManager
-                from .monarchmoney import RequireMFAException, LoginFailedException
-                from .screens.credential_screens import (
-                    BackendSelectionScreen,
-                    CredentialSetupScreen,
-                    CredentialUnlockScreen,
-                )
                 from .backends import get_backend
 
-                cred_manager = CredentialManager()
-                creds = None
-
-                logger.debug(f"Credentials exist: {cred_manager.credentials_exist()}")
-
-                if cred_manager.credentials_exist():
-                    # Show unlock screen
-                    result = await self.push_screen(CredentialUnlockScreen(), wait_for_dismiss=True)
-
-                    if result is None:
-                        # User chose to reset - show backend selection then setup screen
-                        backend_type = await self.push_screen(
-                            BackendSelectionScreen(), wait_for_dismiss=True
-                        )
-                        if not backend_type:
-                            self.exit()
-                            return
-
-                        creds = await self.push_screen(
-                            CredentialSetupScreen(backend_type=backend_type), wait_for_dismiss=True
-                        )
-                        if not creds:
-                            self.exit()
-                            return
-                    else:
-                        creds = result
-                else:
-                    # No credentials - show backend selection first, then setup screen
-                    backend_type = await self.push_screen(
-                        BackendSelectionScreen(), wait_for_dismiss=True
-                    )
-                    if not backend_type:
-                        self.exit()
-                        return
-
-                    creds = await self.push_screen(
-                        CredentialSetupScreen(backend_type=backend_type), wait_for_dismiss=True
-                    )
-                    if not creds:
-                        self.exit()
-                        return
+                creds = await self._handle_credentials()
+                if creds is None:
+                    return  # User exited
 
                 # Initialize backend based on credentials
                 backend_type = creds.get("backend_type", "monarch")
                 loading_status.update(f"🔄 Initializing {backend_type} backend...")
                 self.mm = get_backend(backend_type)
 
-                # Login with credentials using retry logic for robustness
-                loading_status.update(f"🔐 Logging in to {backend_type.capitalize()}...")
-
-                from .retry_logic import retry_with_backoff, RetryAborted
-
-                logger.debug(f"Starting login flow for {backend_type}")
-                logger.debug(f"Email: {creds['email']}")
-                logger.debug(f"Has MFA secret: {bool(creds.get('mfa_secret'))}")
-
-                def on_login_retry(attempt: int, wait_seconds: float) -> None:
-                    """Show retry progress during login."""
-                    loading_status.update(
-                        f"⚠ Login failed. Retrying in {wait_seconds:.0f}s (attempt {attempt + 1}/5). Press Ctrl-C to abort."
-                    )
-
-                async def login_operation():
-                    """Login with automatic retry on session expiration."""
-                    try:
-                        logger.debug("Attempting login with saved session...")
-                        await self.mm.login(
-                            email=creds["email"],
-                            password=creds["password"],
-                            use_saved_session=True,  # Try saved session first
-                            save_session=True,
-                            mfa_secret_key=creds["mfa_secret"],
-                        )
-                        logger.debug("Login succeeded!")
-                        return True
-                    except Exception as e:
-                        logger.warning(f"Login failed: {e}", exc_info=True)
-                        error_str = str(e).lower()
-                        # Check if it's a stale session
-                        if "401" in error_str or "unauthorized" in error_str:
-                            logger.debug("Detected stale session, deleting and retrying with fresh login")
-                            self.mm.delete_session()
-                            # Retry with fresh login
-                            await self.mm.login(
-                                email=creds["email"],
-                                password=creds["password"],
-                                use_saved_session=False,  # Force fresh login
-                                save_session=True,
-                                mfa_secret_key=creds["mfa_secret"],
-                            )
-                            logger.debug("Fresh login succeeded!")
-                            return True
-                        # Not a session issue, re-raise for retry logic
-                        raise
-
-                try:
-                    await retry_with_backoff(
-                        operation=login_operation,
-                        operation_name="Login to backend",
-                        max_retries=5,
-                        initial_wait=60.0,
-                        on_retry=on_login_retry
-                    )
-                    # Store credentials for automatic session refresh if needed
-                    self.stored_credentials = creds
-                    loading_status.update("✅ Logged in successfully!")
-                    logger.debug("Login flow completed successfully")
-                except RetryAborted:
-                    # User pressed Ctrl-C
-                    logger.debug("Login cancelled by user")
-                    loading_status.update("Login cancelled by user. Press 'q' to quit.")
-                    has_error = True
-                    return
-                except Exception as e:
-                    # All retries exhausted
-                    logger.error(f"Login failed after all retries: {e}", exc_info=True)
-                    error_msg = f"Login failed: {e}"
-                    loading_status.update(f"❌ {error_msg}\n\nCheck ~/.moneyflow/moneyflow.log for details.\n\nPress 'q' to quit")
+                # Step 2: Login with retry logic
+                login_success = await self._login_with_retry(creds, loading_status)
+                if not login_success:
                     has_error = True
                     return
             else:
@@ -395,227 +703,34 @@ class MoneyflowTUI(App):
                 loading_status.update("🎮 DEMO MODE - No authentication required")
                 await self.mm.login()  # No-op for DemoBackend
 
-            # Initialize data manager
-            self.data_manager = DataManager(self.mm)
+            # Step 3: Initialize managers
+            self._initialize_managers()
 
-            # Initialize cache manager only if user requested caching
-            if self.cache_path is not None:
-                from .cache_manager import CacheManager
-                self.cache_manager = CacheManager(cache_dir=self.cache_path)
+            # Step 4: Determine date range
+            start_date, end_date, self.cache_year_filter, self.cache_since_filter = self._determine_date_range()
 
-            # Initialize controller with view presenter pattern
-            view = TextualViewPresenter(self)
-            self.controller = AppController(view, self.state, self.data_manager, self.cache_manager)
+            # Step 5: Check and load cache
+            cached_data = await self._check_and_load_cache(loading_status)
 
-            # Determine date range based on CLI arguments
-            if self.custom_start_date:
-                start_date = self.custom_start_date
-                end_date = datetime.now().strftime("%Y-%m-%d")
-                self.cache_year_filter = None
-                self.cache_since_filter = self.custom_start_date
-            elif self.start_year:
-                start_date = f"{self.start_year}-01-01"
-                end_date = datetime.now().strftime("%Y-%m-%d")
-                self.cache_year_filter = self.start_year
-                self.cache_since_filter = None
+            if cached_data:
+                df, categories, category_groups = cached_data
             else:
-                # Fetch ALL transactions (no date filter for offline-first approach)
-                start_date = None
-                end_date = None
-                self.cache_year_filter = None
-                self.cache_since_filter = None
-
-            # Check if we should use cache (only if --cache was passed)
-            use_cache = False
-            if (
-                self.cache_manager
-                and not self.force_refresh
-                and self.cache_manager.is_cache_valid(year=self.cache_year_filter, since=self.cache_since_filter)
-            ):
-                # Cache is valid - show prompt
-                cache_info = self.cache_manager.get_cache_info()
-                if cache_info:
-                    from .screens.credential_screens import CachePromptScreen
-
-                    use_cache = await self.push_screen(
-                        CachePromptScreen(
-                            age=cache_info["age"],
-                            transaction_count=cache_info["transaction_count"],
-                            filter_desc=cache_info["filter"],
-                        ),
-                        wait_for_dismiss=True,
-                    )
-
-            if use_cache:
-                # Load from cache
-                loading_status.update("📦 Loading from cache...")
-                result = self.cache_manager.load_cache()
-                if result:
-                    df, categories, category_groups, metadata = result
-                    # Apply category grouping dynamically (so CATEGORY_GROUPS changes take effect)
-                    loading_status.update("🔄 Applying category groupings...")
-                    df = self.data_manager.apply_category_groups(df)
-                    loading_status.update(f"✅ Loaded {len(df):,} transactions from cache!")
-                else:
-                    # Cache load failed, fall back to API
-                    loading_status.update("⚠ Cache load failed, fetching from API...")
-                    use_cache = False
-
-            if not use_cache:
-                # Fetch from API (with retry on session expiration)
-                if self.custom_start_date:
-                    loading_status.update(
-                        f"📊 Fetching transactions from {self.custom_start_date} onwards..."
-                    )
-                elif self.start_year:
-                    loading_status.update(
-                        f"📊 Fetching transactions from {self.start_year} onwards..."
-                    )
-                else:
-                    loading_status.update("📊 Fetching ALL transaction data from backend...")
-
-                loading_status.update(
-                    "⏳ This may take a minute for large accounts (10k+ transactions)..."
-                )
-                loading_status.update(
-                    "💡 TIP: This is a one-time download. Future operations will be instant!"
-                )
-
-                def update_progress(msg: str) -> None:
-                    """Update the loading status display."""
-                    loading_status.update(f"📊 {msg}")
-
-                # Fetch data with retry logic for network resilience
-                from .retry_logic import retry_with_backoff, RetryAborted
-
-                def on_fetch_retry(attempt: int, wait_seconds: float) -> None:
-                    """Show retry progress during data fetch."""
-                    loading_status.update(
-                        f"⚠ Data fetch failed. Retrying in {wait_seconds:.0f}s (attempt {attempt + 1}/5). Press Ctrl-C to abort."
-                    )
-
-                async def fetch_operation():
-                    """Fetch data with automatic error logging."""
-                    try:
-                        logger.debug(f"Fetching transactions (start={start_date}, end={end_date})")
-                        result = await self.data_manager.fetch_all_data(
-                            start_date=start_date, end_date=end_date, progress_callback=update_progress
-                        )
-                        logger.debug(f"Data fetch succeeded - loaded {len(result[0])} transactions")
-                        return result
-                    except Exception as e:
-                        logger.error(f"Data fetch failed: {e}", exc_info=True)
-                        # Check if session expiration
-                        error_str = str(e).lower()
-                        if ("401" in error_str or "unauthorized" in error_str) and creds:
-                            logger.info("Session expired during fetch, attempting fresh login...")
-                            loading_status.update("🔄 Session expired. Re-authenticating...")
-                            # Delete stale session and force fresh login
-                            try:
-                                self.mm.delete_session()
-                                logger.info("Deleted stale session, attempting fresh login")
-                                await self.mm.login(
-                                    email=creds["email"],
-                                    password=creds["password"],
-                                    use_saved_session=False,  # Force fresh login
-                                    save_session=True,
-                                    mfa_secret_key=creds["mfa_secret"],
-                                )
-                                logger.info("Fresh login succeeded, retrying fetch")
-                                loading_status.update("✅ Re-authenticated. Retrying fetch...")
-                                result = await self.data_manager.fetch_all_data(
-                                    start_date=start_date, end_date=end_date, progress_callback=update_progress
-                                )
-                                logger.info(f"Fetch retry succeeded - loaded {len(result[0])} transactions")
-                                return result
-                            except Exception as reauth_error:
-                                logger.error(f"Re-authentication failed: {reauth_error}", exc_info=True)
-                                # Re-auth failed, let retry logic handle it with backoff
-                                raise Exception(f"Session refresh failed: {reauth_error}")
-                        # Not auth error, re-raise for retry logic
-                        raise
-
-                try:
-                    df, categories, category_groups = await retry_with_backoff(
-                        operation=fetch_operation,
-                        operation_name="Fetch transaction data",
-                        max_retries=5,
-                        initial_wait=60.0,
-                        on_retry=on_fetch_retry
-                    )
-                except RetryAborted:
-                    logger.debug("Data fetch cancelled by user")
-                    loading_status.update("Data fetch cancelled. Press 'q' to quit.")
+                # Step 6: Fetch from API with retry logic
+                fetch_result = await self._fetch_data_with_retry(creds, start_date, end_date, loading_status)
+                if fetch_result is None:
                     has_error = True
                     return
-                except Exception as e:
-                    logger.error(f"Data fetch failed after all retries: {e}", exc_info=True)
-                    loading_status.update(f"❌ Failed to load data: {e}\n\nCheck ~/.moneyflow/moneyflow.log for details.\n\nPress 'q' to quit")
-                    has_error = True
-                    return
+                df, categories, category_groups = fetch_result
 
-                # Save to cache for next time (only if --cache was passed)
-                if self.cache_manager:
-                    loading_status.update("💾 Saving to cache...")
-                    self.cache_manager.save_cache(
-                        transactions_df=df,
-                        categories=categories,
-                        category_groups=category_groups,
-                        year=self.cache_year_filter,
-                        since=self.cache_since_filter,
-                    )
-                    loading_status.update(f"✅ Loaded {len(df):,} transactions and cached!")
-                else:
-                    loading_status.update(f"✅ Loaded {len(df):,} transactions!")
+            # Step 7: Store data
+            self._store_data(df, categories, category_groups)
 
-            # Store in data manager
-            self.data_manager.df = df
-            self.data_manager.categories = categories
-            self.data_manager.category_groups = category_groups
-            self.state.transactions_df = df
-
-            # Initialize time frame to THIS_YEAR (default view filter)
-            # This filters the display to current year even though we loaded all data
-            from datetime import date as date_type
-
-            today = date_type.today()
-            self.state.start_date = date_type(today.year, 1, 1)
-            self.state.end_date = date_type(today.year, 12, 31)
-
+            # Step 8: Initialize view
             loading_status.update(f"✅ Ready! Showing {len(df):,} transactions")
-
-            # Show initial view (merchants)
-            self.refresh_view()
+            self._initialize_view()
 
         except Exception as e:
-            loading_status = self.query_one("#loading-status", Static)
-            error_str = str(e).lower()
-
-            # Check if it's a 401/unauthorized error
-            if "401" in error_str or "unauthorized" in error_str:
-                logger.error("401/Unauthorized in outer handler - recovery already attempted")
-                # If we get here, session recovery already failed in the fetch block above
-                # Delete the bad session
-                try:
-                    if self.mm:
-                        self.mm.delete_session()
-                        logger.debug("Session deleted")
-                except Exception as del_err:
-                    logger.error(f"Failed to delete session: {del_err}")
-
-                # Show helpful error
-                loading_status.update(
-                    f"❌ Session error.\n\n"
-                    f"Could not authenticate with backend.\n"
-                    f"Please restart the app to login fresh.\n\n"
-                    f"Press 'q' to quit"
-                )
-            else:
-                error_msg = f"Failed to load data: {e}"
-                loading_status.update(f"❌ {error_msg}\n\nPress 'q' to quit")
-
-            # Log detailed error for debugging
-            logger.error(f"DATA LOADING ERROR: {e} (Type: {type(e).__name__})", exc_info=True)
+            await self._handle_init_error(e, loading_status)
             has_error = True
 
         finally:
