@@ -1690,18 +1690,51 @@ class MoneyflowTUI(App):
             return False
 
     async def _commit_with_retry(self, edits):
-        """Commit edits with automatic retry on session expiration."""
+        """
+        Commit edits with automatic retry on session expiration.
+
+        Uses exponential backoff (60s, 120s, 240s, 480s, 960s) for transient failures.
+        User can press Ctrl-C to abort during retry waits.
+        """
+        from .retry_logic import retry_with_backoff, RetryAborted
+
+        def on_retry_notification(attempt: int, wait_seconds: float) -> None:
+            """Show retry progress to user."""
+            self.notify(
+                f"Commit failed. Retrying in {wait_seconds:.0f}s (attempt {attempt}/5). Press Ctrl-C to abort.",
+                timeout=int(wait_seconds)
+            )
+
+        async def commit_operation():
+            """Wrapper to commit and re-authenticate if needed."""
+            try:
+                return await self.data_manager.commit_pending_edits(edits)
+            except Exception as e:
+                # Check if it's an auth error (session expired)
+                error_msg = str(e).lower()
+                if "401" in error_msg or "unauthorized" in error_msg or "token" in error_msg:
+                    # Try to refresh session once, then re-raise to trigger retry
+                    if await self._refresh_session():
+                        # Session refreshed - try commit again immediately
+                        return await self.data_manager.commit_pending_edits(edits)
+                # Re-raise for retry logic to handle
+                raise
+
         try:
-            return await self.data_manager.commit_pending_edits(edits)
-        except Exception as e:
-            # Check if it's an auth error (session expired)
-            error_msg = str(e).lower()
-            if "401" in error_msg or "unauthorized" in error_msg or "token" in error_msg:
-                # Try to refresh session and retry once
-                if await self._refresh_session():
-                    self.notify("Retrying commit with refreshed session...", timeout=2)
-                    return await self.data_manager.commit_pending_edits(edits)
-            # Re-raise if not auth error or retry failed
+            # Use retry_with_backoff for robust error handling
+            return await retry_with_backoff(
+                operation=commit_operation,
+                operation_name="Commit changes",
+                max_retries=5,
+                initial_wait=60.0,
+                on_retry=on_retry_notification
+            )
+        except RetryAborted:
+            # User pressed Ctrl-C
+            self.notify("Commit cancelled by user", severity="warning", timeout=3)
+            raise
+        except Exception:
+            # All retries exhausted
             raise
 
     def action_review_and_commit(self) -> None:
