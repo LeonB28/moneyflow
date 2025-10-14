@@ -561,7 +561,7 @@ class MoneyflowTUI(App):
                 raise
 
         try:
-            df, categories, category_groups = await retry_with_backoff(
+            df, categories, category_groups = await retry_with_backoff(  # type: ignore
                 operation=fetch_operation,
                 operation_name="Fetch transaction data",
                 max_retries=5,
@@ -1535,7 +1535,7 @@ class MoneyflowTUI(App):
             self._notify(NotificationHelper.commit_starting(count))
 
             try:
-                success_count, failure_count = await self._commit_with_retry(
+                success_count, failure_count = await self._commit_with_retry(  # type: ignore
                     self.data_manager.pending_edits
                 )
 
