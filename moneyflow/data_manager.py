@@ -18,6 +18,9 @@ from datetime import datetime, date
 from typing import Dict, List, Optional, Any, Tuple, Callable
 import polars as pl
 from .backends.base import FinanceBackend
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 # Category group mapping (since not consistently available in API)
@@ -549,7 +552,10 @@ class DataManager:
         Note: After successful commit, caller should use CommitOrchestrator
         to apply edits to local DataFrames for instant UI update.
         """
+        logger.info(f"Starting commit of {len(edits)} edits")
+
         if not edits:
+            logger.info("No edits to commit")
             return 0, 0
 
         # Group edits by transaction ID
@@ -581,22 +587,11 @@ class DataManager:
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 failure_count += 1
-                # Log the error LOUDLY to multiple outputs
-                import sys
-                error_msg = f"[COMMIT ERROR] Update {i+1}/{len(results)} FAILED: {result}"
-                error_type = f"[COMMIT ERROR] Error type: {type(result).__name__}"
-
-                # Print to stderr
-                print(f"\n{'='*70}", file=sys.stderr, flush=True)
-                print(error_msg, file=sys.stderr, flush=True)
-                print(error_type, file=sys.stderr, flush=True)
-                print(f"{'='*70}\n", file=sys.stderr, flush=True)
-
-                # ALSO print to stdout (in case stderr is redirected)
-                print(error_msg, flush=True)
-                print(error_type, flush=True)
+                logger.error(f"Transaction update {i+1}/{len(results)} FAILED: {result}", exc_info=result)
             else:
                 success_count += 1
+
+        logger.info(f"Commit completed: {success_count} succeeded, {failure_count} failed")
 
         return success_count, failure_count
 

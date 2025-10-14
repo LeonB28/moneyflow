@@ -42,6 +42,7 @@ from .widgets.help_screen import HelpScreen
 from .view_presenter import ViewPresenter, AggregationField
 from .time_navigator import TimeNavigator
 from .commit_orchestrator import CommitOrchestrator
+from .logging_config import setup_logging
 
 
 class MoneyflowTUI(App):
@@ -1732,9 +1733,9 @@ class MoneyflowTUI(App):
                 )
                 if failure_count > 0:
                     self.notify(
-                        f"✅ Saved {success_count}, ❌ {failure_count} failed",
+                        f"✅ Saved {success_count}, ❌ {failure_count} failed. Check terminal (run with --dev to see errors)",
                         severity="warning",
-                        timeout=5,
+                        timeout=8,
                     )
                 else:
                     self.notify(
@@ -1841,6 +1842,10 @@ class MoneyflowTUI(App):
 
 def main():
     """Entry point for the TUI."""
+    # Initialize logging FIRST so all errors are captured
+    logger = setup_logging()
+    logger.info("Starting moneyflow application")
+
     print("[MAIN] Starting application", file=sys.stderr, flush=True)
 
     parser = argparse.ArgumentParser(
