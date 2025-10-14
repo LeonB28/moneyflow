@@ -185,6 +185,10 @@ class EditMerchantScreen(ModalScreen):
         for merchant in sorted(set(matches))[:20]:
             option_list.add_option(Option(merchant, id=merchant))
 
+        # Highlight first item by default so Enter works immediately
+        if option_list.option_count > 0:
+            option_list.highlighted = 0
+
     async def on_input_changed(self, event: Input.Changed) -> None:
         """Filter merchant suggestions as user types."""
         if event.input.id != "merchant-input" or not self.all_merchants:
@@ -357,6 +361,10 @@ class SelectCategoryScreen(ModalScreen):
             is_current = " ← current" if cat_id == self.current_category_id else ""
             option_list.add_option(Option(f"{cat_name}{is_current}", id=cat_id))
             self.category_map[idx] = cat_id
+
+        # Highlight first item by default so Enter works immediately
+        if option_list.option_count > 0:
+            option_list.highlighted = 0
 
     async def on_input_changed(self, event: Input.Changed) -> None:
         """Filter categories as user types."""

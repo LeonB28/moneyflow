@@ -501,24 +501,30 @@ class MoneyflowTUI(App):
                         # Check if session expiration
                         error_str = str(e).lower()
                         if ("401" in error_str or "unauthorized" in error_str) and creds:
-                            logger.info("Session expired during fetch, re-authenticating...")
+                            logger.info("Session expired during fetch, attempting fresh login...")
                             loading_status.update("🔄 Session expired. Re-authenticating...")
                             # Delete stale session and force fresh login
-                            self.mm.delete_session()
-                            await self.mm.login(
-                                email=creds["email"],
-                                password=creds["password"],
-                                use_saved_session=False,  # Force fresh login
-                                save_session=True,
-                                mfa_secret_key=creds["mfa_secret"],
-                            )
-                            logger.info("Re-authenticated, retrying fetch immediately")
-                            loading_status.update("✅ Re-authenticated. Retrying fetch...")
-                            result = await self.data_manager.fetch_all_data(
-                                start_date=start_date, end_date=end_date, progress_callback=update_progress
-                            )
-                            logger.info(f"Retry succeeded - loaded {len(result[0])} transactions")
-                            return result
+                            try:
+                                self.mm.delete_session()
+                                logger.info("Deleted stale session, attempting fresh login")
+                                await self.mm.login(
+                                    email=creds["email"],
+                                    password=creds["password"],
+                                    use_saved_session=False,  # Force fresh login
+                                    save_session=True,
+                                    mfa_secret_key=creds["mfa_secret"],
+                                )
+                                logger.info("Fresh login succeeded, retrying fetch")
+                                loading_status.update("✅ Re-authenticated. Retrying fetch...")
+                                result = await self.data_manager.fetch_all_data(
+                                    start_date=start_date, end_date=end_date, progress_callback=update_progress
+                                )
+                                logger.info(f"Fetch retry succeeded - loaded {len(result[0])} transactions")
+                                return result
+                            except Exception as reauth_error:
+                                logger.error(f"Re-authentication failed: {reauth_error}", exc_info=True)
+                                # Re-auth failed, let retry logic handle it with backoff
+                                raise Exception(f"Session refresh failed: {reauth_error}")
                         # Not auth error, re-raise for retry logic
                         raise
 
