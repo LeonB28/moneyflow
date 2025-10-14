@@ -574,9 +574,19 @@ class DataManager:
         # Execute in parallel
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Count successes and failures
-        success_count = sum(1 for r in results if not isinstance(r, Exception))
-        failure_count = len(results) - success_count
+        # Count successes and failures, and log errors
+        success_count = 0
+        failure_count = 0
+
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                failure_count += 1
+                # Log the error to stderr for debugging
+                import sys
+                print(f"[COMMIT ERROR] Transaction update {i+1} failed: {result}", file=sys.stderr, flush=True)
+                print(f"[COMMIT ERROR] Error type: {type(result).__name__}", file=sys.stderr, flush=True)
+            else:
+                success_count += 1
 
         return success_count, failure_count
 
