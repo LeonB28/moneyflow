@@ -2,7 +2,7 @@
 
 **Track your moneyflow from the terminal.**
 
-A blazing-fast, keyboard-driven TUI for managing personal finance transactions. Built for power users who want speed and efficiency.
+A keyboard-driven terminal UI for managing personal finance transactions. Designed for users who prefer efficiency and direct control over their financial data.
 
 **Currently Supported Platforms:**
 - ✅ **Monarch Money** (full support)
@@ -130,15 +130,18 @@ uv run pytest
 
 ## CLI Options
 
-By default, moneyflow fetches **all transactions** from your account. For very large accounts, you can limit the data range:
+By default, moneyflow fetches **all transactions** from your account. For large accounts or quick monthly reviews, you can limit the data range:
+
+**Load current month only (fastest):**
+```bash
+# Month-to-date: Load from 1st of current month to today
+moneyflow --mtd
+```
 
 **Fetch only recent years:**
 ```bash
 # Only load transactions from 2025 onwards
 moneyflow --year 2025
-
-# Only load transactions from 2024 onwards
-moneyflow --year 2024
 ```
 
 **Fetch from a specific date:**
@@ -147,7 +150,7 @@ moneyflow --year 2024
 moneyflow --since 2024-06-01
 ```
 
-**Enable caching for faster startup:**
+**Enable caching:**
 ```bash
 # Cache data to avoid re-downloading
 moneyflow --cache
@@ -161,7 +164,7 @@ moneyflow --refresh
 moneyflow --help
 ```
 
-**Note**: Limiting the date range makes initial load faster but you won't see older transactions in your analysis.
+**Note**: Limiting the date range reduces initial load time but you won't see older transactions in your analysis.
 
 ### First Run Setup (Monarch Money)
 
