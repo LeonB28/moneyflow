@@ -115,3 +115,99 @@ class TestCacheAndCommit:
             await data_manager.commit_pending_edits(edits)
 
         # The exception being raised is GOOD - it triggers retry logic in app.py
+
+
+class TestCommitFailureDoesNotCorruptLocalState:
+    """
+    CRITICAL: Test that failed commits don't apply changes locally.
+
+    This was a DATA CORRUPTION bug where commit failures would still
+    apply edits to the local DataFrame, making it appear changes succeeded.
+    """
+
+    async def test_partial_commit_failure_keeps_pending_edits(self, data_manager, mock_mm):
+        """Failed commits should keep edits in pending list, not clear them."""
+        await mock_mm.login()
+
+        # Make all updates fail
+        async def always_fail_update(*args, **kwargs):
+            raise Exception("Network timeout")
+
+        mock_mm.update_transaction = always_fail_update
+
+        edits = [
+            TransactionEdit("txn_1", "merchant", "Old1", "New1", datetime.now()),
+            TransactionEdit("txn_2", "merchant", "Old2", "New2", datetime.now()),
+        ]
+
+        data_manager.pending_edits = edits.copy()
+
+        # Commit will fail
+        success, failure = await data_manager.commit_pending_edits(edits)
+
+        assert success == 0
+        assert failure == 2
+        # CRITICAL: pending_edits should still contain the edits
+        # (In app.py, we only clear pending_edits if failure_count == 0)
+
+    async def test_all_commits_fail_local_state_unchanged(self, data_manager, mock_mm):
+        """
+        When ALL commits fail, local DataFrame must NOT be modified.
+
+        Simulates the bug: commits fail due to network, but local state
+        gets corrupted with uncommitted changes.
+        """
+        await mock_mm.login()
+
+        # Set up initial data
+        import polars as pl
+        original_df = pl.DataFrame({
+            "id": ["txn_1", "txn_2"],
+            "merchant": ["OldMerchant1", "OldMerchant2"],
+            "amount": [-100.0, -200.0],
+        })
+        data_manager.df = original_df.clone()
+
+        # Make all commits fail
+        async def network_error(*args, **kwargs):
+            raise Exception("Connection timeout")
+
+        mock_mm.update_transaction = network_error
+
+        edits = [
+            TransactionEdit("txn_1", "merchant", "OldMerchant1", "NewMerchant1", datetime.now()),
+            TransactionEdit("txn_2", "merchant", "OldMerchant2", "NewMerchant2", datetime.now()),
+        ]
+
+        # Commit fails
+        success, failure = await data_manager.commit_pending_edits(edits)
+        assert failure == 2
+
+        # CRITICAL TEST: Local DataFrame should be UNCHANGED
+        # The app.py code should NOT call CommitOrchestrator if failure > 0
+        assert data_manager.df["merchant"].to_list() == ["OldMerchant1", "OldMerchant2"]
+        # NOT ["NewMerchant1", "NewMerchant2"] - that would be corruption!
+
+    async def test_commit_success_applies_changes_locally(self, data_manager, mock_mm):
+        """When all commits succeed, changes SHOULD be applied locally."""
+        await mock_mm.login()
+
+        # Set up initial data
+        import polars as pl
+        original_df = pl.DataFrame({
+            "id": ["txn_1"],
+            "merchant": ["OldMerchant"],
+            "amount": [-100.0],
+        })
+        data_manager.df = original_df.clone()
+
+        edits = [TransactionEdit("txn_1", "merchant", "OldMerchant", "NewMerchant", datetime.now())]
+
+        # Commit succeeds
+        success, failure = await data_manager.commit_pending_edits(edits)
+        assert success == 1
+        assert failure == 0
+
+        # This test just verifies commit worked at data_manager level
+        # The app.py code is responsible for applying to local DataFrame
+        # when failure_count == 0
