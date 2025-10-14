@@ -1664,10 +1664,15 @@ class MoneyflowTUI(App):
 
     async def _refresh_session(self) -> bool:
         """Refresh expired session by re-authenticating with stored credentials."""
+        from .logging_config import get_logger
+        logger = get_logger(__name__)
+
         if self.stored_credentials is None:
+            logger.error("Cannot refresh session - no stored credentials")
             return False
 
         try:
+            logger.info("Session expired - attempting to re-authenticate")
             self.notify("Session expired, re-authenticating...", timeout=2)
             await self.mm.login(
                 email=self.stored_credentials["email"],
@@ -1676,9 +1681,11 @@ class MoneyflowTUI(App):
                 save_session=True,
                 mfa_secret_key=self.stored_credentials["mfa_secret"],
             )
+            logger.info("Session refresh succeeded")
             self.notify("Session refreshed successfully", severity="information", timeout=2)
             return True
         except Exception as e:
+            logger.error(f"Failed to refresh session: {e}", exc_info=True)
             self.notify(f"Failed to refresh session: {e}", severity="error", timeout=5)
             return False
 
