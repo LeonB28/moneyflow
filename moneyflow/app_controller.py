@@ -294,6 +294,30 @@ class AppController:
             self.refresh_view()
         return view_name
 
+    # Sorting operations
+    def toggle_sort_field(self) -> str:
+        """
+        Toggle to next sort field based on current view mode.
+
+        Returns:
+            Display name of new sort field
+        """
+        new_sort, display = self.get_next_sort_field(self.state.view_mode, self.state.sort_by)
+        self.state.sort_by = new_sort
+        self.refresh_view()
+        return display
+
+    def reverse_sort(self) -> str:
+        """
+        Reverse the current sort direction.
+
+        Returns:
+            Display name of new direction ("Ascending" or "Descending")
+        """
+        self.state.reverse_sort()
+        self.refresh_view()
+        return "Descending" if self.state.sort_direction == SortDirection.DESC else "Ascending"
+
     def get_next_sort_field(self, view_mode: ViewMode, current_sort: SortMode) -> tuple[SortMode, str]:
         """
         Determine the next sort field when user toggles sorting.

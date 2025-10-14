@@ -903,23 +903,12 @@ class MoneyflowTUI(App):
 
     def action_reverse_sort(self) -> None:
         """Reverse the current sort direction."""
-        self.state.reverse_sort()
-        self.refresh_view()
-        direction = "Descending" if self.state.sort_direction == SortDirection.DESC else "Ascending"
+        direction = self.controller.reverse_sort()
         self.notify(f"Sort: {direction}", timeout=1)
 
     def action_toggle_sort_field(self) -> None:
         """Toggle sorting field."""
-        # Use controller to determine next sort field (testable business logic)
-        new_sort_mode, field_name = self.controller.get_next_sort_field(
-            self.state.view_mode,
-            self.state.sort_by
-        )
-
-        # Apply the new sort mode
-        self.state.sort_by = new_sort_mode
-
-        self.refresh_view()
+        field_name = self.controller.toggle_sort_field()
         self.notify(f"Sorting by: {field_name}", timeout=1)
 
     def action_show_filters(self) -> None:

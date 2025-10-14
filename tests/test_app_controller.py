@@ -892,3 +892,47 @@ class TestViewModeSwitching:
 
         assert view_name is not None  # Should return next view name
         assert len(mock_view.table_updates) == 1  # Should refresh
+
+
+class TestSortingFacade:
+    """Test sorting facade methods that encapsulate sort operations."""
+
+    async def test_toggle_sort_field_detail_view(self, controller, mock_view):
+        """Test toggling sort field in detail view."""
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.state.sort_by = SortMode.DATE
+
+        display_name = controller.toggle_sort_field()
+
+        assert controller.state.sort_by == SortMode.MERCHANT
+        assert display_name == "Merchant"
+        assert len(mock_view.table_updates) == 1
+
+    async def test_toggle_sort_field_aggregate_view(self, controller, mock_view):
+        """Test toggling sort field in aggregate view."""
+        controller.state.view_mode = ViewMode.MERCHANT
+        controller.state.sort_by = SortMode.COUNT
+
+        display_name = controller.toggle_sort_field()
+
+        assert controller.state.sort_by == SortMode.AMOUNT
+        assert display_name == "Amount"
+
+    async def test_reverse_sort_to_descending(self, controller, mock_view):
+        """Test reversing sort to descending."""
+        controller.state.sort_direction = SortDirection.ASC
+
+        direction_name = controller.reverse_sort()
+
+        assert controller.state.sort_direction == SortDirection.DESC
+        assert direction_name == "Descending"
+        assert len(mock_view.table_updates) == 1
+
+    async def test_reverse_sort_to_ascending(self, controller, mock_view):
+        """Test reversing sort to ascending."""
+        controller.state.sort_direction = SortDirection.DESC
+
+        direction_name = controller.reverse_sort()
+
+        assert controller.state.sort_direction == SortDirection.ASC
+        assert direction_name == "Ascending"
