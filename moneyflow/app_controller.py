@@ -412,6 +412,114 @@ class AppController:
         self.refresh_view()
         return (False, date_range.description)
 
+    # Data access methods (read-only)
+    def get_filtered_df(self):
+        """Get filtered DataFrame for current view."""
+        return self.state.get_filtered_df()
+
+    def get_current_data(self):
+        """Get current view data (aggregated or detail)."""
+        return self.state.current_data
+
+    def get_merchant_suggestions(self) -> list[str]:
+        """Get list of all merchants for autocomplete."""
+        if self.data_manager.df is None:
+            return []
+        return self.data_manager.df["merchant"].unique().to_list()
+
+    def get_categories(self) -> dict:
+        """Get category map."""
+        return self.data_manager.categories
+
+    def get_pending_changes_count(self) -> int:
+        """Get count of pending edits."""
+        return self.data_manager.get_stats()["pending_changes"]
+
+    def get_pending_edits(self):
+        """Get pending edits for review."""
+        return self.data_manager.pending_edits
+
+    def has_unsaved_changes(self) -> bool:
+        """Check if there are unsaved changes."""
+        return self.get_pending_changes_count() > 0
+
+    def get_view_mode(self) -> ViewMode:
+        """Get current view mode."""
+        return self.state.view_mode
+
+    def get_selected_ids(self) -> set:
+        """Get currently selected transaction IDs."""
+        return self.state.selected_ids
+
+    # Search and filtering operations
+    def apply_search(self, query: str) -> int:
+        """
+        Apply search query.
+
+        Args:
+            query: Search query string
+
+        Returns:
+            Count of filtered results
+        """
+        self.state.search_query = query
+        self.refresh_view()
+        filtered = self.state.get_filtered_df()
+        return len(filtered) if filtered is not None else 0
+
+    def clear_search(self):
+        """Clear search query."""
+        self.state.search_query = ""
+        self.refresh_view()
+
+    def apply_filters(self, show_transfers: bool, show_hidden: bool):
+        """Apply visibility filters."""
+        self.state.show_transfers = show_transfers
+        self.state.show_hidden = show_hidden
+        self.refresh_view()
+
+    def toggle_selection(self, txn_id: str) -> int:
+        """
+        Toggle transaction selection.
+
+        Args:
+            txn_id: Transaction ID to toggle
+
+        Returns:
+            Total count of selected transactions
+        """
+        self.state.toggle_selection(txn_id)
+        return len(self.state.selected_ids)
+
+    def clear_selection(self):
+        """Clear all selections."""
+        self.state.clear_selection()
+
+    def drill_down(self, item_name: str, cursor_position: int):
+        """
+        Drill down into an item (merchant/category/group/account).
+
+        Args:
+            item_name: Name of item to drill into
+            cursor_position: Current cursor position to save for go_back
+        """
+        self.state.drill_down(item_name, cursor_position)
+        self.refresh_view()
+
+    def go_back(self) -> tuple[bool, int]:
+        """
+        Go back to previous view.
+
+        Returns:
+            Tuple of (success, cursor_position)
+            - success: True if went back, False if already at top
+            - cursor_position: Where to restore cursor
+        """
+        success, cursor_position = self.state.go_back()
+        if success:
+            self.refresh_view()
+        return (success, cursor_position)
+
     def get_next_sort_field(self, view_mode: ViewMode, current_sort: SortMode) -> tuple[SortMode, str]:
         """
         Determine the next sort field when user toggles sorting.
