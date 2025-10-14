@@ -1695,13 +1695,27 @@ class MoneyflowTUI(App):
 
         Uses exponential backoff (60s, 120s, 240s, 480s, 960s) for transient failures.
         User can press Ctrl-C to abort during retry waits.
+
+        **User Experience:**
+        - On auth error: "Session expired, re-authenticating..." → immediate retry
+        - On other error: "Commit failed due to {reason}. Retrying in Xs (attempt N/5). Press Ctrl-C to abort."
+        - On retry success: Returns normally (no extra notification)
+        - On all retries exhausted: Re-raises exception (caller shows error)
+        - On user cancel: "Commit cancelled by user"
         """
         from .retry_logic import retry_with_backoff, RetryAborted
+        from .logging_config import get_logger
+        logger = get_logger(__name__)
 
         def on_retry_notification(attempt: int, wait_seconds: float) -> None:
-            """Show retry progress to user."""
+            """
+            Show retry progress to user.
+
+            Called AFTER the first failure and BEFORE waiting to retry.
+            """
             self.notify(
-                f"Commit failed. Retrying in {wait_seconds:.0f}s (attempt {attempt}/5). Press Ctrl-C to abort.",
+                f"⚠ Retrying commit in {wait_seconds:.0f}s (attempt {attempt + 1}/5). Press Ctrl-C to abort.",
+                severity="warning",
                 timeout=int(wait_seconds)
             )
 
@@ -1713,11 +1727,20 @@ class MoneyflowTUI(App):
                 # Check if it's an auth error (session expired)
                 error_msg = str(e).lower()
                 if "401" in error_msg or "unauthorized" in error_msg or "token" in error_msg:
-                    # Try to refresh session once, then re-raise to trigger retry
+                    logger.info(f"Commit failed with auth error, attempting session refresh")
+                    # Show clear message to user
+                    self.notify("Session expired during commit. Refreshing...", timeout=2)
+                    # Try to refresh session once
                     if await self._refresh_session():
+                        logger.info("Session refreshed, retrying commit immediately")
                         # Session refreshed - try commit again immediately
                         return await self.data_manager.commit_pending_edits(edits)
+                    else:
+                        logger.error("Session refresh failed")
+                        # Session refresh failed - will trigger retry with backoff
+                        raise Exception("Session refresh failed - will retry with backoff")
                 # Re-raise for retry logic to handle
+                logger.warning(f"Commit failed: {e}")
                 raise
 
         try:
@@ -1731,10 +1754,12 @@ class MoneyflowTUI(App):
             )
         except RetryAborted:
             # User pressed Ctrl-C
+            logger.info("Commit retry cancelled by user")
             self.notify("Commit cancelled by user", severity="warning", timeout=3)
             raise
-        except Exception:
+        except Exception as e:
             # All retries exhausted
+            logger.error(f"All commit retries exhausted: {e}")
             raise
 
     def action_review_and_commit(self) -> None:
