@@ -170,9 +170,9 @@ class MoneyflowTUI(App):
         self.demo_mode = demo_mode
         self.start_year = start_year
         # Backend will be initialized in initialize_data() based on credentials
-        self.mm = None
+        self.backend = None
         if demo_mode:
-            self.mm = DemoBackend(year=start_year or 2025)
+            self.backend = DemoBackend(year=start_year or 2025)
             self.title = "moneyflow [DEMO MODE]"
         else:
             self.title = "moneyflow"
@@ -247,7 +247,7 @@ class MoneyflowTUI(App):
 
     def _initialize_managers(self):
         """Initialize data manager, cache manager, and controller."""
-        self.data_manager = DataManager(self.mm)
+        self.data_manager = DataManager(self.backend)
 
         # Initialize cache manager only if user requested caching
         if self.cache_path is not None:
@@ -390,7 +390,7 @@ class MoneyflowTUI(App):
             """Login with automatic retry on session expiration."""
             try:
                 logger.debug("Attempting login with saved session...")
-                await self.mm.login(
+                await self.backend.login(
                     email=creds["email"],
                     password=creds["password"],
                     use_saved_session=True,  # Try saved session first
@@ -611,8 +611,8 @@ class MoneyflowTUI(App):
             # If we get here, session recovery already failed in the fetch block above
             # Delete the bad session
             try:
-                if self.mm:
-                    self.mm.delete_session()
+                if self.backend:
+                    self.backend.delete_session()
                     logger.debug("Session deleted")
             except Exception as del_err:
                 logger.error(f"Failed to delete session: {del_err}")
@@ -674,7 +674,7 @@ class MoneyflowTUI(App):
                 # Initialize backend based on credentials
                 backend_type = creds.get("backend_type", "monarch")
                 loading_status.update(f"🔄 Initializing {backend_type} backend...")
-                self.mm = get_backend(backend_type)
+                self.backend = get_backend(backend_type)
 
                 # Step 2: Login with retry logic
                 login_success = await self._login_with_retry(creds, loading_status)
@@ -684,7 +684,7 @@ class MoneyflowTUI(App):
             else:
                 # Demo mode - no authentication needed
                 loading_status.update("🎮 DEMO MODE - No authentication required")
-                await self.mm.login()  # No-op for DemoBackend
+                await self.backend.login()  # No-op for DemoBackend
 
             # Step 3: Initialize managers
             self._initialize_managers()
@@ -1516,7 +1516,7 @@ class MoneyflowTUI(App):
         if confirmed:
             try:
                 # Delete via API
-                await self.mm.delete_transaction(txn_id)
+                await self.backend.delete_transaction(txn_id)
                 self.notify("Transaction deleted", severity="information", timeout=2)
 
                 # Refresh data - need to re-fetch
@@ -1557,8 +1557,8 @@ class MoneyflowTUI(App):
         logger = get_logger(__name__)
 
         logger.info("Deleting stale session and performing fresh login")
-        self.mm.delete_session()
-        await self.mm.login(
+        self.backend.delete_session()
+        await self.backend.login(
             email=creds["email"],
             password=creds["password"],
             use_saved_session=False,  # Force fresh login
