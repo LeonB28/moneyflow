@@ -1,7 +1,7 @@
 """
-Tests for view_presenter module.
+Tests for formatters module.
 
-These tests verify the presentation logic is pure, deterministic,
+These tests verify the formatting logic is pure, deterministic,
 and produces correct output for all view types.
 """
 
@@ -9,7 +9,7 @@ import polars as pl
 import pytest
 from datetime import date
 
-from moneyflow.view_presenter import ViewPresenter
+from moneyflow.formatters import ViewPresenter
 from moneyflow.state import SortMode, SortDirection
 
 

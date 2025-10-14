@@ -39,7 +39,7 @@ from .backends import MonarchBackend, DemoBackend
 from .data_manager import DataManager
 from .state import AppState, ViewMode, SortMode, SortDirection, TimeFrame, TransactionEdit
 from .widgets.help_screen import HelpScreen
-from .view_presenter import ViewPresenter, AggregationField
+from .formatters import ViewPresenter, AggregationField
 from .time_navigator import TimeNavigator
 from .commit_orchestrator import CommitOrchestrator
 from .logging_config import setup_logging
