@@ -17,11 +17,15 @@ The controller does NOT:
 - Manage keyboard bindings (that's UI layer)
 """
 
-from typing import Optional
+from typing import Optional, List
 from .view_interface import IViewPresenter
-from .state import AppState, ViewMode, SortMode
+from .state import AppState, ViewMode, SortMode, TransactionEdit
 from .data_manager import DataManager
 from .formatters import ViewPresenter
+from .commit_orchestrator import CommitOrchestrator
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class AppController:
@@ -40,7 +44,8 @@ class AppController:
         self,
         view: IViewPresenter,
         state: AppState,
-        data_manager: DataManager
+        data_manager: DataManager,
+        cache_manager = None
     ):
         """
         Initialize controller.
@@ -49,10 +54,12 @@ class AppController:
             view: UI implementation (TextualView, WebView, MockView, etc.)
             state: Application state
             data_manager: Data operations layer
+            cache_manager: Optional cache manager for saving updated data
         """
         self.view = view
         self.state = state
         self.data_manager = data_manager
+        self.cache_manager = cache_manager
 
     def refresh_view(self, force_rebuild: bool = True) -> None:
         """
@@ -238,3 +245,92 @@ class AppController:
             return f"Enter=Drill down | s=Sort({sort_name}) | g=Change grouping | ←/→=Change period"
         else:  # DETAIL
             return f"s=Sort({sort_name}) | i=Info | m=Edit Merchant | r=Recategorize | h=Hide/Unhide | d=Delete | Space=Select"
+
+    def handle_commit_result(
+        self,
+        success_count: int,
+        failure_count: int,
+        edits: List[TransactionEdit],
+        saved_state: dict,
+        cache_filters: dict = None
+    ) -> None:
+        """
+        Handle commit results and update local state accordingly.
+
+        This is the CRITICAL data integrity logic that prevents corruption.
+        Previously this was in _review_and_commit() in app.py, mixed with
+        modal handling and retry logic.
+
+        **The Rule:**
+        - If ANY commits failed → DO NOT apply edits locally
+        - Only if ALL succeed → Apply edits and clear pending list
+
+        This separation allows testing the data integrity logic without
+        dealing with network/session issues.
+
+        Args:
+            success_count: Number of successful commits
+            failure_count: Number of failed commits
+            edits: List of edits that were attempted
+            saved_state: View state to restore after commit
+            cache_filters: Optional dict with year/since filters for cache
+
+        Side effects:
+            - May update data_manager.df and state.transactions_df
+            - May clear data_manager.pending_edits
+            - May update cache
+            - Calls refresh_view() with force_rebuild=False
+        """
+        logger.info(f"handle_commit_result: {success_count} succeeded, {failure_count} failed")
+
+        # CRITICAL: Only apply changes locally if ALL commits succeeded
+        if failure_count > 0:
+            logger.warning(f"Commit had {failure_count} failures - NOT applying edits locally")
+            # Some or all commits failed - DO NOT apply to local state
+            # This prevents data corruption where UI shows changes that didn't save
+            self.state.restore_view_state(saved_state)
+            self.refresh_view(force_rebuild=False)  # Smooth update, same view
+        else:
+            logger.info("All commits succeeded - applying edits locally")
+            # All commits succeeded - safe to apply to local state
+
+            # Apply edits to local DataFrames for instant UI update
+            # Use CommitOrchestrator to apply all edits (fully tested)
+            self.data_manager.df = CommitOrchestrator.apply_edits_to_dataframe(
+                self.data_manager.df,
+                edits,
+                self.data_manager.categories,
+                self.data_manager.apply_category_groups,
+            )
+
+            # Also update state DataFrame
+            if self.state.transactions_df is not None:
+                self.state.transactions_df = CommitOrchestrator.apply_edits_to_dataframe(
+                    self.state.transactions_df,
+                    edits,
+                    self.data_manager.categories,
+                    self.data_manager.apply_category_groups,
+                )
+
+            # Clear pending edits on success
+            self.data_manager.pending_edits.clear()
+            logger.info("Cleared pending edits")
+
+            # Update cache with edited data (if caching is enabled)
+            if self.cache_manager and cache_filters:
+                try:
+                    logger.debug("Updating cache with committed changes")
+                    self.cache_manager.save_cache(
+                        transactions_df=self.data_manager.df,
+                        categories=self.data_manager.categories,
+                        category_groups=self.data_manager.category_groups,
+                        year=cache_filters.get("year"),
+                        since=cache_filters.get("since"),
+                    )
+                except Exception as e:
+                    # Cache update failed - not critical, just log
+                    logger.warning(f"Cache update failed: {e}", exc_info=True)
+
+            # Restore view state and refresh to show updated data (smooth, no flash)
+            self.state.restore_view_state(saved_state)
+            self.refresh_view(force_rebuild=False)

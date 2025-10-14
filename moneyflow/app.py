@@ -398,15 +398,14 @@ class MoneyflowTUI(App):
             # Initialize data manager
             self.data_manager = DataManager(self.mm)
 
-            # Initialize controller with view presenter pattern
-            view = TextualViewPresenter(self)
-            self.controller = AppController(view, self.state, self.data_manager)
-
             # Initialize cache manager only if user requested caching
             if self.cache_path is not None:
                 from .cache_manager import CacheManager
-
                 self.cache_manager = CacheManager(cache_dir=self.cache_path)
+
+            # Initialize controller with view presenter pattern
+            view = TextualViewPresenter(self)
+            self.controller = AppController(view, self.state, self.data_manager, self.cache_manager)
 
             # Determine date range based on CLI arguments
             if self.custom_start_date:
@@ -1576,55 +1575,26 @@ class MoneyflowTUI(App):
                     self.data_manager.pending_edits
                 )
 
-                # CRITICAL: Only apply changes locally if ALL commits succeeded
+                # Show notification based on results
                 if failure_count > 0:
-                    # Some or all commits failed - DO NOT apply to local state
                     self._notify(NotificationHelper.commit_partial(success_count, failure_count))
-                    # Restore view state without applying edits
-                    self.state.restore_view_state(saved_state)
-                    self.refresh_view(force_rebuild=False)  # Smooth update, same view
                 else:
-                    # All commits succeeded - safe to apply to local state
                     self._notify(NotificationHelper.commit_success(success_count))
 
-                    # Apply edits to local DataFrames for instant UI update
-                    # Use CommitOrchestrator to apply all edits (fully tested)
-                    self.data_manager.df = CommitOrchestrator.apply_edits_to_dataframe(
-                        self.data_manager.df,
-                        self.data_manager.pending_edits,
-                        self.data_manager.categories,
-                        self.data_manager.apply_category_groups,
-                    )
+                # Delegate to controller for data integrity logic
+                # Controller handles: apply edits if success, preserve state if failure
+                cache_filters = {
+                    "year": self.cache_year_filter,
+                    "since": self.cache_since_filter
+                } if self.cache_manager else None
 
-                    # Also update state DataFrame
-                    if self.state.transactions_df is not None:
-                        self.state.transactions_df = CommitOrchestrator.apply_edits_to_dataframe(
-                            self.state.transactions_df,
-                            self.data_manager.pending_edits,
-                            self.data_manager.categories,
-                            self.data_manager.apply_category_groups,
-                        )
-
-                    # Clear pending edits on success
-                    self.data_manager.pending_edits.clear()
-
-                    # Update cache with edited data (if caching is enabled)
-                    if self.cache_manager:
-                        try:
-                            self.cache_manager.save_cache(
-                                transactions_df=self.data_manager.df,
-                                categories=self.data_manager.categories,
-                                category_groups=self.data_manager.category_groups,
-                                year=self.cache_year_filter,
-                                since=self.cache_since_filter,
-                            )
-                        except Exception as e:
-                            # Cache update failed - not critical, just log
-                            self.notify(f"Note: Cache update failed: {e}", severity="warning", timeout=2)
-
-                    # Restore view state and refresh to show updated data (smooth, no flash)
-                    self.state.restore_view_state(saved_state)
-                    self.refresh_view(force_rebuild=False)
+                self.controller.handle_commit_result(
+                    success_count=success_count,
+                    failure_count=failure_count,
+                    edits=self.data_manager.pending_edits,
+                    saved_state=saved_state,
+                    cache_filters=cache_filters
+                )
             except Exception as e:
                 self._notify(NotificationHelper.commit_error(str(e)))
                 # Restore view state even on error

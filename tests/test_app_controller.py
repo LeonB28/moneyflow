@@ -360,3 +360,156 @@ class TestPendingChangesIndicator:
         controller.refresh_view()
 
         assert mock_view.pending_changes[-1] == 2
+
+
+class TestCommitHandling:
+    """
+    Test commit result handling - THE CRITICAL DATA INTEGRITY LOGIC.
+
+    This is the bug we fixed: edits were applied locally even when
+    commits failed. These tests ensure it stays fixed.
+    """
+
+    async def test_all_commits_succeed_applies_edits(self, controller, mock_view):
+        """When ALL commits succeed, edits should be applied locally."""
+        from moneyflow.state import TransactionEdit
+
+        # Set up initial data
+        initial_df = controller.data_manager.df.clone()
+        initial_merchant = initial_df.filter(pl.col("id") == "txn_1")["merchant"][0]
+
+        # Create edits
+        edits = [TransactionEdit("txn_1", "merchant", initial_merchant, "NewMerchant", datetime.now())]
+        controller.data_manager.pending_edits = edits.copy()
+
+        # Simulate successful commit
+        controller.state.view_mode = ViewMode.DETAIL
+        saved_state = controller.state.save_view_state()
+
+        controller.handle_commit_result(
+            success_count=1,
+            failure_count=0,
+            edits=edits,
+            saved_state=saved_state
+        )
+
+        # VERIFY: Edits applied locally
+        updated_merchant = controller.data_manager.df.filter(pl.col("id") == "txn_1")["merchant"][0]
+        assert updated_merchant == "NewMerchant", "Edit should be applied locally"
+
+        # VERIFY: Pending edits cleared
+        assert len(controller.data_manager.pending_edits) == 0, "Pending edits should be cleared"
+
+        # VERIFY: View refreshed
+        assert len(mock_view.table_updates) > 0, "View should be refreshed"
+
+    async def test_partial_failure_does_not_apply_edits(self, controller, mock_view):
+        """
+        CRITICAL: When ANY commits fail, edits should NOT be applied locally.
+
+        This is the data corruption bug we fixed.
+        """
+        from moneyflow.state import TransactionEdit
+
+        # Set up initial data
+        initial_df = controller.data_manager.df.clone()
+        initial_merchant = initial_df.filter(pl.col("id") == "txn_1")["merchant"][0]
+
+        # Create edits
+        edits = [
+            TransactionEdit("txn_1", "merchant", initial_merchant, "NewMerchant1", datetime.now()),
+            TransactionEdit("txn_2", "merchant", "Old2", "NewMerchant2", datetime.now()),
+        ]
+        controller.data_manager.pending_edits = edits.copy()
+
+        # Simulate partial failure (1 success, 1 failure)
+        controller.state.view_mode = ViewMode.DETAIL
+        saved_state = controller.state.save_view_state()
+
+        controller.handle_commit_result(
+            success_count=1,
+            failure_count=1,
+            edits=edits,
+            saved_state=saved_state
+        )
+
+        # CRITICAL VERIFICATION: Edits should NOT be applied
+        current_merchant = controller.data_manager.df.filter(pl.col("id") == "txn_1")["merchant"][0]
+        assert current_merchant == initial_merchant, \
+            "Edit should NOT be applied when there were failures (data corruption!)"
+
+        # VERIFY: Pending edits still present (for retry)
+        assert len(controller.data_manager.pending_edits) == 2, \
+            "Pending edits should be kept for retry"
+
+    async def test_all_failures_does_not_apply_edits(self, controller, mock_view):
+        """When ALL commits fail, nothing should be applied."""
+        from moneyflow.state import TransactionEdit
+
+        initial_df = controller.data_manager.df.clone()
+
+        edits = [
+            TransactionEdit("txn_1", "merchant", "Old1", "New1", datetime.now()),
+            TransactionEdit("txn_2", "merchant", "Old2", "New2", datetime.now()),
+        ]
+        controller.data_manager.pending_edits = edits.copy()
+
+        controller.state.view_mode = ViewMode.DETAIL
+        saved_state = controller.state.save_view_state()
+
+        controller.handle_commit_result(
+            success_count=0,
+            failure_count=2,
+            edits=edits,
+            saved_state=saved_state
+        )
+
+        # VERIFY: DataFrame unchanged
+        assert controller.data_manager.df.equals(initial_df), \
+            "DataFrame should be completely unchanged"
+
+        # VERIFY: Pending edits preserved
+        assert len(controller.data_manager.pending_edits) == 2
+
+    async def test_commit_success_uses_force_rebuild_false(self, controller, mock_view):
+        """Commit should use force_rebuild=False for smooth update."""
+        from moneyflow.state import TransactionEdit
+
+        edits = [TransactionEdit("txn_1", "merchant", "Old", "New", datetime.now())]
+
+        controller.state.view_mode = ViewMode.DETAIL
+        saved_state = controller.state.save_view_state()
+
+        controller.handle_commit_result(
+            success_count=1,
+            failure_count=0,
+            edits=edits,
+            saved_state=saved_state
+        )
+
+        # VERIFY: force_rebuild=False (no flash)
+        mock_view.assert_force_rebuild(False)
+
+    async def test_commit_failure_restores_view_state(self, controller, mock_view):
+        """Failed commit should restore saved view state."""
+        from moneyflow.state import TransactionEdit
+
+        # Set up specific view state
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.state.sort_by = SortMode.AMOUNT
+        saved_state = controller.state.save_view_state()
+
+        # Change state after saving
+        controller.state.sort_by = SortMode.DATE
+
+        edits = [TransactionEdit("txn_1", "merchant", "Old", "New", datetime.now())]
+
+        controller.handle_commit_result(
+            success_count=0,
+            failure_count=1,
+            edits=edits,
+            saved_state=saved_state
+        )
+
+        # VERIFY: State restored
+        assert controller.state.sort_by == SortMode.AMOUNT, "State should be restored"
