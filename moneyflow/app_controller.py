@@ -86,70 +86,11 @@ class AppController:
             return
 
         # Prepare view data based on current state
-        if self.state.view_mode == ViewMode.MERCHANT:
-            filtered_df = self.state.get_filtered_df()
-            if filtered_df is None:
+        if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
+            # All aggregate views use the same pattern
+            view_data = self._prepare_aggregate_view(self.state.view_mode)
+            if view_data is None:
                 return
-            agg = self.data_manager.aggregate_by_merchant(filtered_df)
-            # Apply sorting
-            sort_col = self.state.sort_by.value
-            if sort_col == "amount":
-                sort_col = "total"
-            descending = ViewPresenter.should_sort_descending(sort_col, self.state.sort_direction)
-            if not agg.is_empty():
-                agg = agg.sort(sort_col, descending=descending)
-            self.state.current_data = agg
-            view_data = ViewPresenter.prepare_aggregation_view(
-                agg, "merchant", self.state.sort_by, self.state.sort_direction
-            )
-
-        elif self.state.view_mode == ViewMode.CATEGORY:
-            filtered_df = self.state.get_filtered_df()
-            if filtered_df is None:
-                return
-            agg = self.data_manager.aggregate_by_category(filtered_df)
-            sort_col = self.state.sort_by.value
-            if sort_col == "amount":
-                sort_col = "total"
-            descending = ViewPresenter.should_sort_descending(sort_col, self.state.sort_direction)
-            if not agg.is_empty():
-                agg = agg.sort(sort_col, descending=descending)
-            self.state.current_data = agg
-            view_data = ViewPresenter.prepare_aggregation_view(
-                agg, "category", self.state.sort_by, self.state.sort_direction
-            )
-
-        elif self.state.view_mode == ViewMode.GROUP:
-            filtered_df = self.state.get_filtered_df()
-            if filtered_df is None:
-                return
-            agg = self.data_manager.aggregate_by_group(filtered_df)
-            sort_col = self.state.sort_by.value
-            if sort_col == "amount":
-                sort_col = "total"
-            descending = ViewPresenter.should_sort_descending(sort_col, self.state.sort_direction)
-            if not agg.is_empty():
-                agg = agg.sort(sort_col, descending=descending)
-            self.state.current_data = agg
-            view_data = ViewPresenter.prepare_aggregation_view(
-                agg, "group", self.state.sort_by, self.state.sort_direction
-            )
-
-        elif self.state.view_mode == ViewMode.ACCOUNT:
-            filtered_df = self.state.get_filtered_df()
-            if filtered_df is None:
-                return
-            agg = self.data_manager.aggregate_by_account(filtered_df)
-            sort_col = self.state.sort_by.value
-            if sort_col == "amount":
-                sort_col = "total"
-            descending = ViewPresenter.should_sort_descending(sort_col, self.state.sort_direction)
-            if not agg.is_empty():
-                agg = agg.sort(sort_col, descending=descending)
-            self.state.current_data = agg
-            view_data = ViewPresenter.prepare_aggregation_view(
-                agg, "account", self.state.sort_by, self.state.sort_direction
-            )
 
         elif self.state.view_mode == ViewMode.DETAIL:
             filtered_df = self.state.get_filtered_df()
@@ -233,6 +174,90 @@ class AppController:
         count = len(self.data_manager.pending_edits)
         self.view.update_pending_changes(count)
 
+    def _prepare_aggregate_view(self, view_mode: ViewMode):
+        """
+        Prepare aggregated view data (merchant, category, group, or account).
+
+        This helper eliminates 64 lines of duplication from refresh_view.
+        The pattern is identical for all aggregate views:
+        1. Get filtered data
+        2. Aggregate by field
+        3. Sort by current sort field
+        4. Prepare view data
+
+        Args:
+            view_mode: Which aggregate view to prepare
+
+        Returns:
+            dict: View data with columns and rows, or None if no data
+        """
+        filtered_df = self.state.get_filtered_df()
+        if filtered_df is None:
+            return None
+
+        # Map view mode to aggregation method and field name
+        aggregation_map = {
+            ViewMode.MERCHANT: (self.data_manager.aggregate_by_merchant, "merchant"),
+            ViewMode.CATEGORY: (self.data_manager.aggregate_by_category, "category"),
+            ViewMode.GROUP: (self.data_manager.aggregate_by_group, "group"),
+            ViewMode.ACCOUNT: (self.data_manager.aggregate_by_account, "account"),
+        }
+
+        aggregate_func, field_name = aggregation_map[view_mode]
+        agg = aggregate_func(filtered_df)
+
+        # Apply sorting
+        sort_col = self.state.sort_by.value
+        if sort_col == "amount":
+            sort_col = "total"  # Aggregations use "total" not "amount"
+        descending = ViewPresenter.should_sort_descending(sort_col, self.state.sort_direction)
+        if not agg.is_empty():
+            agg = agg.sort(sort_col, descending=descending)
+
+        self.state.current_data = agg
+        return ViewPresenter.prepare_aggregation_view(
+            agg, field_name, self.state.sort_by, self.state.sort_direction
+        )
+
+    def get_next_sort_field(self, view_mode: ViewMode, current_sort: SortMode) -> tuple[SortMode, str]:
+        """
+        Determine the next sort field when user toggles sorting.
+
+        This is pure business logic - a state machine for sort field cycling.
+        Different cycling behavior for detail view vs aggregate views.
+
+        Args:
+            view_mode: Current view mode
+            current_sort: Current sort field
+
+        Returns:
+            Tuple of (new_sort_mode, display_name)
+
+        Detail view cycles through 5 fields:
+            Date → Merchant → Category → Account → Amount → Date (loop)
+
+        Aggregate views toggle between 2 fields:
+            Count ↔ Amount
+        """
+        if view_mode == ViewMode.DETAIL:
+            # 5-field cycle for transaction detail view
+            if current_sort == SortMode.DATE:
+                return (SortMode.MERCHANT, "Merchant")
+            elif current_sort == SortMode.MERCHANT:
+                return (SortMode.CATEGORY, "Category")
+            elif current_sort == SortMode.CATEGORY:
+                return (SortMode.ACCOUNT, "Account")
+            elif current_sort == SortMode.ACCOUNT:
+                return (SortMode.AMOUNT, "Amount")
+            else:  # AMOUNT or anything else
+                return (SortMode.DATE, "Date")
+        else:
+            # Aggregate views toggle between count and amount
+            if current_sort == SortMode.COUNT:
+                return (SortMode.AMOUNT, "Amount")
+            else:
+                return (SortMode.COUNT, "Count")
+
     def _get_action_hints(self) -> str:
         """Get action hints text based on current view mode."""
         sort_name = self.state.sort_by.value.capitalize()
@@ -245,6 +270,92 @@ class AppController:
             return f"Enter=Drill down | s=Sort({sort_name}) | g=Change grouping | ←/→=Change period"
         else:  # DETAIL
             return f"s=Sort({sort_name}) | i=Info | m=Edit Merchant | r=Recategorize | h=Hide/Unhide | d=Delete | Space=Select"
+
+    def queue_category_edits(self, transactions_df, new_category_id: str) -> int:
+        """
+        Queue category edits for a set of transactions.
+
+        This is pure business logic - no UI dependencies. Can be tested independently.
+
+        Args:
+            transactions_df: Polars DataFrame of transactions to edit
+            new_category_id: New category ID to apply
+
+        Returns:
+            int: Number of edits queued
+        """
+        from datetime import datetime
+        count = 0
+        for txn in transactions_df.iter_rows(named=True):
+            self.data_manager.pending_edits.append(
+                TransactionEdit(
+                    transaction_id=txn["id"],
+                    field="category",
+                    old_value=txn["category_id"],
+                    new_value=new_category_id,
+                    timestamp=datetime.now(),
+                )
+            )
+            count += 1
+        return count
+
+    def queue_merchant_edits(self, transactions_df, old_merchant: str, new_merchant: str) -> int:
+        """
+        Queue merchant edits for a set of transactions.
+
+        This is pure business logic - no UI dependencies. Can be tested independently.
+
+        Args:
+            transactions_df: Polars DataFrame of transactions to edit
+            old_merchant: Original merchant name (for documentation, not used in logic)
+            new_merchant: New merchant name to apply
+
+        Returns:
+            int: Number of edits queued
+        """
+        from datetime import datetime
+        count = 0
+        for txn in transactions_df.iter_rows(named=True):
+            self.data_manager.pending_edits.append(
+                TransactionEdit(
+                    transaction_id=txn["id"],
+                    field="merchant",
+                    old_value=txn["merchant"],  # Use actual current value from transaction
+                    new_value=new_merchant,
+                    timestamp=datetime.now(),
+                )
+            )
+            count += 1
+        return count
+
+    def queue_hide_toggle_edits(self, transactions_df) -> int:
+        """
+        Queue hide/unhide toggle edits for a set of transactions.
+
+        This toggles the hideFromReports flag for each transaction.
+        This is pure business logic - no UI dependencies. Can be tested independently.
+
+        Args:
+            transactions_df: Polars DataFrame of transactions to toggle
+
+        Returns:
+            int: Number of edits queued
+        """
+        from datetime import datetime
+        count = 0
+        for txn in transactions_df.iter_rows(named=True):
+            current_hidden = txn.get("hideFromReports", False)
+            self.data_manager.pending_edits.append(
+                TransactionEdit(
+                    transaction_id=txn["id"],
+                    field="hide_from_reports",
+                    old_value=current_hidden,
+                    new_value=not current_hidden,
+                    timestamp=datetime.now(),
+                )
+            )
+            count += 1
+        return count
 
     def handle_commit_result(
         self,

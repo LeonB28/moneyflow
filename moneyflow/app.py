@@ -935,30 +935,17 @@ class MoneyflowTUI(App):
 
     def action_toggle_sort_field(self) -> None:
         """Toggle sorting field."""
-        # In detail view, cycle through: Date → Merchant → Category → Account → Amount → Date
-        if self.state.view_mode == ViewMode.DETAIL:
-            if self.state.sort_by == SortMode.DATE:
-                self.state.sort_by = SortMode.MERCHANT
-                field = "Merchant"
-            elif self.state.sort_by == SortMode.MERCHANT:
-                self.state.sort_by = SortMode.CATEGORY
-                field = "Category"
-            elif self.state.sort_by == SortMode.CATEGORY:
-                self.state.sort_by = SortMode.ACCOUNT
-                field = "Account"
-            elif self.state.sort_by == SortMode.ACCOUNT:
-                self.state.sort_by = SortMode.AMOUNT
-                field = "Amount"
-            else:  # AMOUNT or anything else
-                self.state.sort_by = SortMode.DATE
-                field = "Date"
-        else:
-            # In aggregate views, toggle between count and amount
-            self.state.toggle_sort_field()
-            field = "Count" if self.state.sort_by == SortMode.COUNT else "Amount"
+        # Use controller to determine next sort field (testable business logic)
+        new_sort_mode, field_name = self.controller.get_next_sort_field(
+            self.state.view_mode,
+            self.state.sort_by
+        )
+
+        # Apply the new sort mode
+        self.state.sort_by = new_sort_mode
 
         self.refresh_view()
-        self.notify(f"Sorting by: {field}", timeout=1)
+        self.notify(f"Sorting by: {field_name}", timeout=1)
 
     def action_show_filters(self) -> None:
         """Show filter options modal."""
@@ -1103,19 +1090,10 @@ class MoneyflowTUI(App):
                 filtered_df = self.state.get_filtered_df()
                 merchant_txns = self.data_manager.filter_by_merchant(filtered_df, merchant_name)
 
-                # Add edits for all transactions
-                for txn in merchant_txns.iter_rows(named=True):
-                    self.data_manager.pending_edits.append(
-                        TransactionEdit(
-                            transaction_id=txn["id"],
-                            field="merchant",
-                            old_value=merchant_name,
-                            new_value=new_merchant,
-                            timestamp=datetime.now(),
-                        )
-                    )
+                # Use controller helper to queue edits
+                count = self.controller.queue_merchant_edits(merchant_txns, merchant_name, new_merchant)
 
-                self._notify(NotificationHelper.edit_queued(len(merchant_txns)))
+                self._notify(NotificationHelper.edit_queued(count))
                 self.refresh_view()
         else:
             self.notify("Edit merchant only works from Merchant view", timeout=2)
@@ -1149,28 +1127,13 @@ class MoneyflowTUI(App):
             )
 
             if new_merchant:
-                # Remember count before clearing
-                num_selected = len(self.state.selected_ids)
-
-                # Edit all selected transactions
-                for txn_id in self.state.selected_ids:
-                    # Find the transaction in current view
-                    txn_rows = self.state.current_data.filter(pl.col("id") == txn_id)
-                    if len(txn_rows) > 0:
-                        txn = txn_rows.row(0, named=True)
-                        self.data_manager.pending_edits.append(
-                            TransactionEdit(
-                                transaction_id=txn_id,
-                                field="merchant",
-                                old_value=txn["merchant"],
-                                new_value=new_merchant,
-                                timestamp=datetime.now(),
-                            )
-                        )
+                # Use controller helper to queue edits for all selected transactions
+                selected_txns = self.state.current_data.filter(pl.col("id").is_in(list(self.state.selected_ids)))
+                count = self.controller.queue_merchant_edits(selected_txns, current_merchant, new_merchant)
 
                 self.state.clear_selection()
                 self.notify(
-                    f"Queued {num_selected} edits. Press w to review and commit.", timeout=3
+                    f"Queued {count} edits. Press w to review and commit.", timeout=3
                 )
                 # Refresh to update the * markers but stay in current view
                 self.refresh_view()
@@ -1191,16 +1154,10 @@ class MoneyflowTUI(App):
                 # Save cursor position before refresh
                 saved_cursor_row = table.cursor_row
 
+                # Use controller helper for consistency
                 txn_id = row_data["id"]
-                self.data_manager.pending_edits.append(
-                    TransactionEdit(
-                        transaction_id=txn_id,
-                        field="merchant",
-                        old_value=current_merchant,
-                        new_value=new_merchant,
-                        timestamp=datetime.now(),
-                    )
-                )
+                single_txn = self.state.current_data.filter(pl.col("id") == txn_id)
+                self.controller.queue_merchant_edits(single_txn, current_merchant, new_merchant)
 
                 self._notify(NotificationHelper.merchant_changed())
                 # Refresh to show * marker, stays in detail view since view_mode unchanged
@@ -1284,22 +1241,13 @@ class MoneyflowTUI(App):
         filtered_df = self.state.get_filtered_df()
         matching_txns = filter_func(filtered_df, field_name)
 
-        # Add edits for all matching transactions
-        for txn in matching_txns.iter_rows(named=True):
-            self.data_manager.pending_edits.append(
-                TransactionEdit(
-                    transaction_id=txn["id"],
-                    field="category",
-                    old_value=txn["category_id"],
-                    new_value=new_category_id,
-                    timestamp=datetime.now(),
-                )
-            )
+        # Use controller helper to queue edits
+        count = self.controller.queue_category_edits(matching_txns, new_category_id)
 
         # Show success notification
         new_cat_name = self.data_manager.categories.get(new_category_id, {}).get("name", "Unknown")
         self.notify(
-            f"Queued {len(matching_txns)} transactions from {field_name} to recategorize to {new_cat_name}. Press w to commit.",
+            f"Queued {count} transactions from {field_name} to recategorize to {new_cat_name}. Press w to commit.",
             timeout=3
         )
         self.refresh_view()
@@ -1307,7 +1255,6 @@ class MoneyflowTUI(App):
     async def _recategorize(self) -> None:
         """Show category selection and apply (for detail view)."""
         from .screens.edit_screens import SelectCategoryScreen
-        from .state import TransactionEdit
 
         if self.state.current_data is None:
             return
@@ -1336,24 +1283,13 @@ class MoneyflowTUI(App):
                 )
 
                 if new_category_id:
-                    # Apply to all selected transactions
-                    for txn_id in self.state.selected_ids:
-                        txn_rows = self.state.current_data.filter(pl.col("id") == txn_id)
-                        if len(txn_rows) > 0:
-                            txn = txn_rows.row(0, named=True)
-                            self.data_manager.pending_edits.append(
-                                TransactionEdit(
-                                    transaction_id=txn_id,
-                                    field="category",
-                                    old_value=txn["category_id"],
-                                    new_value=new_category_id,
-                                    timestamp=datetime.now(),
-                                )
-                            )
+                    # Use controller helper to queue edits for all selected transactions
+                    selected_txns = self.state.current_data.filter(pl.col("id").is_in(list(self.state.selected_ids)))
+                    count = self.controller.queue_category_edits(selected_txns, new_category_id)
 
                     self.state.clear_selection()
                     self.notify(
-                        f"Queued {num_selected} category changes. Press w to review and commit.",
+                        f"Queued {count} category changes. Press w to review and commit.",
                         timeout=3,
                     )
                     self.refresh_view()
@@ -1378,18 +1314,10 @@ class MoneyflowTUI(App):
                     # Save cursor position before refresh
                     saved_cursor_row = table.cursor_row
 
+                    # Use controller helper to queue edit for single transaction
                     txn_id = row_data["id"]
-                    old_category_id = row_data["category_id"]
-
-                    self.data_manager.pending_edits.append(
-                        TransactionEdit(
-                            transaction_id=txn_id,
-                            field="category",
-                            old_value=old_category_id,
-                            new_value=new_category_id,
-                            timestamp=datetime.now(),
-                        )
-                    )
+                    single_txn = self.state.current_data.filter(pl.col("id") == txn_id)
+                    self.controller.queue_category_edits(single_txn, new_category_id)
 
                     self.notify("Category changed. Press w to review and commit.", timeout=2)
                     # Refresh to show * marker, stays in detail view since view_mode unchanged
@@ -1415,26 +1343,13 @@ class MoneyflowTUI(App):
 
         # Check if multi-select is active
         if len(self.state.selected_ids) > 0:
-            # Toggle for all selected
-            num_selected = len(self.state.selected_ids)
-            for txn_id in self.state.selected_ids:
-                txn_rows = self.state.current_data.filter(pl.col("id") == txn_id)
-                if len(txn_rows) > 0:
-                    txn = txn_rows.row(0, named=True)
-                    current_hidden = txn.get("hideFromReports", False)
-                    self.data_manager.pending_edits.append(
-                        TransactionEdit(
-                            transaction_id=txn_id,
-                            field="hide_from_reports",
-                            old_value=current_hidden,
-                            new_value=not current_hidden,
-                            timestamp=datetime.now(),
-                        )
-                    )
+            # Use controller helper to queue toggle edits for all selected
+            selected_txns = self.state.current_data.filter(pl.col("id").is_in(list(self.state.selected_ids)))
+            count = self.controller.queue_hide_toggle_edits(selected_txns)
 
             self.state.clear_selection()
             self.notify(
-                f"Toggled hide/unhide for {num_selected} transactions. Press w to commit.",
+                f"Toggled hide/unhide for {count} transactions. Press w to commit.",
                 timeout=3,
             )
             self.refresh_view()
@@ -1447,15 +1362,9 @@ class MoneyflowTUI(App):
             # Save cursor position before refresh
             saved_cursor_row = table.cursor_row
 
-            self.data_manager.pending_edits.append(
-                TransactionEdit(
-                    transaction_id=txn_id,
-                    field="hide_from_reports",
-                    old_value=current_hidden,
-                    new_value=not current_hidden,
-                    timestamp=datetime.now(),
-                )
-            )
+            # Use controller helper for consistency
+            single_txn = self.state.current_data.filter(pl.col("id") == txn_id)
+            self.controller.queue_hide_toggle_edits(single_txn)
 
             action = "Unhidden" if current_hidden else "Hidden"
             self.notify(f"{action} from reports. Press w to commit.", timeout=2)

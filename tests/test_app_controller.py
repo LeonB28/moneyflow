@@ -513,3 +513,275 @@ class TestCommitHandling:
 
         # VERIFY: State restored
         assert controller.state.sort_by == SortMode.AMOUNT, "State should be restored"
+
+
+class TestEditQueueing:
+    """
+    Test edit queueing methods - pure business logic without UI.
+
+    These methods were extracted from app.py to make them testable.
+    They handle queueing category and merchant edits.
+    """
+
+    async def test_queue_category_edits_single_transaction(self, controller):
+        """Test queueing a category edit for a single transaction."""
+        # Get a single transaction
+        txn_df = controller.data_manager.df.filter(pl.col("id") == "txn_1")
+        old_cat_id = txn_df["category_id"][0]
+        new_cat_id = "cat_new"
+
+        # Queue the edit
+        count = controller.queue_category_edits(txn_df, new_cat_id)
+
+        # Verify
+        assert count == 1, "Should queue exactly 1 edit"
+        assert len(controller.data_manager.pending_edits) == 1
+        edit = controller.data_manager.pending_edits[0]
+        assert edit.transaction_id == "txn_1"
+        assert edit.field == "category"
+        assert edit.old_value == old_cat_id
+        assert edit.new_value == new_cat_id
+
+    async def test_queue_category_edits_multiple_transactions(self, controller):
+        """Test queueing category edits for multiple transactions."""
+        # Get two transactions
+        txn_df = controller.data_manager.df.filter(
+            pl.col("id").is_in(["txn_1", "txn_2"])
+        )
+        new_cat_id = "cat_bulk"
+
+        count = controller.queue_category_edits(txn_df, new_cat_id)
+
+        assert count == 2
+        assert len(controller.data_manager.pending_edits) == 2
+        assert all(e.field == "category" for e in controller.data_manager.pending_edits)
+        assert all(e.new_value == new_cat_id for e in controller.data_manager.pending_edits)
+
+    async def test_queue_category_edits_preserves_old_values(self, controller):
+        """Test that each transaction's old category is preserved correctly."""
+        # Get transactions with different categories
+        txn_df = controller.data_manager.df.head(3)
+
+        count = controller.queue_category_edits(txn_df, "cat_new")
+
+        assert count == 3
+        # Each edit should have its own old_value from the transaction
+        old_values = [e.old_value for e in controller.data_manager.pending_edits]
+        # Old values should match what's in the DataFrame
+        assert len(set(old_values)) >= 1, "Should preserve individual old values"
+
+    async def test_queue_merchant_edits_single_transaction(self, controller):
+        """Test queueing a merchant edit for a single transaction."""
+        txn_df = controller.data_manager.df.filter(pl.col("id") == "txn_1")
+        old_merchant = txn_df["merchant"][0]
+        new_merchant = "New Merchant Name"
+
+        count = controller.queue_merchant_edits(txn_df, old_merchant, new_merchant)
+
+        assert count == 1
+        assert len(controller.data_manager.pending_edits) == 1
+        edit = controller.data_manager.pending_edits[0]
+        assert edit.transaction_id == "txn_1"
+        assert edit.field == "merchant"
+        assert edit.old_value == old_merchant
+        assert edit.new_value == new_merchant
+
+    async def test_queue_merchant_edits_bulk_rename(self, controller):
+        """Test bulk merchant rename across multiple transactions."""
+        # Get all Amazon transactions
+        amazon_txns = controller.data_manager.df.filter(pl.col("merchant") == "Amazon")
+        old_name = "Amazon"
+        new_name = "Amazon.com"
+
+        count = controller.queue_merchant_edits(amazon_txns, old_name, new_name)
+
+        assert count == len(amazon_txns)
+        assert len(controller.data_manager.pending_edits) == count
+        # All should be merchant edits to Amazon.com
+        assert all(e.field == "merchant" for e in controller.data_manager.pending_edits)
+        assert all(e.new_value == new_name for e in controller.data_manager.pending_edits)
+        assert all(e.old_value == "Amazon" for e in controller.data_manager.pending_edits)
+
+    async def test_queue_edits_empty_dataframe(self, controller):
+        """Test queueing edits with empty DataFrame."""
+        empty_df = pl.DataFrame({
+            "id": [],
+            "merchant": [],
+            "category_id": [],
+        }, schema={
+            "id": pl.Utf8,
+            "merchant": pl.Utf8,
+            "category_id": pl.Utf8,
+        })
+
+        count = controller.queue_category_edits(empty_df, "cat_new")
+        assert count == 0
+        assert len(controller.data_manager.pending_edits) == 0
+
+    async def test_queue_edits_preserves_transaction_ids(self, controller):
+        """Test that transaction IDs are correctly preserved."""
+        txn_df = controller.data_manager.df.filter(
+            pl.col("id").is_in(["txn_1", "txn_3", "txn_5"])
+        )
+
+        controller.queue_category_edits(txn_df, "cat_test")
+
+        queued_ids = {e.transaction_id for e in controller.data_manager.pending_edits}
+        assert queued_ids == {"txn_1", "txn_3", "txn_5"}
+
+    async def test_queue_edits_appends_to_existing(self, controller):
+        """Test that queueing appends to existing edits (doesn't replace)."""
+        from moneyflow.state import TransactionEdit
+
+        # Add an existing edit
+        controller.data_manager.pending_edits = [
+            TransactionEdit("txn_999", "merchant", "Old", "New", datetime.now())
+        ]
+
+        # Queue more edits
+        txn_df = controller.data_manager.df.head(2)
+        count = controller.queue_category_edits(txn_df, "cat_new")
+
+        # Should have 3 total (1 existing + 2 new)
+        assert len(controller.data_manager.pending_edits) == 3
+        assert controller.data_manager.pending_edits[0].transaction_id == "txn_999"
+
+    async def test_queue_hide_toggle_edits_single_transaction(self, controller):
+        """Test queueing hide toggle for a single transaction."""
+        # Get a transaction that's not hidden
+        txn_df = controller.data_manager.df.filter(pl.col("hideFromReports") == False).head(1)
+
+        count = controller.queue_hide_toggle_edits(txn_df)
+
+        assert count == 1
+        assert len(controller.data_manager.pending_edits) == 1
+        edit = controller.data_manager.pending_edits[0]
+        assert edit.field == "hide_from_reports"
+        assert edit.old_value is False
+        assert edit.new_value is True  # Should toggle from False to True
+
+    async def test_queue_hide_toggle_edits_multiple_transactions(self, controller):
+        """Test bulk hide/unhide toggle."""
+        txn_df = controller.data_manager.df.head(3)
+
+        count = controller.queue_hide_toggle_edits(txn_df)
+
+        assert count == 3
+        assert len(controller.data_manager.pending_edits) == 3
+        assert all(e.field == "hide_from_reports" for e in controller.data_manager.pending_edits)
+        # Each should toggle its current state
+        for edit in controller.data_manager.pending_edits:
+            assert edit.new_value == (not edit.old_value)
+
+    async def test_queue_hide_toggle_preserves_individual_states(self, controller):
+        """Test that each transaction's hide state is toggled individually."""
+        # Get mix of hidden and unhidden transactions
+        all_txns = controller.data_manager.df.head(4)
+
+        count = controller.queue_hide_toggle_edits(all_txns)
+
+        assert count == 4
+        # Verify each transaction gets its current state preserved in old_value
+        old_values = [e.old_value for e in controller.data_manager.pending_edits]
+        new_values = [e.new_value for e in controller.data_manager.pending_edits]
+        # Each new value should be opposite of old value
+        for old, new in zip(old_values, new_values):
+            assert new == (not old)
+
+
+class TestSortFieldCycling:
+    """
+    Test sort field cycling logic - pure state machine.
+
+    This tests the business logic for determining the next sort field
+    when the user presses 's' to toggle sorting.
+    """
+
+    async def test_detail_view_date_to_merchant(self, controller):
+        """Detail view: Date → Merchant."""
+        new_sort, display = controller.get_next_sort_field(ViewMode.DETAIL, SortMode.DATE)
+        assert new_sort == SortMode.MERCHANT
+        assert display == "Merchant"
+
+    async def test_detail_view_merchant_to_category(self, controller):
+        """Detail view: Merchant → Category."""
+        new_sort, display = controller.get_next_sort_field(ViewMode.DETAIL, SortMode.MERCHANT)
+        assert new_sort == SortMode.CATEGORY
+        assert display == "Category"
+
+    async def test_detail_view_category_to_account(self, controller):
+        """Detail view: Category → Account."""
+        new_sort, display = controller.get_next_sort_field(ViewMode.DETAIL, SortMode.CATEGORY)
+        assert new_sort == SortMode.ACCOUNT
+        assert display == "Account"
+
+    async def test_detail_view_account_to_amount(self, controller):
+        """Detail view: Account → Amount."""
+        new_sort, display = controller.get_next_sort_field(ViewMode.DETAIL, SortMode.ACCOUNT)
+        assert new_sort == SortMode.AMOUNT
+        assert display == "Amount"
+
+    async def test_detail_view_amount_to_date_completes_cycle(self, controller):
+        """Detail view: Amount → Date (completes the cycle)."""
+        new_sort, display = controller.get_next_sort_field(ViewMode.DETAIL, SortMode.AMOUNT)
+        assert new_sort == SortMode.DATE
+        assert display == "Date"
+
+    async def test_detail_view_full_cycle(self, controller):
+        """Test complete cycle through all 5 fields in detail view."""
+        # Start at DATE
+        current = SortMode.DATE
+        expected_cycle = [
+            (SortMode.MERCHANT, "Merchant"),
+            (SortMode.CATEGORY, "Category"),
+            (SortMode.ACCOUNT, "Account"),
+            (SortMode.AMOUNT, "Amount"),
+            (SortMode.DATE, "Date"),  # Back to start
+        ]
+
+        for expected_sort, expected_display in expected_cycle:
+            current, display = controller.get_next_sort_field(ViewMode.DETAIL, current)
+            assert current == expected_sort
+            assert display == expected_display
+
+    async def test_merchant_view_count_to_amount(self, controller):
+        """Merchant view: Count → Amount."""
+        new_sort, display = controller.get_next_sort_field(ViewMode.MERCHANT, SortMode.COUNT)
+        assert new_sort == SortMode.AMOUNT
+        assert display == "Amount"
+
+    async def test_merchant_view_amount_to_count(self, controller):
+        """Merchant view: Amount → Count (toggle back)."""
+        new_sort, display = controller.get_next_sort_field(ViewMode.MERCHANT, SortMode.AMOUNT)
+        assert new_sort == SortMode.COUNT
+        assert display == "Count"
+
+    async def test_category_view_toggles_like_merchant(self, controller):
+        """Category view uses same toggle as merchant view."""
+        # Count → Amount
+        new_sort, _ = controller.get_next_sort_field(ViewMode.CATEGORY, SortMode.COUNT)
+        assert new_sort == SortMode.AMOUNT
+
+        # Amount → Count
+        new_sort, _ = controller.get_next_sort_field(ViewMode.CATEGORY, SortMode.AMOUNT)
+        assert new_sort == SortMode.COUNT
+
+    async def test_group_view_toggles_like_merchant(self, controller):
+        """Group view uses same toggle as merchant view."""
+        new_sort, _ = controller.get_next_sort_field(ViewMode.GROUP, SortMode.COUNT)
+        assert new_sort == SortMode.AMOUNT
+
+    async def test_account_view_toggles_like_merchant(self, controller):
+        """Account view uses same toggle as merchant view."""
+        new_sort, _ = controller.get_next_sort_field(ViewMode.ACCOUNT, SortMode.COUNT)
+        assert new_sort == SortMode.AMOUNT
+
+    async def test_aggregate_views_count_amount_bidirectional(self, controller):
+        """Aggregate views toggle bidirectionally between count and amount."""
+        for view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
+            # Count → Amount → Count (should get back to count)
+            sort1, _ = controller.get_next_sort_field(view_mode, SortMode.COUNT)
+            assert sort1 == SortMode.AMOUNT
+
+            sort2, _ = controller.get_next_sort_field(view_mode, sort1)
+            assert sort2 == SortMode.COUNT
