@@ -500,22 +500,24 @@ class MoneyflowTUI(App):
                         logger.error(f"Data fetch failed: {e}", exc_info=True)
                         # Check if session expiration
                         error_str = str(e).lower()
-                        if ("401" in error_str or "unauthorized" in error_str) and self.stored_credentials:
-                            logger.debug("Session expired during fetch, re-authenticating...")
+                        if ("401" in error_str or "unauthorized" in error_str) and creds:
+                            logger.info("Session expired during fetch, re-authenticating...")
                             loading_status.update("🔄 Session expired. Re-authenticating...")
+                            # Delete stale session and force fresh login
+                            self.mm.delete_session()
                             await self.mm.login(
-                                email=self.stored_credentials["email"],
-                                password=self.stored_credentials["password"],
-                                use_saved_session=False,
+                                email=creds["email"],
+                                password=creds["password"],
+                                use_saved_session=False,  # Force fresh login
                                 save_session=True,
-                                mfa_secret_key=self.stored_credentials["mfa_secret"],
+                                mfa_secret_key=creds["mfa_secret"],
                             )
-                            logger.debug("Re-authenticated, retrying fetch immediately")
+                            logger.info("Re-authenticated, retrying fetch immediately")
                             loading_status.update("✅ Re-authenticated. Retrying fetch...")
                             result = await self.data_manager.fetch_all_data(
                                 start_date=start_date, end_date=end_date, progress_callback=update_progress
                             )
-                            logger.debug(f"Retry succeeded - loaded {len(result[0])} transactions")
+                            logger.info(f"Retry succeeded - loaded {len(result[0])} transactions")
                             return result
                         # Not auth error, re-raise for retry logic
                         raise
