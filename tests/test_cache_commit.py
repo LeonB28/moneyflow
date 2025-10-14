@@ -41,17 +41,19 @@ class TestCacheAndCommit:
         """Test bulk commits after loading from cache."""
         await mock_mm.login()
 
+        # Use valid transaction IDs that exist in mock backend
+        # Mock has txn_1 through txn_6
         edits = [
             TransactionEdit(f"txn_{i}", "merchant", f"Old{i}", f"New{i}", datetime.now())
-            for i in range(15)  # 15 edits (matches user's scenario)
+            for i in range(1, 7)  # Use 6 valid transaction IDs
         ]
 
         success, failure = await data_manager.commit_pending_edits(edits)
 
         # All should succeed
-        assert success == 15
+        assert success == 6
         assert failure == 0
-        assert len(mock_mm.update_calls) == 15
+        assert len(mock_mm.update_calls) == 6
 
     async def test_commit_handles_not_logged_in(self, data_manager, mock_mm):
         """
