@@ -623,13 +623,25 @@ class MoneyflowTUI(App):
         """Update loading progress message."""
         self.status_message = f"{message} ({current}/{total})"
 
-    def refresh_view(self) -> None:
-        """Refresh the current view based on state."""
+    def refresh_view(self, force_rebuild: bool = True) -> None:
+        """
+        Refresh the current view based on state.
+
+        Args:
+            force_rebuild: If True, clear columns and rebuild entire table.
+                          If False, only update rows (avoids flash when staying in same view).
+        """
         if self.data_manager is None:
             return
 
         table = self.query_one("#data-table", DataTable)
-        table.clear(columns=True)
+
+        # Only clear columns if forcing rebuild (view mode changed)
+        if force_rebuild:
+            table.clear(columns=True)
+        else:
+            # Just clear rows, keep columns (smooth update for same view)
+            table.clear()
 
         # Determine what data to show
         if self.state.view_mode == ViewMode.MERCHANT:
@@ -1782,7 +1794,7 @@ class MoneyflowTUI(App):
                     self._notify(NotificationHelper.commit_partial(success_count, failure_count))
                     # Restore view state without applying edits
                     self.state.restore_view_state(saved_state)
-                    self.refresh_view()
+                    self.refresh_view(force_rebuild=False)  # Smooth update, same view
                 else:
                     # All commits succeeded - safe to apply to local state
                     self._notify(NotificationHelper.commit_success(success_count))
@@ -1822,18 +1834,18 @@ class MoneyflowTUI(App):
                             # Cache update failed - not critical, just log
                             self.notify(f"Note: Cache update failed: {e}", severity="warning", timeout=2)
 
-                    # Restore view state and refresh to show updated data in same view
+                    # Restore view state and refresh to show updated data (smooth, no flash)
                     self.state.restore_view_state(saved_state)
-                    self.refresh_view()
+                    self.refresh_view(force_rebuild=False)
             except Exception as e:
                 self._notify(NotificationHelper.commit_error(str(e)))
                 # Restore view state even on error
                 self.state.restore_view_state(saved_state)
-                self.refresh_view()
+                self.refresh_view(force_rebuild=False)
         else:
             # User pressed Escape - restore view state and refresh to go back to where they were
             self.state.restore_view_state(saved_state)
-            self.refresh_view()
+            self.refresh_view(force_rebuild=False)
 
     def action_quit_app(self) -> None:
         """Quit the application - show confirmation first."""
