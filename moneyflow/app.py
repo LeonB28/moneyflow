@@ -45,6 +45,8 @@ from .commit_orchestrator import CommitOrchestrator
 from .logging_config import setup_logging
 from .notification_helper import NotificationHelper
 from .modal_helper import ModalHelper
+from .app_controller import AppController
+from .textual_view import TextualViewPresenter
 
 
 class MoneyflowTUI(App):
@@ -184,6 +186,8 @@ class MoneyflowTUI(App):
         self.cache_manager = None  # Will be set if caching is enabled
         self.cache_year_filter = None  # Track what filters the cache uses
         self.cache_since_filter = None
+        # Controller will be initialized after data_manager is ready
+        self.controller: Optional[AppController] = None
 
     def compose(self) -> ComposeResult:
         """Compose the main UI."""
@@ -393,6 +397,10 @@ class MoneyflowTUI(App):
 
             # Initialize data manager
             self.data_manager = DataManager(self.mm)
+
+            # Initialize controller with view presenter pattern
+            view = TextualViewPresenter(self)
+            self.controller = AppController(view, self.state, self.data_manager)
 
             # Initialize cache manager only if user requested caching
             if self.cache_path is not None:
@@ -627,38 +635,18 @@ class MoneyflowTUI(App):
         """
         Refresh the current view based on state.
 
+        Delegates to AppController which handles all business logic.
+        This method is now just a thin wrapper for backwards compatibility.
+
         Args:
             force_rebuild: If True, clear columns and rebuild entire table.
                           If False, only update rows (avoids flash when staying in same view).
         """
-        if self.data_manager is None:
+        if self.controller is None:
             return
 
-        table = self.query_one("#data-table", DataTable)
-
-        # Only clear columns if forcing rebuild (view mode changed)
-        if force_rebuild:
-            table.clear(columns=True)
-        else:
-            # Just clear rows, keep columns (smooth update for same view)
-            table.clear()
-
-        # Determine what data to show
-        if self.state.view_mode == ViewMode.MERCHANT:
-            self.show_merchant_aggregation()
-        elif self.state.view_mode == ViewMode.CATEGORY:
-            self.show_category_aggregation()
-        elif self.state.view_mode == ViewMode.GROUP:
-            self.show_group_aggregation()
-        elif self.state.view_mode == ViewMode.ACCOUNT:
-            self.show_account_aggregation()
-        elif self.state.view_mode == ViewMode.DETAIL:
-            self.show_transactions()
-
-        # Update UI elements
-        self.update_breadcrumb()
-        self.update_stats()
-        self.update_action_hints()
+        # Delegate to controller - it handles all the business logic
+        self.controller.refresh_view(force_rebuild=force_rebuild)
 
     def _show_aggregation(
         self, group_by_field: AggregationField, aggregate_func: Callable[[pl.DataFrame], pl.DataFrame]
