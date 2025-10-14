@@ -318,6 +318,100 @@ class AppController:
         self.refresh_view()
         return "Descending" if self.state.sort_direction == SortDirection.DESC else "Ascending"
 
+    # Time navigation operations
+    def set_timeframe_this_year(self):
+        """Set view to current year."""
+        from .state import TimeFrame
+        self.state.set_timeframe(TimeFrame.THIS_YEAR)
+        self.refresh_view()
+
+    def set_timeframe_all_time(self):
+        """Set view to all time."""
+        from .state import TimeFrame
+        self.state.set_timeframe(TimeFrame.ALL_TIME)
+        self.refresh_view()
+
+    def set_timeframe_this_month(self):
+        """Set view to current month."""
+        from .state import TimeFrame
+        self.state.set_timeframe(TimeFrame.THIS_MONTH)
+        self.refresh_view()
+
+    def select_month(self, month: int) -> str:
+        """
+        Select a specific month of the current year.
+
+        Args:
+            month: Month number (1-12)
+
+        Returns:
+            Description of the selected time range
+        """
+        from datetime import date as date_type
+        from .time_navigator import TimeNavigator
+        from .state import TimeFrame
+
+        today = date_type.today()
+        date_range = TimeNavigator.get_month_range(today.year, month)
+
+        self.state.set_timeframe(
+            TimeFrame.CUSTOM,
+            start_date=date_range.start_date,
+            end_date=date_range.end_date
+        )
+        self.refresh_view()
+        return date_range.description
+
+    def navigate_prev_period(self) -> tuple[bool, Optional[str]]:
+        """
+        Navigate to previous time period.
+
+        Returns:
+            Tuple of (should_fallback_to_year, description)
+            - should_fallback_to_year: True if in all-time view (no prev period)
+            - description: Time range description if navigated
+        """
+        from .time_navigator import TimeNavigator
+        from .state import TimeFrame
+
+        if self.state.start_date is None:
+            # In all-time view, signal to fallback to current year
+            return (True, None)
+
+        date_range = TimeNavigator.previous_period(self.state.start_date, self.state.end_date)
+        self.state.set_timeframe(
+            TimeFrame.CUSTOM,
+            start_date=date_range.start_date,
+            end_date=date_range.end_date
+        )
+        self.refresh_view()
+        return (False, date_range.description)
+
+    def navigate_next_period(self) -> tuple[bool, Optional[str]]:
+        """
+        Navigate to next time period.
+
+        Returns:
+            Tuple of (should_fallback_to_year, description)
+            - should_fallback_to_year: True if in all-time view (no next period)
+            - description: Time range description if navigated
+        """
+        from .time_navigator import TimeNavigator
+        from .state import TimeFrame
+
+        if self.state.start_date is None:
+            # In all-time view, signal to fallback to current year
+            return (True, None)
+
+        date_range = TimeNavigator.next_period(self.state.start_date, self.state.end_date)
+        self.state.set_timeframe(
+            TimeFrame.CUSTOM,
+            start_date=date_range.start_date,
+            end_date=date_range.end_date
+        )
+        self.refresh_view()
+        return (False, date_range.description)
+
     def get_next_sort_field(self, view_mode: ViewMode, current_sort: SortMode) -> tuple[SortMode, str]:
         """
         Determine the next sort field when user toggles sorting.

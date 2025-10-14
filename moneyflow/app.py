@@ -800,20 +800,17 @@ class MoneyflowTUI(App):
     # Time navigation actions
     def action_this_year(self) -> None:
         """Switch to current year view."""
-        self.state.set_timeframe(TimeFrame.THIS_YEAR)
-        self.refresh_view()
+        self.controller.set_timeframe_this_year()
         self.notify("Viewing: This Year", timeout=1)
 
     def action_all_time(self) -> None:
         """Switch to all time view."""
-        self.state.set_timeframe(TimeFrame.ALL_TIME)
-        self.refresh_view()
+        self.controller.set_timeframe_all_time()
         self.notify("Viewing: All Time", timeout=1)
 
     def action_this_month(self) -> None:
         """Switch to current month view."""
-        self.state.set_timeframe(TimeFrame.THIS_MONTH)
-        self.refresh_view()
+        self.controller.set_timeframe_this_month()
         self.notify("Viewing: This Month", timeout=1)
 
     def action_select_month_1(self) -> None:
@@ -854,52 +851,28 @@ class MoneyflowTUI(App):
 
     def _select_month(self, month: int, month_name: str) -> None:
         """Helper to select a specific month of the current year."""
-        from datetime import date as date_type
-
-        today = date_type.today()
-        date_range = TimeNavigator.get_month_range(today.year, month)
-
-        self.state.set_timeframe(
-            TimeFrame.CUSTOM,
-            start_date=date_range.start_date,
-            end_date=date_range.end_date
-        )
-        self.refresh_view()
-        self.notify(f"Viewing: {date_range.description}", timeout=1)
+        description = self.controller.select_month(month)
+        self.notify(f"Viewing: {description}", timeout=1)
 
     def action_prev_period(self) -> None:
         """Navigate to previous time period."""
-        if self.state.start_date is None:
+        should_fallback, description = self.controller.navigate_prev_period()
+
+        if should_fallback:
             # In all-time view, go to current year
             self.action_this_year()
-            return
-
-        date_range = TimeNavigator.previous_period(self.state.start_date, self.state.end_date)
-
-        self.state.set_timeframe(
-            TimeFrame.CUSTOM,
-            start_date=date_range.start_date,
-            end_date=date_range.end_date
-        )
-        self.notify(f"Viewing: {date_range.description}", timeout=1)
-        self.refresh_view()
+        else:
+            self.notify(f"Viewing: {description}", timeout=1)
 
     def action_next_period(self) -> None:
         """Navigate to next time period."""
-        if self.state.start_date is None:
+        should_fallback, description = self.controller.navigate_next_period()
+
+        if should_fallback:
             # In all-time view, go to current year
             self.action_this_year()
-            return
-
-        date_range = TimeNavigator.next_period(self.state.start_date, self.state.end_date)
-
-        self.state.set_timeframe(
-            TimeFrame.CUSTOM,
-            start_date=date_range.start_date,
-            end_date=date_range.end_date
-        )
-        self.notify(f"Viewing: {date_range.description}", timeout=1)
-        self.refresh_view()
+        else:
+            self.notify(f"Viewing: {description}", timeout=1)
 
     def action_reverse_sort(self) -> None:
         """Reverse the current sort direction."""
