@@ -93,14 +93,15 @@ moneyflow is designed to be used entirely with the keyboard. Here's your complet
 
 ## Bulk Edit from Aggregate View
 
-When viewing **Merchants** aggregate:
+When viewing **Merchants**, **Categories**, or **Groups**:
 
 | Key | Action |
 |-----|--------|
-| ++m++ | Edit merchant for ALL transactions in that merchant |
+| ++m++ | Edit merchant for ALL transactions (Merchants view only) |
+| ++r++ | Recategorize ALL transactions in selected row |
 | ++enter++ | Drill down to see individual transactions |
 
-This lets you rename a merchant across hundreds of transactions in one operation.
+This lets you rename a merchant or recategorize hundreds of transactions in one operation.
 
 ---
 
