@@ -342,6 +342,11 @@ class SelectCategoryScreen(ModalScreen):
                 )
                 yield Static(details_text, classes="edit-label")
 
+            # Show current category
+            if self.current_category_id and self.current_category_id in self.categories:
+                current_cat_name = self.categories[self.current_category_id]["name"]
+                yield Label(f"Current category: {current_cat_name}", classes="edit-label")
+
             yield Input(placeholder="Type to filter categories...", id="search-input")
 
             yield Static(f"{len(self.categories)} categories", id="results-count")
