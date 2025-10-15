@@ -157,17 +157,17 @@ class TestRetryLogic:
             operation=failing_operation,
             operation_name="Backoff test",
             max_retries=5,
-            initial_wait=1.0,
+            initial_wait=0.05,  # 50ms for faster tests
             on_retry=on_retry_callback
         )
 
         # Should have 3 retries (attempts 1, 2, 3)
         assert len(retry_times) == 3
 
-        # Check exponential backoff: 1s, 2s, 4s
-        assert retry_times[0] == (1, 1.0)  # 1.0 * 2^0 = 1
-        assert retry_times[1] == (2, 2.0)  # 1.0 * 2^1 = 2
-        assert retry_times[2] == (3, 4.0)  # 1.0 * 2^2 = 4
+        # Check exponential backoff: 0.05s, 0.1s, 0.2s
+        assert retry_times[0] == (1, 0.05)  # 0.05 * 2^0 = 0.05
+        assert retry_times[1] == (2, 0.1)   # 0.05 * 2^1 = 0.1
+        assert retry_times[2] == (3, 0.2)   # 0.05 * 2^2 = 0.2
 
     @pytest.mark.asyncio
     async def test_on_retry_callback_invoked(self):
@@ -282,19 +282,19 @@ class TestRetryLogic:
         def callback(attempt: int, wait_seconds: float):
             retry_waits.append(wait_seconds)
 
-        # Custom initial wait of 5 seconds
+        # Custom initial wait of 0.05 seconds (50ms)
         with pytest.raises(Exception):
             await retry_with_backoff(
                 operation=failing_operation,
                 operation_name="Test",
                 max_retries=2,
-                initial_wait=5.0,
+                initial_wait=0.05,
                 on_retry=callback
             )
 
         # Should have 1 retry (attempt 1)
         assert len(retry_waits) == 1
-        assert retry_waits[0] == 5.0  # 5.0 * 2^0 = 5
+        assert retry_waits[0] == 0.05  # 0.05 * 2^0 = 0.05
 
     @pytest.mark.asyncio
     async def test_actual_wait_occurs(self):
