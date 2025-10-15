@@ -879,10 +879,11 @@ class MoneyflowApp(App):
         )
 
         if result is not None:
-            # Apply filters
-            self.state.show_transfers = result["show_transfers"]
-            self.state.show_hidden = result["show_hidden"]
-            self.refresh_view()
+            # Apply filters via controller
+            self.controller.apply_filters(
+                show_transfers=result["show_transfers"],
+                show_hidden=result["show_hidden"]
+            )
 
             # Build status message
             statuses = []
@@ -915,16 +916,12 @@ class MoneyflowApp(App):
         )
 
         if new_query is not None:  # None means cancelled
-            # Apply search
-            self.state.search_query = new_query
-            self.refresh_view()
-
+            # Apply search via controller
             if new_query:
-                # Get count of filtered results
-                filtered = self.state.get_filtered_df()
-                count = len(filtered) if filtered is not None else 0
+                count = self.controller.apply_search(new_query)
                 self.notify(f"Search: '{new_query}' - {count} results", timeout=2)
             else:
+                self.controller.clear_search()
                 self.notify("Search cleared", timeout=1)
 
     def action_toggle_select(self) -> None:
