@@ -61,10 +61,6 @@ extra:
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/moneyflow/
 
-  # Show GitHub stars in header
-  version:
-    provider: mike
-
   # Analytics disabled for now
   # analytics:
   #   provider: google
