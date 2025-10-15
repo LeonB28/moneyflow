@@ -47,6 +47,9 @@ theme:
     repo: fontawesome/brands/github
     logo: material/currency-usd
 
+  # Show star count in header
+  custom_dir: docs/overrides
+
 extra_css:
   - stylesheets/extra.css
   - stylesheets/terminal.css

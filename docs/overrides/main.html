@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block site_nav %}
+  {{ super() }}
+  <!-- GitHub Stars Badge -->
+  <style>
+    .md-header__source {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+  </style>
+  <script async defer src="https://buttons.github.io/buttons.js"></script>
+{% endblock %}
+
+{% block announce %}
+  <!-- Optional announcement banner -->
+{% endblock %}

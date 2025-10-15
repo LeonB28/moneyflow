@@ -121,3 +121,11 @@
   background-color: var(--md-code-bg-color);
   font-weight: 600;
 }
+
+/* GitHub stars in header */
+.md-source__repository::after {
+  content: "★ Star";
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
