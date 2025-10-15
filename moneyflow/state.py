@@ -270,7 +270,15 @@ class AppState:
         self.selected_account = None
 
         # Reset sort to valid field for aggregate views if needed
-        if self.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
+        # Now includes field-based sorting (MERCHANT, CATEGORY, GROUP, ACCOUNT)
+        if self.sort_by not in [
+            SortMode.COUNT,
+            SortMode.AMOUNT,
+            SortMode.MERCHANT,
+            SortMode.CATEGORY,
+            SortMode.GROUP,
+            SortMode.ACCOUNT,
+        ]:
             self.sort_by = SortMode.AMOUNT
 
         # Cycle through views
@@ -412,8 +420,15 @@ class AppState:
 
             # Reset sort to valid field for aggregate views
             # (Detail views can have DATE, MERCHANT, CATEGORY, ACCOUNT, AMOUNT)
-            # (Aggregate views only have COUNT, AMOUNT)
-            if self.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
+            # (Aggregate views have COUNT, AMOUNT, and field-based sorting)
+            if self.sort_by not in [
+                SortMode.COUNT,
+                SortMode.AMOUNT,
+                SortMode.MERCHANT,
+                SortMode.CATEGORY,
+                SortMode.GROUP,
+                SortMode.ACCOUNT,
+            ]:
                 self.sort_by = SortMode.AMOUNT
                 self.sort_direction = SortDirection.DESC
 
