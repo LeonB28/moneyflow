@@ -1,8 +1,7 @@
-<div class="hero">
-
-<div class="hero-content">
-
 # moneyflow
+
+<div class="hero">
+<div class="hero-left">
 
 **Terminal UI for personal finance power users**
 
@@ -13,18 +12,15 @@ pip install moneyflow
 moneyflow
 ```
 
-Monarch Money • Python 3.11+
+<p class="hero-meta">Monarch Money • Python 3.11+</p>
 
 </div>
+<div class="hero-right">
 
-<div class="hero-screenshot">
-<!-- Replace this div with: <img src="images/screenshot.png" alt="moneyflow TUI"> -->
-<div class="screenshot-placeholder">
-  <p>Screenshot</p>
-  <p>Coming Soon</p>
-</div>
-</div>
+<!-- Replace img src with your screenshot path -->
+![Screenshot Coming Soon](data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='500'%3E%3Crect width='800' height='500' fill='%23f5f5f5'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999' font-size='20' font-family='monospace'%3EScreenshot Coming Soon%3C/text%3E%3C/svg%3E)
 
+</div>
 </div>
 
 ---

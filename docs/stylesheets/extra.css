@@ -1,84 +1,62 @@
 /* moneyflow documentation styles */
 
-/* Hero section - compact, above-the-fold layout */
+/* Hero section - clean two-column layout */
 .hero {
   display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  gap: 4rem;
-  padding: 3rem 2rem 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 3rem;
+  padding: 2rem 0 3rem;
+  align-items: start;
+}
+
+.hero-left p:first-of-type {
+  font-size: 1.3rem;
+  font-weight: 500;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+
+.hero-left p:nth-of-type(2) {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+  color: var(--md-default-fg-color--light);
+}
+
+.hero-left .highlight {
+  margin: 1.5rem 0;
+}
+
+.hero-meta {
+  font-size: 0.9rem;
+  color: var(--md-default-fg-color--light);
+  margin-top: 1rem;
+}
+
+.hero-right {
+  display: flex;
   align-items: center;
-  min-height: 500px;
+  justify-content: center;
+}
+
+.hero-right img {
+  width: 100%;
+  max-width: 800px;
+  height: auto;
+  border-radius: 4px;
+  border: 1px solid var(--md-default-fg-color--lightest);
 }
 
 @media (max-width: 960px) {
   .hero {
     grid-template-columns: 1fr;
     gap: 2rem;
-    min-height: auto;
   }
-}
 
-.hero-content h1 {
-  font-size: 3rem;
-  font-weight: 700;
-  margin: 0 0 0.5rem 0;
-  line-height: 1.1;
-}
-
-.hero-content > p:first-of-type {
-  font-size: 1.3rem;
-  font-weight: 500;
-  margin: 0 0 0.75rem 0;
-  color: var(--md-default-fg-color--light);
-}
-
-.hero-content > p:nth-of-type(2) {
-  font-size: 1.05rem;
-  line-height: 1.5;
-  margin: 0 0 1.5rem 0;
-  color: var(--md-default-fg-color--light);
-}
-
-.hero-content .highlight {
-  margin: 0 0 1rem 0;
-}
-
-.hero-content .highlight pre {
-  padding: 1rem;
-  font-size: 0.95rem;
-}
-
-.hero-screenshot {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.screenshot-placeholder {
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  border: 2px dashed var(--md-default-fg-color--lightest);
-  border-radius: 6px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: var(--md-default-fg-color--lighter);
-  background: var(--md-code-bg-color);
-}
-
-.screenshot-placeholder p {
-  margin: 0.25rem;
-  font-size: 1rem;
-}
-
-.hero-screenshot img {
-  width: 100%;
-  height: auto;
-  border-radius: 6px;
-  border: 1px solid var(--md-default-fg-color--lightest);
+  .hero-right {
+    order: -1;
+  }
 }
 
 /* Feature grid */
