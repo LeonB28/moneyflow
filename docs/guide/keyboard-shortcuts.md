@@ -48,25 +48,8 @@ moneyflow is designed to be used entirely with the keyboard. Here's your complet
 | Key | Time Period |
 |-----|-------------|
 | ++y++ | Current year |
-| ++t++ | Current month (Today's month) |
+| ++t++ | Current month |
 | ++a++ | All time |
-
-### Specific Months
-
-| Key | Month |
-|-----|-------|
-| ++1++ | January |
-| ++2++ | February |
-| ++3++ | March |
-| ++4++ | April |
-| ++5++ | May |
-| ++6++ | June |
-| ++7++ | July |
-| ++8++ | August |
-| ++9++ | September |
-
-!!! tip "Quick Access"
-    Press ++5++ to jump to May of the current year instantly.
 
 ### Period Navigation
 
@@ -81,10 +64,7 @@ moneyflow is designed to be used entirely with the keyboard. Here's your complet
 
 ## Editing Transactions
 
-!!! info "Detail View Only"
-    These shortcuts only work when viewing individual transactions (not in aggregate views).
-
-### Single Transaction
+### Single Transaction (Detail View)
 
 | Key | Action |
 |-----|--------|
@@ -226,7 +206,6 @@ When in a modal dialog (edit merchant, select category, etc.):
     - The cursor stays in place after edits - keep pressing ++m++ or ++r++
 
 !!! tip "Time Navigation"
-    - Use ++1++-++9++ for instant month access
     - ++left++/++right++ maintain context (month→month, year→year)
     - ++y++ is your "reset" - always returns to current year
 
