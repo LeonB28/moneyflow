@@ -31,8 +31,13 @@
   height: auto;
   border-radius: 6px;
   border: 1px solid var(--md-default-fg-color--lightest);
-  margin: 0 0 1.5rem 0;
+  margin: 0.5rem 0 0.5rem 0;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Tighten spacing around hero */
+.md-typeset h1:first-child ~ hr:first-of-type {
+  margin-top: 1.5rem;
 }
 
 /* Feature grid */

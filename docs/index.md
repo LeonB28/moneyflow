@@ -2,7 +2,7 @@
 
 **Terminal UI for personal finance power users**
 
-Track spending, bulk edit transactions, and navigate your financial data at keyboard speed.
+Track spending, bulk edit transactions, and navigate your financial data at keyboard speed. First-class support for Monarch Money.
 
 ```bash
 # Install and run
@@ -13,8 +13,6 @@ moneyflow
 uvx moneyflow
 uvx moneyflow --demo  # Try with demo data
 ```
-
-<p class="hero-support">Supports Monarch Money™ • Additional backends planned</p>
 
 ![moneyflow terminal UI](images/home-screen.png)
 
@@ -64,7 +62,7 @@ See exactly what changes you're making before saving. All edits are queued and r
 # Try with demo data
 uvx moneyflow --demo
 
-# Run with your Monarch Money account
+# Connect to your personal finance account
 moneyflow
 
 # Load recent transactions only (faster startup)
@@ -72,7 +70,7 @@ moneyflow --mtd         # Month-to-date
 moneyflow --year 2025   # Year to present
 ```
 
-On first run, you'll configure your finance platform credentials. They're encrypted and stored locally at `~/.moneyflow/`.
+On first run, you'll configure your credentials. They're encrypted and stored locally at `~/.moneyflow/`.
 
 ---
 

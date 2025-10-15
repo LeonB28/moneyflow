@@ -1,18 +1,57 @@
 {% extends "base.html" %}
 
-{% block site_nav %}
+{% block extrahead %}
   {{ super() }}
-  <!-- GitHub Stars Badge -->
   <style>
+    /* GitHub star button in header */
     .md-header__source {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.8rem;
+    }
+
+    .github-star-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0.6rem;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 4px;
+      font-size: 0.75rem;
+      color: var(--md-primary-bg-color);
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .github-star-button:hover {
+      background: rgba(255,255,255,0.15);
+      transform: translateY(-1px);
     }
   </style>
-  <script async defer src="https://buttons.github.io/buttons.js"></script>
-{% endblock %}
-
-{% block announce %}
-  <!-- Optional announcement banner -->
+  <script>
+    // Fetch and display GitHub stars
+    document.addEventListener('DOMContentLoaded', function() {
+      fetch('https://api.github.com/repos/wesm/moneyflow')
+        .then(response => response.json())
+        .then(data => {
+          const stars = data.stargazers_count || 0;
+          const starsFormatted = stars >= 1000 ? (stars / 1000).toFixed(1) + 'k' : stars;
+          const sourceEl = document.querySelector('.md-header__source');
+          if (sourceEl) {
+            const starButton = document.createElement('a');
+            starButton.href = 'https://github.com/wesm/moneyflow/stargazers';
+            starButton.className = 'github-star-button';
+            starButton.innerHTML = `
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"/>
+              </svg>
+              <span>${starsFormatted}</span>
+            `;
+            sourceEl.appendChild(starButton);
+          }
+        })
+        .catch(err => console.log('Could not fetch GitHub stars'));
+    });
+  </script>
 {% endblock %}
