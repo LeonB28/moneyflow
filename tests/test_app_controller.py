@@ -753,47 +753,58 @@ class TestSortFieldCycling:
             assert current == expected_sort
             assert display == expected_display
 
-    async def test_merchant_view_count_to_amount(self, controller):
-        """Merchant view: Count → Amount."""
+    async def test_merchant_view_full_cycle(self, controller):
+        """Merchant view: Merchant → Count → Amount → Merchant (3-field cycle)."""
+        # Merchant → Count
+        new_sort, display = controller.get_next_sort_field(ViewMode.MERCHANT, SortMode.MERCHANT)
+        assert new_sort == SortMode.COUNT
+        assert display == "Count"
+
+        # Count → Amount
         new_sort, display = controller.get_next_sort_field(ViewMode.MERCHANT, SortMode.COUNT)
         assert new_sort == SortMode.AMOUNT
         assert display == "Amount"
 
-    async def test_merchant_view_amount_to_count(self, controller):
-        """Merchant view: Amount → Count (toggle back)."""
+        # Amount → Merchant (completes cycle)
         new_sort, display = controller.get_next_sort_field(ViewMode.MERCHANT, SortMode.AMOUNT)
-        assert new_sort == SortMode.COUNT
-        assert display == "Count"
+        assert new_sort == SortMode.MERCHANT
+        assert display == "Merchant"
 
-    async def test_category_view_toggles_like_merchant(self, controller):
-        """Category view uses same toggle as merchant view."""
-        # Count → Amount
+    async def test_category_view_full_cycle(self, controller):
+        """Category view: Category → Count → Amount → Category."""
+        new_sort, _ = controller.get_next_sort_field(ViewMode.CATEGORY, SortMode.CATEGORY)
+        assert new_sort == SortMode.COUNT
+
         new_sort, _ = controller.get_next_sort_field(ViewMode.CATEGORY, SortMode.COUNT)
         assert new_sort == SortMode.AMOUNT
 
-        # Amount → Count
-        new_sort, _ = controller.get_next_sort_field(ViewMode.CATEGORY, SortMode.AMOUNT)
+        new_sort, display = controller.get_next_sort_field(ViewMode.CATEGORY, SortMode.AMOUNT)
+        assert new_sort == SortMode.CATEGORY
+        assert display == "Category"
+
+    async def test_group_view_full_cycle(self, controller):
+        """Group view: Group → Count → Amount → Group."""
+        new_sort, _ = controller.get_next_sort_field(ViewMode.GROUP, SortMode.GROUP)
         assert new_sort == SortMode.COUNT
 
-    async def test_group_view_toggles_like_merchant(self, controller):
-        """Group view uses same toggle as merchant view."""
         new_sort, _ = controller.get_next_sort_field(ViewMode.GROUP, SortMode.COUNT)
         assert new_sort == SortMode.AMOUNT
 
-    async def test_account_view_toggles_like_merchant(self, controller):
-        """Account view uses same toggle as merchant view."""
+        new_sort, display = controller.get_next_sort_field(ViewMode.GROUP, SortMode.AMOUNT)
+        assert new_sort == SortMode.GROUP
+        assert display == "Group"
+
+    async def test_account_view_full_cycle(self, controller):
+        """Account view: Account → Count → Amount → Account."""
+        new_sort, _ = controller.get_next_sort_field(ViewMode.ACCOUNT, SortMode.ACCOUNT)
+        assert new_sort == SortMode.COUNT
+
         new_sort, _ = controller.get_next_sort_field(ViewMode.ACCOUNT, SortMode.COUNT)
         assert new_sort == SortMode.AMOUNT
 
-    async def test_aggregate_views_count_amount_bidirectional(self, controller):
-        """Aggregate views toggle bidirectionally between count and amount."""
-        for view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
-            # Count → Amount → Count (should get back to count)
-            sort1, _ = controller.get_next_sort_field(view_mode, SortMode.COUNT)
-            assert sort1 == SortMode.AMOUNT
-
-            sort2, _ = controller.get_next_sort_field(view_mode, sort1)
-            assert sort2 == SortMode.COUNT
+        new_sort, display = controller.get_next_sort_field(ViewMode.ACCOUNT, SortMode.AMOUNT)
+        assert new_sort == SortMode.ACCOUNT
+        assert display == "Account"
 
 
 class TestViewModeSwitching:
@@ -892,6 +903,15 @@ class TestViewModeSwitching:
 
         # COUNT is valid for aggregates, should be preserved
         assert controller.state.sort_by == SortMode.COUNT
+
+    async def test_aggregate_view_preserves_field_sort(self, controller, mock_view):
+        """Test that field name sort is preserved when switching aggregate views."""
+        controller.state.sort_by = SortMode.MERCHANT
+
+        controller.switch_to_merchant_view()
+
+        # MERCHANT is valid for merchant view, should be preserved
+        assert controller.state.sort_by == SortMode.MERCHANT
 
     async def test_cycle_grouping_returns_view_name(self, controller, mock_view):
         """Test cycle_grouping returns view name and refreshes."""

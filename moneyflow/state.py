@@ -33,6 +33,7 @@ class SortMode(Enum):
     DATE = "date"
     MERCHANT = "merchant"
     CATEGORY = "category"
+    GROUP = "group"
     ACCOUNT = "account"
 
 

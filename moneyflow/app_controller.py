@@ -212,8 +212,15 @@ class AppController:
 
         # Apply sorting
         sort_col = self.state.sort_by.value
+
+        # Map sort field to actual column name in aggregation DataFrame
         if sort_col == "amount":
             sort_col = "total"  # Aggregations use "total" not "amount"
+        elif sort_col in ["merchant", "category", "group", "account"]:
+            # Use the grouping field name (e.g., "merchant" column in merchant aggregation)
+            sort_col = field_name
+        # else: "count" stays as "count"
+
         descending = ViewPresenter.should_sort_descending(sort_col, self.state.sort_direction)
         if not agg.is_empty():
             agg = agg.sort(sort_col, descending=descending)
@@ -231,8 +238,8 @@ class AppController:
         self.state.selected_category = None
         self.state.selected_group = None
         self.state.selected_account = None
-        # Reset sort to valid field for aggregate views
-        if self.state.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
+        # Reset sort to valid field for aggregate views (now includes field name)
+        if self.state.sort_by not in [SortMode.MERCHANT, SortMode.COUNT, SortMode.AMOUNT]:
             self.state.sort_by = SortMode.AMOUNT
         self.refresh_view()
 
@@ -243,7 +250,7 @@ class AppController:
         self.state.selected_category = None
         self.state.selected_group = None
         self.state.selected_account = None
-        if self.state.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
+        if self.state.sort_by not in [SortMode.CATEGORY, SortMode.COUNT, SortMode.AMOUNT]:
             self.state.sort_by = SortMode.AMOUNT
         self.refresh_view()
 
@@ -254,7 +261,7 @@ class AppController:
         self.state.selected_category = None
         self.state.selected_group = None
         self.state.selected_account = None
-        if self.state.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
+        if self.state.sort_by not in [SortMode.GROUP, SortMode.COUNT, SortMode.AMOUNT]:
             self.state.sort_by = SortMode.AMOUNT
         self.refresh_view()
 
@@ -265,7 +272,7 @@ class AppController:
         self.state.selected_category = None
         self.state.selected_group = None
         self.state.selected_account = None
-        if self.state.sort_by not in [SortMode.COUNT, SortMode.AMOUNT]:
+        if self.state.sort_by not in [SortMode.ACCOUNT, SortMode.COUNT, SortMode.AMOUNT]:
             self.state.sort_by = SortMode.AMOUNT
         self.refresh_view()
 
@@ -544,8 +551,9 @@ class AppController:
         Detail view cycles through 5 fields:
             Date → Merchant → Category → Account → Amount → Date (loop)
 
-        Aggregate views toggle between 2 fields:
-            Count ↔ Amount
+        Aggregate views cycle through 3 fields:
+            Name → Count → Amount → Name (loop)
+            where Name is the grouping field (Merchant/Category/Group/Account)
         """
         if view_mode == ViewMode.DETAIL:
             # 5-field cycle for transaction detail view
@@ -560,11 +568,26 @@ class AppController:
             else:  # AMOUNT or anything else
                 return (SortMode.DATE, "Date")
         else:
-            # Aggregate views toggle between count and amount
-            if current_sort == SortMode.COUNT:
+            # Aggregate views cycle: Field name → Count → Amount → Field name
+            # Map view mode to its field SortMode
+            view_to_field_sort = {
+                ViewMode.MERCHANT: (SortMode.MERCHANT, "Merchant"),
+                ViewMode.CATEGORY: (SortMode.CATEGORY, "Category"),
+                ViewMode.GROUP: (SortMode.GROUP, "Group"),
+                ViewMode.ACCOUNT: (SortMode.ACCOUNT, "Account"),
+            }
+
+            field_sort, field_name = view_to_field_sort.get(
+                view_mode, (SortMode.COUNT, "Count")
+            )
+
+            # Cycle through: Field → Count → Amount → Field
+            if current_sort == field_sort:
+                return (SortMode.COUNT, "Count")
+            elif current_sort == SortMode.COUNT:
                 return (SortMode.AMOUNT, "Amount")
             else:
-                return (SortMode.COUNT, "Count")
+                return (field_sort, field_name)
 
     def _get_action_hints(self) -> str:
         """Get action hints text based on current view mode."""
