@@ -1281,17 +1281,30 @@ class MoneyflowApp(App):
             # Toggle single transaction
             row_data = self.state.current_data.row(table.cursor_row, named=True)
             txn_id = row_data["id"]
-            current_hidden = row_data.get("hideFromReports", False)
+
+            # Check if there's already a pending hide toggle for this transaction
+            existing_edit = None
+            for edit in self.data_manager.pending_edits:
+                if edit.transaction_id == txn_id and edit.field == "hide_from_reports":
+                    existing_edit = edit
+                    break
 
             # Save cursor position before refresh
             saved_cursor_row = table.cursor_row
 
-            # Use controller helper for consistency
-            single_txn = self.state.current_data.filter(pl.col("id") == txn_id)
-            self.controller.queue_hide_toggle_edits(single_txn)
+            if existing_edit:
+                # Remove the pending edit (undo the toggle)
+                self.data_manager.pending_edits.remove(existing_edit)
+                self.notify("Reverted hide/unhide change", timeout=2)
+            else:
+                # Queue a new toggle edit
+                current_hidden = row_data.get("hideFromReports", False)
+                single_txn = self.state.current_data.filter(pl.col("id") == txn_id)
+                self.controller.queue_hide_toggle_edits(single_txn)
 
-            action = "Unhidden" if current_hidden else "Hidden"
-            self.notify(f"{action} from reports. Press w to commit.", timeout=2)
+                action = "Unhidden" if current_hidden else "Hidden"
+                self.notify(f"{action} from reports. Press w to commit.", timeout=2)
+
             self.refresh_view()
             # Restore cursor position
             if saved_cursor_row < table.row_count:

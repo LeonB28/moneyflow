@@ -46,6 +46,7 @@ CATEGORY_GROUPS = {
         "Fast Food",
         "Food & Drink",
         "Alcohol",
+        "Quick Eats"
     ],
     "Travel": [
         "Airfare",
