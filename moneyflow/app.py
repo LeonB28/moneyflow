@@ -470,6 +470,16 @@ class MoneyflowApp(App):
                 # Apply category grouping dynamically (so CATEGORY_GROUPS changes take effect)
                 loading_status.update("🔄 Applying category groupings...")
                 df = self.data_manager.apply_category_groups(df)
+
+                # Load merchant cache for autocomplete (especially important for MTD mode)
+                try:
+                    cached_merchants = await self.data_manager.refresh_merchant_cache(force=False)
+                    self.data_manager.all_merchants = cached_merchants
+                    logger.debug(f"Loaded {len(cached_merchants)} merchants from cache")
+                except Exception as e:
+                    logger.warning(f"Merchant cache load failed: {e}")
+                    self.data_manager.all_merchants = []
+
                 loading_status.update(f"✅ Loaded {len(df):,} transactions from cache!")
                 return df, categories, category_groups
             else:
@@ -973,10 +983,8 @@ class MoneyflowApp(App):
             transaction_count = row_data["count"]
             total_amount = row_data["total"]
 
-            # Get list of all merchants for suggestions
-            if self.data_manager.df is None:
-                return
-            all_merchants = self.data_manager.df["merchant"].unique().to_list()
+            # Get list of all merchants for suggestions (includes cached + current)
+            all_merchants = self.controller.get_merchant_suggestions()
 
             # Pass aggregate summary for bulk edit
             bulk_summary = {
@@ -1019,10 +1027,8 @@ class MoneyflowApp(App):
         row_data = self.state.current_data.row(table.cursor_row, named=True)
         current_merchant = row_data["merchant"]
 
-        # Get list of all merchants for suggestions
-        if self.data_manager.df is None:
-            return
-        all_merchants = self.data_manager.df["merchant"].unique().to_list()
+        # Get list of all merchants for suggestions (includes cached + current)
+        all_merchants = self.controller.get_merchant_suggestions()
 
         # Check if we have selected transactions for bulk edit
         if len(self.state.selected_ids) > 0:
