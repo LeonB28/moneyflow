@@ -91,26 +91,4 @@ If you see the demo data load successfully, you're all set!
 
 ## Troubleshooting
 
-### "command not found: moneyflow"
-
-**After pip install:**
-
-```bash
-# Your PATH might not include pip's bin directory
-# Add to ~/.bashrc or ~/.zshrc:
-export PATH="$HOME/.local/bin:$PATH"
-
-# Then reload:
-source ~/.bashrc  # or ~/.zshrc
-```
-
-### "No module named 'moneyflow'"
-
-```bash
-# Reinstall
-pip install --upgrade --force-reinstall moneyflow
-```
-
-### More Help
-
-See [Troubleshooting Guide](../reference/troubleshooting.md) for comprehensive solutions.
+Having issues? See the [Troubleshooting Guide](../reference/troubleshooting.md) for help.
