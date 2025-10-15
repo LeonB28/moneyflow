@@ -250,6 +250,11 @@ uv sync
 
 **CRITICAL**: Never commit without running tests first!
 
+**IMPORTANT**: When working with Claude Code or AI assistants:
+- ✅ AI can create commits locally
+- ❌ AI must NEVER push to git without explicit user permission
+- 💡 User should review commits before pushing
+
 ```bash
 # MANDATORY: Run tests before committing
 uv run pytest -v
@@ -257,6 +262,9 @@ uv run pytest -v
 # Only if all tests pass, then commit
 git add -A
 git commit -m "Descriptive commit message"
+
+# WAIT for user approval before pushing
+# git push origin main
 
 # Use conventional commit format
 # feat: New feature
