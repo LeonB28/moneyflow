@@ -6,7 +6,7 @@ with intelligent retry behavior.
 """
 
 import asyncio
-from typing import Callable, TypeVar, Optional
+from typing import Callable, TypeVar, Optional, Awaitable
 from .logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -21,7 +21,7 @@ class RetryAborted(Exception):
 
 
 async def retry_with_backoff(
-    operation: Callable[[], T],
+    operation: Callable[[], Awaitable[T]],
     operation_name: str,
     max_retries: int = 5,
     initial_wait: float = 60.0,
@@ -86,5 +86,8 @@ async def retry_with_backoff(
                 logger.info(f"{operation_name} retry cancelled by user")
                 raise RetryAborted(f"User cancelled {operation_name}")
 
-    # All retries exhausted
-    raise last_error
+    # All retries exhausted - last_error will always be set since we enter the loop
+    if last_error is not None:
+        raise last_error
+    else:
+        raise Exception(f"{operation_name} failed after {max_retries} attempts")
