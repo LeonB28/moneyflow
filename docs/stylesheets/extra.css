@@ -129,3 +129,8 @@
   font-size: 0.8rem;
   opacity: 0.7;
 }
+
+/* Hide "Table of contents" heading in right sidebar */
+.md-sidebar--secondary .md-sidebar__scrollwrap .md-sidebar__inner > .md-nav > .md-nav__title {
+  display: none;
+}
