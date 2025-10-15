@@ -5,11 +5,13 @@
 Track spending, bulk edit transactions, and navigate your financial data at keyboard speed.
 
 ```bash
+# Install and run
 pip install moneyflow
 moneyflow
 
-# Or try without installing
-uvx moneyflow --demo
+# Or run directly with uvx (no install needed)
+uvx moneyflow
+uvx moneyflow --demo  # Try with demo data
 ```
 
 <p class="hero-support">Supports Monarch Money™ • Additional backends planned</p>
