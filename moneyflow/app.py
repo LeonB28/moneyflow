@@ -263,7 +263,6 @@ class MoneyflowApp(App):
 
         # Initialize cache manager only if user requested caching
         if self.cache_path is not None:
-
             self.cache_manager = CacheManager(cache_dir=self.cache_path)
 
         # Initialize controller with view presenter pattern
@@ -677,7 +676,6 @@ class MoneyflowApp(App):
             # Step 1: Handle credentials (if not demo mode)
             creds = None
             if not self.demo_mode:
-
                 creds = await self._handle_credentials()
                 if creds is None:
                     return  # User exited
@@ -875,8 +873,7 @@ class MoneyflowApp(App):
         if result is not None:
             # Apply filters via controller
             self.controller.apply_filters(
-                show_transfers=result["show_transfers"],
-                show_hidden=result["show_hidden"]
+                show_transfers=result["show_transfers"], show_hidden=result["show_hidden"]
             )
 
             # Build status message
@@ -1499,7 +1496,9 @@ class MoneyflowApp(App):
 
         # Save view state before showing review screen
         saved_state = self.state.save_view_state()
-        logger.debug(f"Saved view state: view_mode={saved_state['view_mode']}, selected_category={saved_state.get('selected_category')}")
+        logger.debug(
+            f"Saved view state: view_mode={saved_state['view_mode']}, selected_category={saved_state.get('selected_category')}"
+        )
 
         # Show review screen with category names for readable display
         should_commit = await self.push_screen(
@@ -1512,7 +1511,9 @@ class MoneyflowApp(App):
             # User should see their original view while commits are happening
             logger.debug(f"Before restore: view_mode={self.state.view_mode}")
             self.state.restore_view_state(saved_state)
-            logger.debug(f"After restore: view_mode={self.state.view_mode}, selected_category={self.state.selected_category}")
+            logger.debug(
+                f"After restore: view_mode={self.state.view_mode}, selected_category={self.state.selected_category}"
+            )
             self.refresh_view(force_rebuild=False)
 
             count = len(self.data_manager.pending_edits)

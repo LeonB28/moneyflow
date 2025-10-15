@@ -46,7 +46,7 @@ CATEGORY_GROUPS = {
         "Fast Food",
         "Food & Drink",
         "Alcohol",
-        "Quick Eats"
+        "Quick Eats",
     ],
     "Travel": [
         "Airfare",
@@ -237,7 +237,9 @@ class DataManager:
 
         logger.info(f"Saved {data['count']} merchants to cache")
 
-    async def refresh_merchant_cache(self, force: bool = False, skip_cache: bool = False) -> List[str]:
+    async def refresh_merchant_cache(
+        self, force: bool = False, skip_cache: bool = False
+    ) -> List[str]:
         """
         Refresh merchant cache from API if stale or forced.
 

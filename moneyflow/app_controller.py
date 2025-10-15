@@ -564,9 +564,7 @@ class AppController:
                 ViewMode.ACCOUNT: (SortMode.ACCOUNT, "Account"),
             }
 
-            field_sort, field_name = view_to_field_sort.get(
-                view_mode, (SortMode.COUNT, "Count")
-            )
+            field_sort, field_name = view_to_field_sort.get(view_mode, (SortMode.COUNT, "Count"))
 
             # Cycle through: Field → Count → Amount → Field
             if current_sort == field_sort:
@@ -761,6 +759,8 @@ class AppController:
 
             # Refresh to show updated data (smooth update)
             # Note: View already restored in app.py before commit started
-            logger.debug(f"Success path - refreshing to show updated data. Current view_mode={self.state.view_mode}, selected_category={self.state.selected_category}")
+            logger.debug(
+                f"Success path - refreshing to show updated data. Current view_mode={self.state.view_mode}, selected_category={self.state.selected_category}"
+            )
             self.refresh_view(force_rebuild=False)
             logger.debug(f"After refresh: view_mode={self.state.view_mode}")
