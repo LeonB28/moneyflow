@@ -29,8 +29,7 @@ moneyflow is designed to be used entirely with the keyboard. Here's your complet
 
 | Key | View |
 |-----|------|
-| ++c++ | Categories (hidden shortcut) |
-| ++shift+a++ | Accounts (hidden shortcut) |
+| ++shift+a++ | Accounts |
 
 ### Drill Down
 
