@@ -133,6 +133,8 @@ This lets you rename a merchant or recategorize hundreds of transactions in one 
 - ++enter++ to apply search
 - ++escape++ to cancel
 
+**To clear an active search:** Press ++slash++ to open search, delete all text, then press ++enter++ with empty input.
+
 ---
 
 ## Arrow Key Navigation
