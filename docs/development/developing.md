@@ -330,9 +330,7 @@ uv run --python 3.13 pytest
 
 ## Release Process
 
-See [PUBLISHING.md](../../PUBLISHING.md) for complete publishing workflow.
-
-**Quick version**:
+**Publishing workflow**:
 ```bash
 # 1. Bump version
 ./scripts/bump-version.sh 0.2.0
@@ -388,9 +386,9 @@ uv sync --reinstall
 
 ## Getting Help
 
-- **Bugs**: Open an issue on GitHub
-- **Questions**: Check existing issues or open a discussion
-- **Development**: See [CLAUDE.md](../../CLAUDE.md) for detailed developer guide
+- **Bugs**: Open an issue on [GitHub](https://github.com/wesm/moneyflow/issues)
+- **Questions**: Check existing issues or start a [discussion](https://github.com/wesm/moneyflow/discussions)
+- **Contributing**: See [Contributing Guide](contributing.md)
 
 ## Best Practices
 
