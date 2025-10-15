@@ -131,7 +131,7 @@ uvx moneyflow
 
 ---
 
-## Independent Project 
+## Independent Open Source Project 
 
 !!! info ""
     moneyflow is an independent open-source project. It is not affiliated with, endorsed by, or officially connected to Monarch Money, Inc. or any other finance platform.
