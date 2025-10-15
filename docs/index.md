@@ -1,19 +1,20 @@
 # moneyflow
-{: .hero-title }
 
 **Terminal UI for personal finance power users**
-{: .hero-subtitle }
 
 Track spending, bulk edit transactions, and navigate your financial data at keyboard speed.
 
 ```bash
 pip install moneyflow
 moneyflow
+
+# Or try without installing
+uvx moneyflow --demo
 ```
 
-*Monarch Money • Python 3.11+*
+<p class="hero-support">Supports Monarch Money™ • Additional backends planned</p>
 
-![moneyflow terminal UI](images/home-screen.png){ .hero-screenshot }
+![moneyflow terminal UI](images/home-screen.png)
 
 ---
 

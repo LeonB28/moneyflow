@@ -1,26 +1,38 @@
 /* moneyflow documentation styles */
 
-/* Hero section */
-.hero-title {
-  font-size: 3rem !important;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-}
-
-.hero-subtitle {
-  font-size: 1.4rem;
-  font-weight: 500;
+/* Hero section - tight spacing */
+.md-typeset h1:first-child {
+  margin-top: 0;
   margin-bottom: 1rem;
-  display: block;
+  font-size: 3rem;
+  font-weight: 700;
 }
 
-.hero-screenshot {
+.md-typeset h1:first-child + p strong {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: var(--md-primary-fg-color);
+}
+
+.md-typeset h1 + p + p {
+  margin-bottom: 1.5rem;
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.hero-support {
+  font-size: 0.9rem;
+  color: var(--md-default-fg-color--light);
+  margin: 0.75rem 0 1.5rem 0 !important;
+}
+
+.md-typeset img[alt*="moneyflow"] {
   max-width: 100%;
   height: auto;
   border-radius: 6px;
   border: 1px solid var(--md-default-fg-color--lightest);
-  margin: 2rem 0;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  margin: 0 0 1.5rem 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 /* Feature grid */
