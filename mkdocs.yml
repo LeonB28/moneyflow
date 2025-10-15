@@ -9,24 +9,24 @@ edit_uri: edit/main/docs/
 theme:
   name: material
   palette:
-    # Dark theme (terminal aesthetic)
+    # Dark theme (default for terminal users)
     - scheme: slate
-      primary: deep purple
-      accent: cyan
+      primary: indigo
+      accent: teal
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
-    # Light theme (optional)
+    # Light theme
     - scheme: default
-      primary: deep purple
-      accent: cyan
+      primary: indigo
+      accent: teal
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
 
   font:
-    text: Inter
-    code: Fira Code
+    text: Roboto
+    code: Roboto Mono
 
   features:
     - navigation.instant
@@ -58,9 +58,14 @@ extra:
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/moneyflow/
 
-  analytics:
-    provider: google
-    property: G-XXXXXXXXXX  # Replace with your GA4 property
+  # Show GitHub stars in header
+  version:
+    provider: mike
+
+  # Analytics disabled for now
+  # analytics:
+  #   provider: google
+  #   property: G-XXXXXXXXXX
 
 markdown_extensions:
   - admonition

@@ -4,161 +4,151 @@
 
 # moneyflow
 
-<p class="tagline">$ track your moneyflow</p>
+**A terminal UI for managing personal finances at keyboard speed.**
 
-**A blazing-fast terminal UI for personal finance power users.**
+Track spending, bulk edit transactions, and drill into your financial data—all from the terminal. Built for power users who prefer keyboards to clicking through web interfaces.
 
-Built for speed. Designed for keyboards. Made for people who think in transactions per second, not clicks per minute.
-
-**Currently supports**: Monarch Money • More platforms coming soon
-
-<div class="install-command">
-pip install moneyflow
-</div>
-
+<div class="hero-buttons">
 [Get Started](getting-started/installation.md){ .md-button .md-button--primary }
 [Try Demo](getting-started/quickstart.md#demo-mode){ .md-button }
-[View on GitHub](https://github.com/wesm/moneyflow){ .md-button }
+[GitHub](https://github.com/wesm/moneyflow){ .md-button }
+</div>
+
+```bash
+# Try it now (no installation required)
+uvx moneyflow --demo
+
+# Or install
+pip install moneyflow
+```
 
 </div>
 
 ---
 
-## Why moneyflow?
+## Features
 
 <div class="feature-grid" markdown>
 
 <div class="feature-card" markdown>
-### ⚡ Blazing Fast
-Download all transactions once. Filter, search, and aggregate **instantly** using Polars. No waiting for API calls.
+### Keyboard-Driven
+Navigate, filter, and edit without touching the mouse. Vim-inspired shortcuts make common operations instant.
 </div>
 
 <div class="feature-card" markdown>
-### ⌨️ Keyboard-First
-Zero mouse required. Vim-inspired shortcuts. Navigate your finances at the speed of thought.
+### Fast Local Operations
+Download transactions once. All filtering, searching, and aggregation happens locally using Polars—no API latency.
 </div>
 
 <div class="feature-card" markdown>
-### 🎯 Bulk Operations
-Multi-select transactions. Batch rename merchants. Recategorize hundreds of transactions in seconds.
+### Bulk Editing
+Select multiple transactions. Rename merchants or recategorize hundreds of transactions with a few keystrokes.
 </div>
 
 <div class="feature-card" markdown>
-### 🔐 Secure
-AES-128 encryption with PBKDF2 (100k iterations). Your credentials never leave your machine.
+### Smart Views
+Aggregate by merchant, category, group, or account. Drill down to individual transactions. Navigate time periods with arrow keys.
 </div>
 
 <div class="feature-card" markdown>
-### 📊 Smart Aggregation
-View by merchant, category, or group. Drill down to transactions. See your spending patterns instantly.
+### Secure Credentials
+Local credential storage with AES-128 encryption. Your finance credentials stay on your machine.
 </div>
 
 <div class="feature-card" markdown>
-### 🎮 Demo Mode
-Try it risk-free with synthetic data. No account needed. Perfect for learning or showcasing.
+### Review Before Commit
+See exactly what changes you're making before saving. All edits are queued and reviewed together.
 </div>
 
 </div>
 
 ---
 
-## Quick Look
+## Quick Start
 
 ```bash
-# Install
-pip install moneyflow
-
-# Or try instantly with uvx (no installation!)
+# Try with demo data
 uvx moneyflow --demo
 
 # Run with your Monarch Money account
 moneyflow
 
-# Load only recent data
-moneyflow --year 2025
+# Load recent transactions only (faster startup)
+moneyflow --mtd         # Month-to-date
+moneyflow --year 2025   # Year to present
 ```
 
-**First time?** The app walks you through encrypted credential setup for your finance platform.
+On first run, you'll configure your finance platform credentials. They're encrypted and stored locally at `~/.moneyflow/`.
 
 ---
 
-## What You Can Do
+## Core Workflows
 
-### View Your Spending
+**View and analyze spending:**
 
-- **By Merchant**: See which stores you spend the most at
-- **By Category**: Track groceries, dining, travel separately
-- **By Group**: High-level view (Food & Dining, Travel, Housing)
-- **By Account**: Per credit card or bank account
-- **All Transactions**: Chronological list with full details
+- ++g++ - Cycle between merchant/category/group/account views
+- ++u++ - Show all transactions
+- ++slash++ - Search by merchant or category
+- ++arrow-left++ ++arrow-right++ - Navigate time periods
 
-### Edit Efficiently
+**Edit transactions:**
 
-- **Rename merchants**: Fix "AMZN*ABC123" → "Amazon"
-- **Recategorize**: Move transactions to correct categories
-- **Bulk operations**: Select multiple, edit once
-- **Hide from reports**: Mark transfers and one-offs
-- **Review before commit**: See all changes before saving
+- ++m++ - Rename merchant
+- ++r++ - Recategorize
+- ++h++ - Hide/unhide from reports
+- ++space++ - Select multiple (bulk operations)
 
-### Navigate Time
+**Review and save:**
 
-- Jump to any month (++1++ through ++9++)
-- Navigate years with arrow keys
-- Filter to current month/year instantly
-- View all-time or custom ranges
+- ++w++ - Review pending changes
+- ++c++ - Confirm and commit to backend
 
-### Search & Filter
-
-- Type ++slash++ to search by merchant or category
-- Filter out transfers and hidden items
-- Live filtering as you type
-- Combine filters for precise views
+[Full keyboard reference →](guide/keyboard-shortcuts.md)
 
 ---
 
-## Built With
+## Platform Support
 
-<div class="metrics">
-<div class="metric">
-  <div class="metric-value">334</div>
-  <div class="metric-label">Tests Passing</div>
-</div>
-<div class="metric">
-  <div class="metric-value">61%</div>
-  <div class="metric-label">Code Coverage</div>
-</div>
-<div class="metric">
-  <div class="metric-value">0ms</div>
-  <div class="metric-label">Filter Latency</div>
-</div>
-</div>
+**Currently supported:**
 
-**Stack**: Python 3.11+ • [Textual](https://textual.textualize.io/) • [Polars](https://pola.rs/) • Pluggable Backend System
+- [Monarch Money](https://www.monarchmoney.com/) - Full support
+
+**Planned:**
+
+- YNAB (You Need A Budget)
+- Lunch Money
+- Generic CSV import
+
+The backend system is pluggable—adding new platforms is straightforward. See [Contributing](development/contributing.md) if you want to add support for your platform.
 
 ---
 
-## Screenshots
+## Installation
 
-!!! note "Screenshots Coming Soon"
-    Beautiful terminal screenshots will be added here once we set up the moneyflow-assets repository.
+```bash
+# Using pip
+pip install moneyflow
 
-    For now, try it yourself: `uvx moneyflow --demo`
+# Using uv (recommended)
+uv tool install moneyflow
+
+# Try without installing
+uvx moneyflow --demo
+```
+
+**Requirements:** Python 3.11+
+
+[Installation guide →](getting-started/installation.md)
 
 ---
 
 ## Not Affiliated
 
-!!! warning "Independent Project"
-    moneyflow is an **independent open-source project** and is not affiliated with, endorsed by, or officially connected to Monarch Money, Inc.
-
-    Monarch Money® is a trademark of Monarch Money, Inc.
+!!! info ""
+    moneyflow is an independent open-source project. It is not affiliated with, endorsed by, or officially connected to Monarch Money, Inc. or any other finance platform.
 
 ---
 
-## Ready to Start?
+## License
 
-<div style="text-align: center; margin: 3rem 0;">
-
-[Install moneyflow](getting-started/installation.md){ .md-button .md-button--primary style="font-size: 1.2em; padding: 1em 2em;" }
-
-</div>
+MIT License - see [LICENSE](https://github.com/wesm/moneyflow/blob/main/LICENSE) for details.

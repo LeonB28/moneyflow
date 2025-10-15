@@ -1,45 +1,123 @@
-/* Additional custom styles for moneyflow docs */
+/* moneyflow documentation styles */
 
-/* Smooth animations */
-* {
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+/* Hero section */
+.hero {
+  text-align: center;
+  padding: 2rem 1rem 3rem;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
-/* Custom spacing for better readability */
-.md-typeset h1 {
-  margin-top: 2rem;
+.hero h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: var(--md-primary-fg-color);
 }
 
-.md-typeset h2 {
-  margin-top: 1.5rem;
-  border-bottom: 2px solid rgba(57, 186, 230, 0.2);
-  padding-bottom: 0.5rem;
+.hero p {
+  font-size: 1.2rem;
+  line-height: 1.6;
+  color: var(--md-default-fg-color--light);
+  margin-bottom: 2rem;
 }
 
-/* Make tables look better */
-.md-typeset table:not([class]) {
-  border: 1px solid rgba(57, 186, 230, 0.2);
-  border-radius: 4px;
+.hero-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin: 2rem 0;
+  flex-wrap: wrap;
 }
 
-.md-typeset table:not([class]) th {
-  background-color: rgba(57, 186, 230, 0.1);
-  color: #39bae6;
-  font-family: 'Fira Code', monospace;
+.hero .highlight {
+  margin: 2rem auto;
+  max-width: 600px;
 }
 
-/* Custom button styling */
+/* Feature grid */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  margin: 2rem 0;
+}
+
+.feature-card {
+  padding: 1.5rem;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 8px;
+  background: var(--md-code-bg-color);
+}
+
+.feature-card h3 {
+  margin-top: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--md-primary-fg-color);
+}
+
+.feature-card p {
+  margin-bottom: 0;
+  color: var(--md-default-fg-color--light);
+  line-height: 1.6;
+}
+
+/* Buttons */
 .md-button {
-  border-radius: 4px;
-  font-family: 'Fira Code', monospace;
+  border-radius: 6px;
+  font-weight: 500;
+  padding: 0.625rem 1.25rem;
+  transition: all 0.2s ease;
 }
 
 .md-button--primary {
-  background-color: #39bae6;
-  border-color: #39bae6;
+  background-color: var(--md-primary-fg-color);
 }
 
 .md-button--primary:hover {
-  background-color: #59c2ff;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Typography improvements */
+.md-typeset h2 {
+  margin-top: 3rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+  padding-bottom: 0.5rem;
+}
+
+.md-typeset h3 {
+  margin-top: 2rem;
+  font-weight: 600;
+}
+
+/* Code blocks */
+.md-typeset code {
+  padding: 0.1em 0.4em;
+  background-color: var(--md-code-bg-color);
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+/* Remove excessive animations */
+* {
+  transition: none;
+}
+
+.md-button, .feature-card {
+  transition: all 0.2s ease;
+}
+
+/* Table styling */
+.md-typeset table:not([class]) {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.md-typeset table:not([class]) th {
+  background-color: var(--md-code-bg-color);
+  font-weight: 600;
 }
