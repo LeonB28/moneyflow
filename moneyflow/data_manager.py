@@ -236,12 +236,13 @@ class DataManager:
 
         logger.info(f"Saved {data['count']} merchants to cache")
 
-    async def refresh_merchant_cache(self, force: bool = False) -> List[str]:
+    async def refresh_merchant_cache(self, force: bool = False, skip_cache: bool = False) -> List[str]:
         """
         Refresh merchant cache from API if stale or forced.
 
         Args:
             force: If True, refresh even if cache is fresh
+            skip_cache: If True, don't save to cache (for demo mode)
 
         Returns:
             List of merchant names
@@ -252,7 +253,11 @@ class DataManager:
 
         logger.info("Fetching all merchants from API...")
         merchants = await self.mm.get_all_merchants()
-        self._save_merchant_cache(merchants)
+
+        if not skip_cache:
+            self._save_merchant_cache(merchants)
+        else:
+            logger.debug("Skipping merchant cache save (demo/test mode)")
 
         return merchants
 

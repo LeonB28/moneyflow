@@ -238,7 +238,9 @@ class MoneyflowApp(App):
 
     def _initialize_managers(self):
         """Initialize data manager, cache manager, and controller."""
-        self.data_manager = DataManager(self.backend)
+        # In demo mode, use a temp directory for merchant cache (don't pollute ~/.moneyflow)
+        merchant_cache_dir = "" if not self.demo_mode else "/tmp/moneyflow_demo"
+        self.data_manager = DataManager(self.backend, merchant_cache_dir=merchant_cache_dir)
 
         # Initialize cache manager only if user requested caching
         if self.cache_path is not None:
