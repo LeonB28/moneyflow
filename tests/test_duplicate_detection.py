@@ -82,54 +82,6 @@ class TestDuplicateDetection:
         duplicates_loose = DuplicateDetector.find_duplicates(df, strict_account_match=False)
         assert len(duplicates_loose) == 1
 
-    @pytest.mark.skip(reason="Date tolerance not supported in optimized groupby algorithm")
-    def test_date_tolerance(self):
-        """Test date tolerance for duplicate detection."""
-        data = [
-            {
-                "id": "txn_1",
-                "date": date(2024, 10, 1),
-                "amount": -50.00,
-                "merchant": "Amazon",
-                "merchant_id": "merch_1",
-                "category": "Shopping",
-                "category_id": "cat_1",
-                "group": "Shopping",
-                "account": "Chase",
-                "account_id": "acc_1",
-                "notes": "",
-                "hide_from_reports": False,
-                "pending": False,
-                "is_recurring": False,
-            },
-            {
-                "id": "txn_2",
-                "date": date(2024, 10, 2),  # One day later
-                "amount": -50.00,
-                "merchant": "Amazon",
-                "merchant_id": "merch_1",
-                "category": "Shopping",
-                "category_id": "cat_1",
-                "group": "Shopping",
-                "account": "Chase",
-                "account_id": "acc_1",
-                "notes": "",
-                "hide_from_reports": False,
-                "pending": False,
-                "is_recurring": False,
-            },
-        ]
-
-        df = pl.DataFrame(data)
-
-        # With 0 day tolerance, should NOT be duplicates
-        duplicates_strict = DuplicateDetector.find_duplicates(df, date_tolerance_days=0)
-        assert duplicates_strict.is_empty()
-
-        # With 1 day tolerance, SHOULD be duplicates
-        duplicates_tolerant = DuplicateDetector.find_duplicates(df, date_tolerance_days=1)
-        assert len(duplicates_tolerant) == 1
-
     def test_case_insensitive_merchant_matching(self):
         """Test that merchant matching is case-insensitive."""
         data = [
