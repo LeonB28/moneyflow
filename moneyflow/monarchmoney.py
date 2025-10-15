@@ -1801,6 +1801,50 @@ class MonarchMoney(object):
         )
         return await self.gql_call(operation="ManageGetCategoryGroups", graphql_query=query)
 
+    async def get_all_merchants(self) -> List[str]:
+        """
+        Gets all unique merchant names from all transactions using aggregation.
+
+        This is much faster than downloading all transactions - it uses GraphQL's
+        groupBy aggregation to get a distinct list of merchants.
+
+        Returns:
+            List of merchant names sorted alphabetically
+        """
+        query = gql(
+            """
+          query GetAllMerchants {
+            byMerchant: aggregates(groupBy: ["merchant"]) {
+              groupBy {
+                merchant {
+                  id
+                  name
+                  __typename
+                }
+                __typename
+              }
+              __typename
+            }
+          }
+        """
+        )
+
+        response = await self.gql_call(
+            operation="GetAllMerchants",
+            graphql_query=query,
+        )
+
+        # Extract merchant names from response
+        merchants = []
+        for item in response.get("byMerchant", []):
+            group_by = item.get("groupBy", {})
+            merchant = group_by.get("merchant")
+            if merchant and merchant.get("name"):
+                merchants.append(merchant["name"])
+
+        # Return sorted list
+        return sorted(merchants)
+
     async def create_transaction_category(
         self,
         group_id: str,

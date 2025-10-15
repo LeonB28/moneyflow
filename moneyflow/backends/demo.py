@@ -143,6 +143,21 @@ class DemoBackend(FinanceBackend):
 
         return True
 
+    async def get_all_merchants(self) -> List[str]:
+        """
+        Get all unique merchant names from demo data.
+
+        Returns:
+            List of merchant names, sorted alphabetically
+        """
+        merchants = set()
+        for txn in self.transactions:
+            merchant = txn.get("merchant", {})
+            if merchant and merchant.get("name"):
+                merchants.add(merchant["name"])
+
+        return sorted(merchants)
+
     def get_transaction_by_id(self, transaction_id: str) -> Optional[Dict[str, Any]]:
         """Helper to get a transaction by ID."""
         for txn in self.transactions:

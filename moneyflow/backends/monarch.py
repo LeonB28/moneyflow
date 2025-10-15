@@ -4,7 +4,7 @@ Monarch Money backend implementation.
 Wraps the MonarchMoney GraphQL client to implement the FinanceBackend interface.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from .base import FinanceBackend
 from ..monarchmoney import MonarchMoney
 
@@ -144,6 +144,15 @@ class MonarchBackend(FinanceBackend):
             Exception: If transaction not found or deletion fails
         """
         return await self.client.delete_transaction(transaction_id)
+
+    async def get_all_merchants(self) -> List[str]:
+        """
+        Get all unique merchant names using GraphQL aggregation.
+
+        Returns:
+            List of merchant names, sorted alphabetically
+        """
+        return await self.client.get_all_merchants()
 
     def delete_session(self, filename: Optional[str] = None) -> None:
         """

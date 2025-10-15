@@ -14,7 +14,9 @@ providing a clean interface for data operations without exposing API details.
 """
 
 import asyncio
-from datetime import datetime, date
+import json
+from datetime import datetime, date, timedelta
+from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple, Callable
 import polars as pl
 from .backends.base import FinanceBackend
@@ -125,6 +127,7 @@ class DataManager:
     - Fetch transactions from API with pagination (batches of 1000)
     - Fetch categories and category groups
     - Convert API responses to Polars DataFrames for fast operations
+    - Cache merchants for fast autocomplete in MTD mode
 
     **Data Transformation**:
     - Apply category-to-group mappings (uses CATEGORY_GROUPS constant)
@@ -135,6 +138,7 @@ class DataManager:
     **Data Persistence**:
     - Commit pending edits back to API (in parallel for speed)
     - Track success/failure counts for commit operations
+    - Cache merchants with daily refresh
 
     **Design Philosophy**:
     - All aggregations done locally with Polars (fast, no API calls)
@@ -148,14 +152,18 @@ class DataManager:
         category_groups: Group lookup dict {id: {name, type, ...}}
         pending_edits: List of edits queued for commit
         category_to_group: Reverse mapping {category_name: group_name}
+        all_merchants: Merged list of cached + current merchants for autocomplete
     """
 
-    def __init__(self, mm: FinanceBackend):
+    MERCHANT_CACHE_MAX_AGE_HOURS = 24  # Refresh once per day
+
+    def __init__(self, mm: FinanceBackend, merchant_cache_dir: str = ""):
         """
         Initialize DataManager with a finance backend.
 
         Args:
             mm: Backend instance (must implement FinanceBackend interface)
+            merchant_cache_dir: Directory for merchant cache (defaults to ~/.moneyflow/)
         """
         self.mm = mm
         self.category_to_group: Dict[str, str] = {}
@@ -166,12 +174,108 @@ class DataManager:
         self.categories: Dict[str, Any] = {}
         self.category_groups: Dict[str, Any] = {}
         self.pending_edits: List[Any] = []
+        self.all_merchants: List[str] = []  # Cached + current merchants
+
+        # Merchant cache setup
+        if not merchant_cache_dir:
+            merchant_cache_dir = str(Path.home() / ".moneyflow")
+        self.merchant_cache_dir = Path(merchant_cache_dir)
+        self.merchant_cache_dir.mkdir(parents=True, exist_ok=True)
+        self.merchant_cache_file = self.merchant_cache_dir / "merchants.json"
 
     def _build_category_group_mapping(self):
         """Build reverse mapping from category to group."""
         for group, categories in CATEGORY_GROUPS.items():
             for category in categories:
                 self.category_to_group[category] = group
+
+    def _is_merchant_cache_stale(self) -> bool:
+        """Check if merchant cache needs refresh (older than 24 hours)."""
+        if not self.merchant_cache_file.exists():
+            return True
+
+        try:
+            with open(self.merchant_cache_file, "r") as f:
+                data = json.load(f)
+
+            timestamp_str = data.get("timestamp")
+            if not timestamp_str:
+                return True
+
+            cache_time = datetime.fromisoformat(timestamp_str)
+            age_hours = (datetime.now() - cache_time).total_seconds() / 3600
+
+            return age_hours >= self.MERCHANT_CACHE_MAX_AGE_HOURS
+
+        except (json.JSONDecodeError, KeyError, ValueError):
+            return True
+
+    def _load_cached_merchants(self) -> List[str]:
+        """Load merchants from cache file."""
+        if not self.merchant_cache_file.exists():
+            return []
+
+        try:
+            with open(self.merchant_cache_file, "r") as f:
+                data = json.load(f)
+            return data.get("merchants", [])
+        except (json.JSONDecodeError, KeyError):
+            logger.warning("Corrupt merchant cache, will refresh")
+            return []
+
+    def _save_merchant_cache(self, merchants: List[str]) -> None:
+        """Save merchants to cache with timestamp."""
+        data = {
+            "timestamp": datetime.now().isoformat(),
+            "merchants": sorted(set(merchants)),
+            "count": len(set(merchants)),
+        }
+
+        with open(self.merchant_cache_file, "w") as f:
+            json.dump(data, f, indent=2)
+
+        logger.info(f"Saved {data['count']} merchants to cache")
+
+    async def refresh_merchant_cache(self, force: bool = False) -> List[str]:
+        """
+        Refresh merchant cache from API if stale or forced.
+
+        Args:
+            force: If True, refresh even if cache is fresh
+
+        Returns:
+            List of merchant names
+        """
+        if not force and not self._is_merchant_cache_stale():
+            logger.debug("Merchant cache is fresh, loading from cache")
+            return self._load_cached_merchants()
+
+        logger.info("Fetching all merchants from API...")
+        merchants = await self.mm.get_all_merchants()
+        self._save_merchant_cache(merchants)
+
+        return merchants
+
+    def get_all_merchants_for_autocomplete(self) -> List[str]:
+        """
+        Get merged list of cached merchants + merchants from loaded transactions.
+
+        This ensures:
+        - MTD mode has access to all historical merchants (from cache)
+        - Recent merchant edits are immediately available (from current df)
+
+        Returns:
+            Sorted, deduplicated list of all merchants
+        """
+        # Start with cached merchants
+        merchants_set = set(self.all_merchants)
+
+        # Add merchants from currently loaded transactions
+        if self.df is not None and not self.df.is_empty():
+            current_merchants = self.df["merchant"].unique().to_list()
+            merchants_set.update(current_merchants)
+
+        return sorted(merchants_set)
 
     async def fetch_all_data(
         self,
@@ -251,6 +355,20 @@ class DataManager:
 
         # Apply category grouping (done dynamically so CATEGORY_GROUPS changes take effect)
         df = self.apply_category_groups(df)
+
+        # Load/refresh merchant cache for autocomplete
+        # Do this in background - don't block on merchant fetch
+        if progress_callback:
+            progress_callback("Refreshing merchant cache...")
+
+        try:
+            cached_merchants = await self.refresh_merchant_cache(force=False)
+            self.all_merchants = cached_merchants
+            logger.info(f"Loaded {len(cached_merchants)} cached merchants")
+        except Exception as e:
+            logger.warning(f"Merchant cache refresh failed: {e}")
+            # Not critical - fall back to merchants from loaded transactions
+            self.all_merchants = []
 
         return df, categories, category_groups
 

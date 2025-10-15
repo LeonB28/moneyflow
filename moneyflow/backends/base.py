@@ -155,6 +155,23 @@ class FinanceBackend(ABC):
         """
         pass
 
+    @abstractmethod
+    async def get_all_merchants(self) -> List[str]:
+        """
+        Get all unique merchant names from all transactions.
+
+        Uses aggregation to fetch distinct merchants without downloading all transactions.
+        This is much faster than fetching all transaction details.
+
+        Returns:
+            List of merchant names, sorted alphabetically
+
+        Example:
+            >>> merchants = await backend.get_all_merchants()
+            >>> print(f"Found {len(merchants)} merchants")
+        """
+        pass
+
     def delete_session(self) -> None:
         """
         Delete saved session data.

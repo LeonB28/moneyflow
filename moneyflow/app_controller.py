@@ -423,10 +423,14 @@ class AppController:
         return self.state.current_data
 
     def get_merchant_suggestions(self) -> list[str]:
-        """Get list of all merchants for autocomplete."""
-        if self.data_manager.df is None:
-            return []
-        return self.data_manager.df["merchant"].unique().to_list()
+        """
+        Get list of all merchants for autocomplete.
+
+        Returns merchants from both:
+        - Cached historical merchants (refreshed daily)
+        - Currently loaded transactions (includes recent edits)
+        """
+        return self.data_manager.get_all_merchants_for_autocomplete()
 
     def get_categories(self) -> dict:
         """Get category map."""
