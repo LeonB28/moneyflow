@@ -214,7 +214,20 @@ class EditMerchantScreen(ModalScreen):
                 self.dismiss(None)
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
-        """Handle Enter key in input - save the typed value."""
+        """Handle Enter key in input - auto-select if only one match, else save typed value."""
+        if event.input.id != "merchant-input":
+            return
+
+        # Check if there's exactly one filtered suggestion
+        if self.all_merchants:
+            option_list = self.query_one("#suggestions", OptionList)
+            if option_list.option_count == 1:
+                # Auto-select the single match
+                highlighted_option = option_list.get_option_at_index(0)
+                self.dismiss(str(highlighted_option.id))
+                return
+
+        # Otherwise save the typed value
         new_merchant = event.value.strip()
         if new_merchant and new_merchant != self.current_merchant:
             self.dismiss(new_merchant)
@@ -227,13 +240,20 @@ class EditMerchantScreen(ModalScreen):
             event.stop()  # Prevent propagation to parent
             self.dismiss(None)
         elif event.key == "down":
-            # Only intercept if focus is NOT on the suggestions list
-            # (allow normal navigation within the list)
+            # Move focus from input to suggestions (if list has items)
             if self.all_merchants:
                 option_list = self.query_one("#suggestions", OptionList)
-                if not option_list.has_focus:
+                if not option_list.has_focus and option_list.option_count > 0:
                     event.stop()  # Stop only when moving TO the list
                     option_list.focus()
+        elif event.key == "up":
+            # Move focus from list back to input (if at top of list)
+            if self.all_merchants:
+                option_list = self.query_one("#suggestions", OptionList)
+                merchant_input = self.query_one("#merchant-input", Input)
+                if option_list.has_focus and option_list.highlighted == 0:
+                    event.stop()  # Stop to prevent default behavior
+                    merchant_input.focus()
 
 
 class SelectCategoryScreen(ModalScreen):
@@ -379,18 +399,39 @@ class SelectCategoryScreen(ModalScreen):
         if event.option.id:
             self.dismiss(str(event.option.id))
 
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Handle Enter key in search - auto-select if only one match."""
+        if event.input.id != "search-input":
+            return
+
+        option_list = self.query_one("#category-list", OptionList)
+        if option_list.option_count == 1:
+            # Auto-select the single match
+            highlighted_option = option_list.get_option_at_index(0)
+            self.dismiss(str(highlighted_option.id))
+        elif option_list.option_count > 1 and option_list.highlighted is not None:
+            # If there are multiple matches but one is highlighted, select it
+            highlighted_option = option_list.get_option_at_index(option_list.highlighted)
+            self.dismiss(str(highlighted_option.id))
+
     def on_key(self, event: Key) -> None:
         """Handle keyboard shortcuts."""
         if event.key == "escape":
             event.stop()  # Prevent propagation to parent
             self.dismiss(None)
         elif event.key == "down":
-            # Only intercept if focus is NOT on the category list
-            # (allow normal navigation within the list)
+            # Move focus from search to list (if list has items)
             category_list = self.query_one("#category-list", OptionList)
-            if not category_list.has_focus:
+            if not category_list.has_focus and category_list.option_count > 0:
                 event.stop()  # Stop only when moving TO the list
                 category_list.focus()
+        elif event.key == "up":
+            # Move focus from list back to search (if at top of list)
+            category_list = self.query_one("#category-list", OptionList)
+            search_input = self.query_one("#search-input", Input)
+            if category_list.has_focus and category_list.highlighted == 0:
+                event.stop()  # Stop to prevent default behavior
+                search_input.focus()
         elif event.key == "slash":
             event.stop()  # Prevent propagation
             # Focus search input when user presses /
