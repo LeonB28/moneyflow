@@ -2,25 +2,34 @@
 
 <div class="hero" markdown>
 
+<div class="hero-content">
+
 # moneyflow
 
 **A terminal UI for managing personal finances at keyboard speed.**
 
-Track spending, bulk edit transactions, and drill into your financial data—all from the terminal. Built for power users who prefer keyboards to clicking through web interfaces.
+```bash
+# Install
+pip install moneyflow
 
-<div class="hero-buttons">
-[Get Started](getting-started/installation.md){ .md-button .md-button--primary }
-[Try Demo](getting-started/quickstart.md#demo-mode){ .md-button }
-[GitHub](https://github.com/wesm/moneyflow){ .md-button }
+# Run
+moneyflow
+
+# Or try without installing
+uvx moneyflow --demo
+```
+
+**Supports:** Monarch Money | **Requires:** Python 3.11+
+
 </div>
 
-```bash
-# Try it now (no installation required)
-uvx moneyflow --demo
-
-# Or install
-pip install moneyflow
-```
+<div class="hero-screenshot">
+<!-- Screenshot placeholder - add terminal screenshot here -->
+<div class="screenshot-placeholder">
+  <p>Screenshot</p>
+  <p>Coming Soon</p>
+</div>
+</div>
 
 </div>
 
