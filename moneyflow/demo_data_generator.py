@@ -10,6 +10,8 @@ from datetime import date, timedelta
 from typing import List, Dict, Any
 import hashlib
 
+from moneyflow.data_manager import CATEGORY_GROUPS
+
 
 class DemoDataGenerator:
     """Generate realistic synthetic financial data."""
@@ -166,9 +168,6 @@ class DemoDataGenerator:
             "Transfers": "grp_transfers",
             "Uncategorized": "grp_uncategorized",
         }
-
-        # Import CATEGORY_GROUPS to get all categories
-        from moneyflow.data_manager import CATEGORY_GROUPS
 
         # Add all categories from CATEGORY_GROUPS that aren't already in base list
         cat_id_counter = 100  # Start at 100 to avoid conflicts with hardcoded IDs

@@ -6,6 +6,8 @@ from textual.screen import ModalScreen, Screen
 from textual.containers import Container, Vertical
 from textual.widgets import Button, Input, Label, Static, Checkbox
 
+from ..credentials import CredentialManager
+
 
 class BackendSelectionScreen(Screen):
     """Backend selection screen for first-time setup."""
@@ -239,8 +241,6 @@ class CredentialSetupScreen(Screen):
 
         # Save credentials
         try:
-            from ..credentials import CredentialManager
-
             error_label.update("💾 Saving credentials...")
             cred_manager = CredentialManager()
             cred_manager.save_credentials(
@@ -376,8 +376,6 @@ class CredentialUnlockScreen(Screen):
             return
 
         try:
-            from ..credentials import CredentialManager
-
             error_label.update("🔓 Unlocking...")
             cred_manager = CredentialManager()
             creds = cred_manager.load_credentials(encryption_password=encryption_password)
@@ -397,8 +395,6 @@ class CredentialUnlockScreen(Screen):
     async def reset_credentials(self) -> None:
         """Delete credentials and show setup screen."""
         try:
-            from ..credentials import CredentialManager
-
             cred_manager = CredentialManager()
             cred_manager.delete_credentials()
 

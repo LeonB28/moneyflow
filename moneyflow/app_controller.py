@@ -18,11 +18,15 @@ The controller does NOT:
 """
 
 from typing import Optional, List
+from datetime import datetime, date as date_type
+import polars as pl
+
 from .view_interface import IViewPresenter
-from .state import AppState, ViewMode, SortMode, SortDirection, TransactionEdit
+from .state import AppState, ViewMode, SortMode, SortDirection, TransactionEdit, TimeFrame
 from .data_manager import DataManager
 from .formatters import ViewPresenter
 from .commit_orchestrator import CommitOrchestrator
+from .time_navigator import TimeNavigator
 from .logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -150,7 +154,6 @@ class AppController:
         if filtered_df is not None and not filtered_df.is_empty():
             # Exclude hidden from totals
             non_hidden_df = filtered_df.filter(filtered_df["hideFromReports"] == False)
-            import polars as pl
 
             income_df = non_hidden_df.filter(pl.col("group") == "Income")
             total_income = float(income_df["amount"].sum()) if not income_df.is_empty() else 0.0
@@ -332,22 +335,16 @@ class AppController:
     # Time navigation operations
     def set_timeframe_this_year(self):
         """Set view to current year."""
-        from .state import TimeFrame
-
         self.state.set_timeframe(TimeFrame.THIS_YEAR)
         self.refresh_view()
 
     def set_timeframe_all_time(self):
         """Set view to all time."""
-        from .state import TimeFrame
-
         self.state.set_timeframe(TimeFrame.ALL_TIME)
         self.refresh_view()
 
     def set_timeframe_this_month(self):
         """Set view to current month."""
-        from .state import TimeFrame
-
         self.state.set_timeframe(TimeFrame.THIS_MONTH)
         self.refresh_view()
 
@@ -361,10 +358,6 @@ class AppController:
         Returns:
             Description of the selected time range
         """
-        from datetime import date as date_type
-        from .time_navigator import TimeNavigator
-        from .state import TimeFrame
-
         today = date_type.today()
         date_range = TimeNavigator.get_month_range(today.year, month)
 
@@ -383,9 +376,6 @@ class AppController:
             - should_fallback_to_year: True if in all-time view (no prev period)
             - description: Time range description if navigated
         """
-        from .time_navigator import TimeNavigator
-        from .state import TimeFrame
-
         if self.state.start_date is None:
             # In all-time view, signal to fallback to current year
             return (True, None)
@@ -406,9 +396,6 @@ class AppController:
             - should_fallback_to_year: True if in all-time view (no next period)
             - description: Time range description if navigated
         """
-        from .time_navigator import TimeNavigator
-        from .state import TimeFrame
-
         if self.state.start_date is None:
             # In all-time view, signal to fallback to current year
             return (True, None)
@@ -615,8 +602,6 @@ class AppController:
         Returns:
             int: Number of edits queued
         """
-        from datetime import datetime
-
         count = 0
         for txn in transactions_df.iter_rows(named=True):
             self.data_manager.pending_edits.append(
@@ -645,8 +630,6 @@ class AppController:
         Returns:
             int: Number of edits queued
         """
-        from datetime import datetime
-
         count = 0
         for txn in transactions_df.iter_rows(named=True):
             self.data_manager.pending_edits.append(
@@ -674,8 +657,6 @@ class AppController:
         Returns:
             int: Number of edits queued
         """
-        from datetime import datetime
-
         count = 0
         for txn in transactions_df.iter_rows(named=True):
             current_hidden = txn.get("hideFromReports", False)

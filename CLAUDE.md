@@ -183,10 +183,14 @@ open htmlcov/index.html
 
 ## Code Style
 
-- Use type hints for all function signatures
-- Document complex logic with comments
-- Keep functions focused and single-purpose
-- Use meaningful variable names
+- **Use type hints** for all function signatures
+- **No inline imports**: All imports must be at the top of the file, not inside functions/methods
+  - Inline imports are slower (import happens on every call)
+  - Harder to see dependencies at a glance
+  - Exception: Circular import issues (rare)
+- **Document complex logic** with comments explaining "why", not "what"
+- **Keep functions focused** - Single responsibility, easy to test
+- **Use meaningful variable names** - Prefer clarity over brevity
 
 ## Making Changes to monarchmoney.py
 

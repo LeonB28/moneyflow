@@ -9,6 +9,8 @@ keyboard shortcuts across the application.
 from dataclasses import dataclass
 from typing import List
 
+from textual.binding import Binding
+
 
 @dataclass
 class KeyBinding:
@@ -85,8 +87,6 @@ def get_help_text() -> str:
 
 def get_textual_bindings():
     """Get bindings in Textual's Binding format."""
-    from textual.binding import Binding
-
     bindings = []
     for kb in KEYBINDINGS:
         # Only include single-key bindings for Textual

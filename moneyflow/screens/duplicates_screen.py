@@ -10,6 +10,9 @@ from textual.widgets import Label, Static, DataTable
 from textual.binding import Binding
 import polars as pl
 
+from .transaction_detail_screen import TransactionDetailScreen
+from .edit_screens import DeleteConfirmationScreen
+
 
 class DuplicatesScreen(Screen):
     """Screen to review and handle duplicate transactions."""
@@ -223,8 +226,6 @@ class DuplicatesScreen(Screen):
         if not txn_data:
             return
 
-        from .transaction_detail_screen import TransactionDetailScreen
-
         self.app.push_screen(TransactionDetailScreen(txn_data))
 
     async def action_delete_transaction(self) -> None:
@@ -239,8 +240,6 @@ class DuplicatesScreen(Screen):
             to_delete = [txn_id]
 
         # Show confirmation
-        from .edit_screens import DeleteConfirmationScreen
-
         confirmed = await self.push_screen(
             DeleteConfirmationScreen(transaction_count=len(to_delete)), wait_for_dismiss=True
         )
