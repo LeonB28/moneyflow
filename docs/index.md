@@ -121,16 +121,13 @@ The backend system is pluggable—adding new platforms is straightforward. See [
 # Using pip
 pip install moneyflow
 
-# Using uv (recommended)
-uv tool install moneyflow
-
-# Try without installing
-uvx moneyflow --demo
+# Using uvx (no install needed)
+uvx moneyflow
 ```
 
 **Requirements:** Python 3.11+
 
-[Installation guide →](getting-started/installation.md)
+[Full installation guide →](getting-started/installation.md)
 
 ---
 
