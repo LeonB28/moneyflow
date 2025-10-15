@@ -24,7 +24,7 @@ import asyncio
 import os
 import sys
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date as date_type
 from pathlib import Path
 from typing import Optional, Callable
 import polars as pl
@@ -35,18 +35,37 @@ from textual.containers import Container, Horizontal, Vertical
 from textual.widgets import Header, Footer, DataTable, Static, LoadingIndicator
 from textual.reactive import reactive
 
-from .backends import MonarchBackend, DemoBackend
+from .backends import MonarchBackend, DemoBackend, get_backend
+from .cache_manager import CacheManager
+from .credentials import CredentialManager
 from .data_manager import DataManager
+from .duplicate_detector import DuplicateDetector
+from .logging_config import setup_logging, get_logger
+from .retry_logic import retry_with_backoff, RetryAborted
 from .state import AppState, ViewMode, SortMode, SortDirection, TimeFrame, TransactionEdit
 from .widgets.help_screen import HelpScreen
 from .formatters import ViewPresenter, AggregationField
 from .time_navigator import TimeNavigator
 from .commit_orchestrator import CommitOrchestrator
-from .logging_config import setup_logging
 from .notification_helper import NotificationHelper
 from .modal_helper import ModalHelper
 from .app_controller import AppController
 from .textual_view import TextualViewPresenter
+
+# Screen imports
+from .screens.credential_screens import (
+    BackendSelectionScreen,
+    CredentialSetupScreen,
+    CredentialUnlockScreen,
+    CachePromptScreen,
+    FilterScreen,
+    QuitConfirmationScreen,
+)
+from .screens.duplicates_screen import DuplicatesScreen
+from .screens.edit_screens import EditMerchantScreen, SelectCategoryScreen, DeleteConfirmationScreen
+from .screens.review_screen import ReviewChangesScreen
+from .screens.search_screen import SearchScreen
+from .screens.transaction_detail_screen import TransactionDetailScreen
 
 
 class MoneyflowApp(App):
@@ -244,7 +263,6 @@ class MoneyflowApp(App):
 
         # Initialize cache manager only if user requested caching
         if self.cache_path is not None:
-            from .cache_manager import CacheManager
 
             self.cache_manager = CacheManager(cache_dir=self.cache_path)
 
@@ -286,7 +304,6 @@ class MoneyflowApp(App):
 
     def _initialize_view(self):
         """Initialize time frame to THIS_YEAR and show initial view."""
-        from datetime import date as date_type
 
         today = date_type.today()
         self.state.start_date = date_type(today.year, 1, 1)
@@ -301,16 +318,8 @@ class MoneyflowApp(App):
         Returns:
             dict: Credentials dict or None if user exits
         """
-        from .credentials import CredentialManager
-        from .screens.credential_screens import (
-            BackendSelectionScreen,
-            CredentialSetupScreen,
-            CredentialUnlockScreen,
-        )
 
         cred_manager = CredentialManager()
-
-        from .logging_config import get_logger
 
         logger = get_logger(__name__)
         logger.debug(f"Credentials exist: {cred_manager.credentials_exist()}")
@@ -362,8 +371,6 @@ class MoneyflowApp(App):
         Returns:
             bool: True on success, False on failure
         """
-        from .retry_logic import retry_with_backoff, RetryAborted
-        from .logging_config import get_logger
 
         logger = get_logger(__name__)
 
@@ -452,8 +459,6 @@ class MoneyflowApp(App):
             # Cache is valid - show prompt
             cache_info = self.cache_manager.get_cache_info()
             if cache_info:
-                from .screens.credential_screens import CachePromptScreen
-
                 use_cache = await self.push_screen(
                     CachePromptScreen(
                         age=cache_info["age"],
@@ -503,8 +508,6 @@ class MoneyflowApp(App):
         Returns:
             tuple: (df, categories, category_groups) or None on failure
         """
-        from .retry_logic import retry_with_backoff, RetryAborted
-        from .logging_config import get_logger
 
         logger = get_logger(__name__)
 
@@ -609,7 +612,6 @@ class MoneyflowApp(App):
             error: The exception that occurred
             loading_status: Loading status widget
         """
-        from .logging_config import get_logger
 
         logger = get_logger(__name__)
 
@@ -653,7 +655,6 @@ class MoneyflowApp(App):
         5. Data storage and view initialization
         6. Error handling and cleanup
         """
-        from .logging_config import get_logger
 
         logger = get_logger(__name__)
         logger.debug("initialize_data started")
@@ -676,7 +677,6 @@ class MoneyflowApp(App):
             # Step 1: Handle credentials (if not demo mode)
             creds = None
             if not self.demo_mode:
-                from .backends import get_backend
 
                 creds = await self._handle_credentials()
                 if creds is None:
@@ -792,10 +792,6 @@ class MoneyflowApp(App):
         """Find and display duplicate transactions."""
         if self.data_manager is None or self.data_manager.df is None:
             return
-
-        from .duplicate_detector import DuplicateDetector
-        from .screens.duplicates_screen import DuplicatesScreen
-
         # Find duplicates in current filtered view
         filtered_df = self.state.get_filtered_df()
         if filtered_df is None or filtered_df.is_empty():
@@ -869,8 +865,6 @@ class MoneyflowApp(App):
 
     async def _show_filter_modal(self) -> None:
         """Show filter modal and apply selected filters."""
-        from .screens.credential_screens import FilterScreen
-
         result = await self.push_screen(
             FilterScreen(
                 show_transfers=self.state.show_transfers, show_hidden=self.state.show_hidden
@@ -908,8 +902,6 @@ class MoneyflowApp(App):
 
     async def _show_search(self) -> None:
         """Show search modal and apply filter."""
-        from .screens.search_screen import SearchScreen
-
         # Show search modal with current query
         new_query = await self.push_screen(
             SearchScreen(current_query=self.state.search_query), wait_for_dismiss=True
@@ -965,8 +957,6 @@ class MoneyflowApp(App):
 
     async def _bulk_edit_merchant_from_aggregate(self) -> None:
         """Edit merchant for all transactions in selected aggregate row."""
-        from .screens.edit_screens import EditMerchantScreen
-
         if self.state.current_data is None:
             return
 
@@ -1013,8 +1003,6 @@ class MoneyflowApp(App):
 
     async def _edit_merchant_detail(self) -> None:
         """Edit merchant in detail view."""
-        from .screens.edit_screens import EditMerchantScreen
-
         if self.state.current_data is None:
             return
 
@@ -1081,7 +1069,6 @@ class MoneyflowApp(App):
 
     def action_recategorize(self) -> None:
         """Change category for current selection (works in aggregate and detail views)."""
-        from .logging_config import get_logger
 
         logger = get_logger(__name__)
 
@@ -1104,9 +1091,6 @@ class MoneyflowApp(App):
 
     async def _bulk_recategorize_from_aggregate(self) -> None:
         """Recategorize all transactions in selected merchant/category/group."""
-        from .screens.edit_screens import SelectCategoryScreen
-        from .logging_config import get_logger
-
         logger = get_logger(__name__)
 
         logger.debug(f"_bulk_recategorize_from_aggregate called, view_mode={self.state.view_mode}")
@@ -1171,8 +1155,6 @@ class MoneyflowApp(App):
 
     async def _recategorize(self) -> None:
         """Show category selection and apply (for detail view)."""
-        from .screens.edit_screens import SelectCategoryScreen
-
         if self.state.current_data is None:
             return
 
@@ -1324,8 +1306,6 @@ class MoneyflowApp(App):
         row_data = self.state.current_data.row(table.cursor_row, named=True)
 
         # Show detail modal (doesn't change view state, just displays info)
-        from .screens.transaction_detail_screen import TransactionDetailScreen
-
         self.push_screen(TransactionDetailScreen(dict(row_data)))
 
     def action_delete_transaction(self) -> None:
@@ -1338,8 +1318,6 @@ class MoneyflowApp(App):
 
     async def _delete_transaction(self) -> None:
         """Show delete confirmation and delete if confirmed."""
-        from .screens.edit_screens import DeleteConfirmationScreen
-
         if self.state.current_data is None:
             return
 
@@ -1396,7 +1374,6 @@ class MoneyflowApp(App):
         Raises:
             Exception: If login fails
         """
-        from .logging_config import get_logger
 
         logger = get_logger(__name__)
 
@@ -1415,7 +1392,6 @@ class MoneyflowApp(App):
 
     async def _refresh_session(self) -> bool:
         """Refresh expired session by re-authenticating with stored credentials."""
-        from .logging_config import get_logger
 
         logger = get_logger(__name__)
 
@@ -1450,8 +1426,6 @@ class MoneyflowApp(App):
         - On all retries exhausted: Re-raises exception (caller shows error)
         - On user cancel: "Commit cancelled by user"
         """
-        from .retry_logic import retry_with_backoff, RetryAborted
-        from .logging_config import get_logger
 
         logger = get_logger(__name__)
 
@@ -1521,8 +1495,6 @@ class MoneyflowApp(App):
 
     async def _review_and_commit(self) -> None:
         """Show review screen and commit if confirmed."""
-        from .screens.review_screen import ReviewChangesScreen
-        from .logging_config import get_logger
         logger = get_logger(__name__)
 
         # Save view state before showing review screen
@@ -1592,8 +1564,6 @@ class MoneyflowApp(App):
 
     async def _confirm_and_quit(self) -> None:
         """Show quit confirmation dialog and exit if confirmed."""
-        from .screens.credential_screens import QuitConfirmationScreen
-
         has_changes = (
             (self.data_manager and self.data_manager.get_stats()["pending_changes"] > 0)
             if self.data_manager
@@ -1680,7 +1650,6 @@ def main():
 
     if args.mtd:
         # Month-to-date: Load from 1st of current month to today
-        from datetime import date as date_type
 
         today = date_type.today()
         first_of_month = date_type(today.year, today.month, 1)
