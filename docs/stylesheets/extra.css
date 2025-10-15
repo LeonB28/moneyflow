@@ -130,16 +130,31 @@
   transition: all 0.2s ease;
 }
 
-/* Table styling */
+/* Table styling - compact and sleek */
 .md-typeset table:not([class]) {
   border: 1px solid var(--md-default-fg-color--lightest);
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  border-collapse: collapse;
 }
 
 .md-typeset table:not([class]) th {
   background-color: var(--md-code-bg-color);
   font-weight: 600;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--md-default-fg-color--light);
+}
+
+.md-typeset table:not([class]) td {
+  padding: 0.4rem 0.75rem;
+  border-top: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.md-typeset table:not([class]) tbody tr:hover {
+  background-color: var(--md-code-bg-color);
 }
 
 /* Hide "Table of contents" heading in right sidebar */
