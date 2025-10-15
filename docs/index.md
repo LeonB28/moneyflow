@@ -4,6 +4,8 @@
 
 Track spending, bulk edit transactions, and navigate your financial data at keyboard speed. First-class support for Monarch Money.
 
+<a class="github-button" href="https://github.com/wesm/moneyflow" data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star wesm/moneyflow on GitHub">Star</a>
+
 ```bash
 # Install and run
 pip install moneyflow

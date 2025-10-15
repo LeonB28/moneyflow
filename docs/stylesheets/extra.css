@@ -146,12 +146,3 @@
 .md-sidebar--secondary .md-sidebar__scrollwrap .md-sidebar__inner > .md-nav > .md-nav__title {
   display: none;
 }
-
-/* Hide repo name, keep only icon in header */
-.md-source__repository {
-  font-size: 0;
-}
-
-.md-source__icon {
-  font-size: 1.2rem;
-}

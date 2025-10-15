@@ -2,36 +2,6 @@
 
 {% block extrahead %}
   {{ super() }}
-  <!-- GitHub Buttons -->
+  <!-- GitHub Buttons for star button in hero -->
   <script async defer src="https://buttons.github.io/buttons.js"></script>
-  <style>
-    /* Position GitHub star button in header */
-    .md-header__source {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-  </style>
-{% endblock %}
-
-{% block header %}
-  {{ super() }}
-  <script>
-    // Add GitHub star button to header
-    document.addEventListener('DOMContentLoaded', function() {
-      const sourceEl = document.querySelector('.md-header__source');
-      if (sourceEl) {
-        const starButton = document.createElement('a');
-        starButton.className = 'github-button';
-        starButton.href = 'https://github.com/wesm/moneyflow';
-        starButton.setAttribute('data-color-scheme', 'no-preference: dark; light: dark; dark: dark;');
-        starButton.setAttribute('data-icon', 'octicon-star');
-        starButton.setAttribute('data-size', 'large');
-        starButton.setAttribute('data-show-count', 'true');
-        starButton.setAttribute('aria-label', 'Star wesm/moneyflow on GitHub');
-        starButton.textContent = 'Star';
-        sourceEl.appendChild(starButton);
-      }
-    });
-  </script>
 {% endblock %}
