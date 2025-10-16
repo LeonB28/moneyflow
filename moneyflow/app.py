@@ -447,6 +447,8 @@ class MoneyflowApp(App):
         Returns:
             tuple: (df, categories, category_groups) or None if not using cache
         """
+        logger = get_logger(__name__)
+
         use_cache = False
         if (
             self.cache_manager
