@@ -50,6 +50,7 @@ CATEGORY_GROUPS = {
     ],
     "Travel": [
         "Airfare",
+        "Auto Rental",
         "Hotel",
         "Trains",
         "Public Transit",
