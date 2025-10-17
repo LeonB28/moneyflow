@@ -91,7 +91,7 @@ class DuplicatesScreen(Screen):
                     id="duplicates-title",
                 )
                 yield Static(
-                    "Review transactions below. Duplicates are grouped together.",
+                    "Space=Select | Enter=Details | d=Delete | h=Hide | Esc=Close",
                     id="duplicates-help",
                 )
 
@@ -146,20 +146,19 @@ class DuplicatesScreen(Screen):
         status_parts = []
 
         if len(self.selected_ids) > 0:
-            status_parts.append(f"Selected: {len(self.selected_ids)}")
+            status_parts.append(f"✓ {len(self.selected_ids)} selected")
 
         if len(self.pending_deletes) > 0:
-            status_parts.append(f"Pending deletes: {len(self.pending_deletes)}")
+            status_parts.append(f"🗑 {len(self.pending_deletes)} to delete")
 
         if len(self.pending_hides) > 0:
-            status_parts.append(f"Pending hide changes: {len(self.pending_hides)}")
+            status_parts.append(f"👁 {len(self.pending_hides)} to hide/unhide")
 
+        status_line = self.query_one("#status-line", Static)
         if status_parts:
-            status_line = self.query_one("#status-line", Static)
             status_line.update(" | ".join(status_parts))
         else:
-            status_line = self.query_one("#status-line", Static)
-            status_line.update("Use arrow keys to navigate, Space to select, Esc to close")
+            status_line.update("↑/↓=Navigate | Space=Select | Enter=Details | d=Delete | h=Hide | Esc=Close")
 
     def get_current_transaction_id(self) -> Optional[str]:
         """Get the transaction ID of the currently selected row."""
@@ -301,4 +300,4 @@ class DuplicatesScreen(Screen):
     async def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection (Enter key) - show details."""
         event.stop()  # Prevent main app's handler from running
-        await self.action_show_details()
+        self.action_show_details()  # Not async, don't await
