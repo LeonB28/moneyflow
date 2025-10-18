@@ -68,24 +68,24 @@ def amazon_import(csv_path, force):
     from moneyflow.importers.amazon_csv import import_amazon_csv
     from moneyflow.backends.amazon import AmazonBackend
 
-    click.echo(f"=æ Importing Amazon purchases from {csv_path}...")
+    click.echo(f"Importing Amazon purchases from {csv_path}...")
 
     try:
         backend = AmazonBackend()
         stats = import_amazon_csv(csv_path, backend=backend, force=force)
 
-        click.echo(f" Parsed {stats['total_rows']} items from CSV")
+        click.echo(f"Parsed {stats['total_rows']} items from CSV")
 
         if stats['categories_created'] > 0:
-            click.echo(f" Created {stats['categories_created']} new categories")
+            click.echo(f"Created {stats['categories_created']} new categories")
 
         if stats['duplicates'] > 0:
             if force:
-                click.echo(f" Updated {stats['duplicates']} existing transactions")
+                click.echo(f"Updated {stats['duplicates']} existing transactions")
             else:
-                click.echo(f" Skipped {stats['duplicates']} duplicates")
+                click.echo(f"Skipped {stats['duplicates']} duplicates")
 
-        click.echo(f" Imported {stats['imported']} new transactions")
+        click.echo(f"Imported {stats['imported']} new transactions")
 
         # Show database stats
         db_stats = backend.get_database_stats()
@@ -99,7 +99,7 @@ def amazon_import(csv_path, force):
         click.echo(f"\nLaunch moneyflow: $ moneyflow amazon")
 
     except Exception as e:
-        click.echo(f"L Import failed: {e}", err=True)
+        click.echo(f"Import failed: {e}", err=True)
         raise click.Abort()
 
 
@@ -120,7 +120,7 @@ def amazon_status():
     # Show database stats
     db_stats = backend.get_database_stats()
 
-    click.echo("=Ê Amazon Purchase Database")
+    click.echo("Amazon Purchase Database")
     click.echo(f"\nLocation: {backend.db_path}")
     click.echo(f"\nStatistics:")
     click.echo(f"  Total transactions: {db_stats['total_transactions']}")
@@ -157,7 +157,7 @@ def launch():
 
     # Check if database exists
     if not backend.db_path.exists():
-        click.echo("L No Amazon data found.")
+        click.echo("No Amazon data found.")
         click.echo("\nPlease import your Amazon purchase data first:")
         click.echo("  $ moneyflow amazon import ~/Downloads/amazon-purchases.csv")
         click.echo("\nFor help:")
@@ -167,7 +167,7 @@ def launch():
     # Check if database has data
     stats = backend.get_database_stats()
     if stats['total_transactions'] == 0:
-        click.echo("L Amazon database is empty.")
+        click.echo("Amazon database is empty.")
         click.echo("\nPlease import your Amazon purchase data:")
         click.echo("  $ moneyflow amazon import ~/Downloads/amazon-purchases.csv")
         raise click.Abort()
@@ -177,16 +177,7 @@ def launch():
 
 
 # Make 'moneyflow amazon' (without subcommand) launch the UI
-@amazon.command(hidden=True, name='')
-def amazon_default():
-    """Default action for 'moneyflow amazon' - launches UI."""
-    ctx = click.get_current_context()
-    ctx.invoke(launch)
-
-
-# Allow 'moneyflow amazon' to invoke 'launch' by default
-amazon.invoke_without_command = True
-amazon.result_callback = lambda *args, **kwargs: None
+amazon.invoke_without_command = False
 
 
 if __name__ == "__main__":
