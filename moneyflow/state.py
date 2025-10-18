@@ -511,7 +511,7 @@ class AppState:
                 parts.append("Accounts")
                 parts.append(self.selected_account)
             else:
-                parts.append("Transactions")
+                parts.append("All Transactions (press g for grouped view)")
 
         # Add time frame with actual dates
         if self.time_frame == TimeFrame.THIS_YEAR and self.start_date:

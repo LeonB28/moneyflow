@@ -169,7 +169,7 @@ class NotificationHelper:
     @staticmethod
     def all_transactions_view() -> NotificationTuple:
         """Switched to ungrouped view."""
-        return ("Viewing all transactions (ungrouped)", "information", 1)
+        return ("All transactions (ungrouped) • Press g to return to grouped view", "information", 2)
 
     # ==================== Selection & Multi-select ====================
 

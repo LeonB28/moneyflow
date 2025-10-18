@@ -171,8 +171,9 @@ class TestNavigationNotifications:
 
     def test_all_transactions_view(self):
         msg, severity, timeout = NotificationHelper.all_transactions_view()
-        assert "all transactions" in msg
-        assert "ungrouped" in msg
+        assert "all transactions" in msg.lower()
+        assert "ungrouped" in msg.lower()
+        assert "press g" in msg.lower()
 
 
 class TestSelectionNotifications:
