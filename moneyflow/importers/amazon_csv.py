@@ -72,6 +72,7 @@ def import_amazon_csv(
     df = pl.read_csv(
         csv_path,
         schema_overrides={
+            "Order Date": pl.Utf8,  # Read as string first (handle multiple formats)
             "Quantity": pl.Utf8,  # Read as string first
             "Item Total": pl.Utf8,  # Read as string first
         }
@@ -84,9 +85,75 @@ def import_amazon_csv(
         raise ValueError(f"Missing required columns: {', '.join(missing_columns)}")
 
     # Data cleaning and transformation
+    # Handle multiple date formats: MM/DD/YYYY, MM/DD/YY, and YYYY-MM-DD (ISO)
     df = df.with_columns([
-        # Parse date to ISO format
-        pl.col("Order Date").str.to_date("%m/%d/%Y").dt.strftime("%Y-%m-%d").alias("date"),
+        # Try ISO format first (YYYY-MM-DD)
+        pl.col("Order Date")
+        .str.strptime(pl.Date, "%Y-%m-%d", strict=False)
+        .alias("date_iso")
+    ])
+
+    df = df.with_columns([
+        # Try MM/DD/YYYY
+        pl.col("Order Date")
+        .str.strptime(pl.Date, "%m/%d/%Y", strict=False)
+        .alias("date_4digit")
+    ])
+
+    df = df.with_columns([
+        # Try MM/DD/YY
+        pl.col("Order Date")
+        .str.strptime(pl.Date, "%m/%d/%y", strict=False)
+        .alias("date_2digit")
+    ])
+
+    df = df.with_columns([
+        # Priority: ISO format > 4-digit year (if valid) > 2-digit year
+        # This handles mixed formats in the CSV
+        pl.coalesce([
+            "date_iso",
+            pl.when(pl.col("date_4digit").dt.year() >= 1900)
+            .then(pl.col("date_4digit"))
+            .otherwise(pl.col("date_2digit"))
+        ])
+        .alias("parsed_date")
+    ]).drop(["date_iso", "date_4digit", "date_2digit"])
+
+    # Check for unparseable dates (both formats failed)
+    unparseable = df.filter(pl.col("parsed_date").is_null())
+    if len(unparseable) > 0:
+        bad_rows = unparseable.select(["Order Date", "Title"]).head(10)
+        raise ValueError(
+            f"Found {len(unparseable)} transactions with unparseable dates.\n"
+            f"Expected format: MM/DD/YYYY or MM/DD/YY\n"
+            f"First few invalid dates:\n{bad_rows}"
+        )
+
+    # Strict validation: Reject dates before 2000 or more than 2 years in future
+    from datetime import datetime
+    current_year = datetime.now().year
+
+    df = df.with_columns([
+        pl.col("parsed_date").dt.strftime("%Y-%m-%d").alias("date")
+    ])
+
+    # Validate date range
+    invalid_dates = df.filter(
+        (pl.col("parsed_date").dt.year() < 2000) |
+        (pl.col("parsed_date").dt.year() > current_year + 2)
+    )
+
+    if len(invalid_dates) > 0:
+        bad_dates = invalid_dates.select(["Order Date", "date", "Title"]).head(5)
+        raise ValueError(
+            f"Found {len(invalid_dates)} transactions with invalid dates. "
+            f"Dates must be between 2000 and {current_year + 2}.\n"
+            f"First few invalid dates:\n{bad_dates}"
+        )
+
+    df = df.drop("parsed_date")
+
+    df = df.with_columns([
 
         # Merchant is the item title
         pl.col("Title").alias("merchant"),
@@ -96,8 +163,8 @@ def import_amazon_csv(
             normalize_category, return_dtype=pl.Utf8
         ).alias("category"),
 
-        # Convert quantity to integer, treating invalid values as null
-        pl.col("Quantity").cast(pl.Int64, strict=False).fill_null(1).alias("quantity"),
+        # Convert quantity to integer (strict - will fail on invalid values)
+        pl.col("Quantity").cast(pl.Int64).alias("quantity"),
 
         # Convert Item Total to float, removing $ and commas if present
         pl.col("Item Total")
