@@ -31,17 +31,24 @@ class AmazonBackend(FinanceBackend):
 
         Args:
             db_path: Path to SQLite database. Defaults to ~/.moneyflow/amazon.db
+
+        Note: Database file is not created until first access (lazy initialization).
         """
         if db_path is None:
             db_path = str(Path.home() / ".moneyflow" / "amazon.db")
 
         self.db_path = Path(db_path).expanduser()
+        self._db_initialized = False
+
+    def _ensure_db_initialized(self) -> None:
+        """Ensure database and schema are initialized on first access."""
+        if self._db_initialized:
+            return
+
+        # Create directory if needed
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        self._init_database()
-
-    def _init_database(self) -> None:
-        """Initialize the SQLite database schema if it doesn't exist."""
+        # Initialize schema
         conn = sqlite3.connect(self.db_path)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS transactions (
@@ -83,6 +90,18 @@ class AmazonBackend(FinanceBackend):
 
         conn.commit()
         conn.close()
+
+        self._db_initialized = True
+
+    def _get_connection(self) -> sqlite3.Connection:
+        """
+        Get a database connection, initializing the database if needed.
+
+        Returns:
+            SQLite connection object
+        """
+        self._ensure_db_initialized()
+        return sqlite3.connect(self.db_path)
 
     @staticmethod
     def generate_transaction_id(date: str, merchant: str, amount: float, quantity: int) -> str:
@@ -138,7 +157,7 @@ class AmazonBackend(FinanceBackend):
         Returns:
             Dictionary containing transaction data in Monarch-compatible format
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = self._get_connection()
         conn.row_factory = sqlite3.Row
 
         query = "SELECT * FROM transactions WHERE 1=1"
@@ -206,7 +225,7 @@ class AmazonBackend(FinanceBackend):
         Returns:
             Dictionary containing categories in Monarch-compatible format
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = self._get_connection()
         conn.row_factory = sqlite3.Row
 
         cursor = conn.execute("SELECT * FROM categories ORDER BY name")
@@ -251,7 +270,7 @@ class AmazonBackend(FinanceBackend):
         Returns:
             Dictionary containing the updated transaction data
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = self._get_connection()
 
         updates = []
         params = []
@@ -298,7 +317,7 @@ class AmazonBackend(FinanceBackend):
         Returns:
             True if deletion was successful
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = self._get_connection()
         cursor = conn.execute("DELETE FROM transactions WHERE id = ?", (transaction_id,))
         deleted = cursor.rowcount > 0
         conn.commit()
@@ -312,7 +331,7 @@ class AmazonBackend(FinanceBackend):
         Returns:
             List of merchant names, sorted alphabetically
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = self._get_connection()
         cursor = conn.execute("SELECT DISTINCT merchant FROM transactions ORDER BY merchant")
         merchants = [row[0] for row in cursor.fetchall()]
         conn.close()
@@ -325,7 +344,7 @@ class AmazonBackend(FinanceBackend):
         Returns:
             List of import records with filename, counts, and timestamps
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = self._get_connection()
         conn.row_factory = sqlite3.Row
         cursor = conn.execute("""
             SELECT filename, record_count, duplicate_count, import_date
@@ -343,7 +362,7 @@ class AmazonBackend(FinanceBackend):
         Returns:
             Dictionary with transaction count, date range, total amount, etc.
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = self._get_connection()
 
         stats = {}
 

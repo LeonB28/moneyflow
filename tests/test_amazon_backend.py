@@ -9,13 +9,15 @@ from moneyflow.backends.amazon import AmazonBackend
 
 @pytest.fixture
 def temp_db():
-    """Create a temporary database for testing."""
-    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+    """Create a temporary database path for testing."""
+    # Create a temp file to get a unique path, then delete it
+    # Database will be created by lazy initialization
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=True) as f:
         db_path = f.name
 
     yield db_path
 
-    # Cleanup
+    # Cleanup (database might or might not exist)
     Path(db_path).unlink(missing_ok=True)
 
 
@@ -28,7 +30,8 @@ def backend(temp_db):
 @pytest.fixture
 def populated_backend(backend):
     """Create a backend with some test data."""
-    conn = sqlite3.connect(backend.db_path)
+    # Trigger initialization
+    conn = backend._get_connection()
 
     # Add test categories
     conn.execute("INSERT INTO categories (id, name) VALUES ('books', 'Books')")
@@ -54,13 +57,20 @@ class TestAmazonBackendInit:
     """Test backend initialization."""
 
     def test_init_creates_database(self, temp_db):
-        """Test that initialization creates database file."""
+        """Test that database is created on first access (lazy initialization)."""
         backend = AmazonBackend(db_path=temp_db)
+        # Database should NOT exist yet (lazy initialization)
+        assert not Path(temp_db).exists()
+
+        # Trigger initialization by accessing database
+        backend._get_connection().close()
+
+        # Now database should exist
         assert Path(temp_db).exists()
 
     def test_init_creates_tables(self, backend):
         """Test that initialization creates required tables."""
-        conn = sqlite3.connect(backend.db_path)
+        conn = backend._get_connection()
         cursor = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
         )
@@ -73,7 +83,7 @@ class TestAmazonBackendInit:
 
     def test_init_creates_indexes(self, backend):
         """Test that initialization creates indexes."""
-        conn = sqlite3.connect(backend.db_path)
+        conn = backend._get_connection()
         cursor = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='index'"
         )
@@ -444,7 +454,7 @@ class TestImportHistory:
     def test_get_import_history(self, backend):
         """Test getting import history."""
         # Add import records
-        conn = sqlite3.connect(backend.db_path)
+        conn = backend._get_connection()
         conn.execute("""
             INSERT INTO import_history (filename, record_count, duplicate_count)
             VALUES ('purchases1.csv', 100, 5)

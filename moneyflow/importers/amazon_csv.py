@@ -119,8 +119,8 @@ def import_amazon_csv(
     duplicate_count = 0
     categories_created = 0
 
-    # Connect to database
-    conn = sqlite3.connect(backend.db_path)
+    # Connect to database (initializes if needed)
+    conn = backend._get_connection()
 
     # Get existing categories
     existing_categories = set(
@@ -243,7 +243,7 @@ def get_category_statistics(backend: Optional[AmazonBackend] = None) -> Dict[str
     if backend is None:
         backend = AmazonBackend()
 
-    conn = sqlite3.connect(backend.db_path)
+    conn = backend._get_connection()
 
     cursor = conn.execute("""
         SELECT category, COUNT(*) as count, SUM(amount) as total
