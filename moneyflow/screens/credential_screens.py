@@ -182,7 +182,7 @@ class CredentialSetupScreen(Screen):
                 classes="setup-input",
             )
 
-            yield Label("Encryption Password (for monarch-tui):", classes="setup-label")
+            yield Label("Encryption Password (for moneyflow):", classes="setup-label")
             yield Static(
                 "Create a NEW password to encrypt your stored credentials", classes="setup-help"
             )

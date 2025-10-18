@@ -227,7 +227,7 @@ diff monarchmoney.py /path/to/original/monarchmoney.py > my_changes.patch
 uv run textual console
 
 # Then in another terminal
-uv run python monarch_tui.py
+uv run moneyflow
 
 # View logs in the console
 ```

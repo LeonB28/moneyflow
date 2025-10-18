@@ -2,7 +2,7 @@
 
 ## Credential Storage
 
-Monarch TUI provides secure credential storage to avoid storing plaintext passwords or requiring environment variables.
+moneyflow provides secure credential storage to avoid storing plaintext passwords or requiring environment variables.
 
 ### How It Works
 
@@ -13,7 +13,7 @@ Monarch TUI provides secure credential storage to avoid storing plaintext passwo
 
 ### What's Stored
 
-The `~/.monarch_tui/credentials.enc` file contains:
+The `~/.moneyflow/credentials.enc` file contains:
 - Monarch Money email address
 - Monarch Money password
 - TOTP/OTP secret for 2FA
@@ -44,8 +44,8 @@ The `~/.monarch_tui/credentials.enc` file contains:
 
 2. **Protect your config directory**
    ```bash
-   chmod 700 ~/.monarch_tui
-   chmod 600 ~/.monarch_tui/*
+   chmod 700 ~/.moneyflow
+   chmod 600 ~/.moneyflow/*
    ```
 
 3. **Backup your TOTP secret**
@@ -54,8 +54,8 @@ The `~/.monarch_tui/credentials.enc` file contains:
 
 4. **Delete credentials when done**
    ```bash
-   rm ~/.monarch_tui/credentials.enc
-   rm ~/.monarch_tui/salt
+   rm ~/.moneyflow/credentials.enc
+   rm ~/.moneyflow/salt
    ```
 
 ### Security Audit

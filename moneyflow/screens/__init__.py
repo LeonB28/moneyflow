@@ -1,1 +1,1 @@
-"""TUI screens for monarch-tui."""
+"""TUI screens for moneyflow."""
