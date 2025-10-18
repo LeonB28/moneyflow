@@ -140,3 +140,7 @@ class ReviewChangesScreen(Screen):
         elif event.key == "enter":
             event.stop()  # Prevent event from bubbling
             self.dismiss(True)  # Commit
+        else:
+            # Stop all other keys from bubbling to parent app
+            # This prevents accidental activation of app-level shortcuts (like 'c' for edit category)
+            event.stop()
