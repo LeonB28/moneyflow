@@ -20,12 +20,14 @@ from typing import Dict, Type
 from .base import FinanceBackend
 from .monarch import MonarchBackend
 from .demo import DemoBackend
+from .amazon import AmazonBackend
 
 
 # Backend registry: maps backend names to their classes
 _BACKEND_REGISTRY: Dict[str, Type[FinanceBackend]] = {
     "monarch": MonarchBackend,
     "demo": DemoBackend,
+    "amazon": AmazonBackend,
 }
 
 
@@ -95,6 +97,7 @@ __all__ = [
     "FinanceBackend",
     "MonarchBackend",
     "DemoBackend",
+    "AmazonBackend",
     "get_backend",
     "register_backend",
     "list_backends",

@@ -901,6 +901,7 @@ version = "0.1.2"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
+    { name = "click" },
     { name = "cryptography" },
     { name = "gql" },
     { name = "oathtool" },
@@ -928,6 +929,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.8.4" },
+    { name = "click", specifier = ">=8.1.0" },
     { name = "cryptography", specifier = ">=41.0.0" },
     { name = "gql", specifier = ">=3.4" },
     { name = "oathtool", specifier = ">=2.3.1" },
