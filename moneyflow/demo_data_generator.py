@@ -713,7 +713,7 @@ class DemoDataGenerator:
             "cat_utilities": "Gas & Electric",
             "cat_internet": "Internet & Cable",
             "cat_shopping": "Shopping",
-            "cat_amazon": "Amazon",
+            "cat_amazon": "Online Shopping",
             "cat_streaming": "Entertainment & Recreation",
             "cat_gym": "Fitness",
             "cat_medical": "Medical",

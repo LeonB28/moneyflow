@@ -654,6 +654,15 @@ class AppState:
             ):
                 month_name = self.start_date.strftime("%B")
                 parts.append(f"{month_name} {self.start_date.year}")
+            # Check if it's a full year (Jan 1 to Dec 31 of same year)
+            elif (
+                self.start_date.year == self.end_date.year
+                and self.start_date.month == 1
+                and self.start_date.day == 1
+                and self.end_date.month == 12
+                and self.end_date.day == 31
+            ):
+                parts.append(f"Year {self.start_date.year}")
             else:
                 parts.append(f"{self.start_date} to {self.end_date}")
 
