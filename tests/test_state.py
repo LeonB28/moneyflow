@@ -770,3 +770,205 @@ class TestTimeFrameEdgeCases:
 
             assert app_state.start_date == date(2023, 2, 1)
             assert app_state.end_date == date(2023, 2, 28)  # Non-leap year has 28 days
+
+
+class TestSubGrouping:
+    """Tests for sub-grouping within drilled-down views."""
+
+    def test_is_drilled_down_with_merchant(self):
+        """Should return True when merchant is selected."""
+        state = AppState()
+        state.selected_merchant = "Amazon"
+        assert state.is_drilled_down() is True
+
+    def test_is_drilled_down_with_category(self):
+        """Should return True when category is selected."""
+        state = AppState()
+        state.selected_category = "Groceries"
+        assert state.is_drilled_down() is True
+
+    def test_is_drilled_down_no_selection(self):
+        """Should return False with no selections."""
+        state = AppState()
+        assert state.is_drilled_down() is False
+
+    def test_cycle_sub_grouping_from_merchant_includes_category(self):
+        """When drilled into Merchant, should offer Category sub-grouping."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+
+        result = state.cycle_sub_grouping()
+
+        # First cycle should go to Category (Merchant is excluded)
+        assert state.sub_grouping_mode == ViewMode.CATEGORY
+        assert result == "by Category"
+
+    def test_cycle_sub_grouping_from_category_includes_merchant(self):
+        """When drilled into Category, should offer Merchant sub-grouping."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_category = "Groceries"
+
+        result = state.cycle_sub_grouping()
+
+        # First cycle should go to Merchant (Category is excluded)
+        assert state.sub_grouping_mode == ViewMode.MERCHANT
+        assert result == "by Merchant"
+
+    def test_cycle_sub_grouping_full_cycle_from_merchant(self):
+        """Should cycle through all modes (excluding Merchant) then back."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+
+        # Cycle: Category → Group → Account → Detail → Category
+        assert state.cycle_sub_grouping() == "by Category"
+        assert state.sub_grouping_mode == ViewMode.CATEGORY
+
+        assert state.cycle_sub_grouping() == "by Group"
+        assert state.sub_grouping_mode == ViewMode.GROUP
+
+        assert state.cycle_sub_grouping() == "by Account"
+        assert state.sub_grouping_mode == ViewMode.ACCOUNT
+
+        assert state.cycle_sub_grouping() == "Detail"
+        assert state.sub_grouping_mode is None
+
+        # Back to Category
+        assert state.cycle_sub_grouping() == "by Category"
+        assert state.sub_grouping_mode == ViewMode.CATEGORY
+
+    def test_cycle_sub_grouping_full_cycle_from_category(self):
+        """Should cycle through all modes (excluding Category) then back."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_category = "Groceries"
+
+        # Cycle: Merchant → Group → Account → Detail → Merchant
+        assert state.cycle_sub_grouping() == "by Merchant"
+        assert state.sub_grouping_mode == ViewMode.MERCHANT
+
+        assert state.cycle_sub_grouping() == "by Group"
+        assert state.sub_grouping_mode == ViewMode.GROUP
+
+        assert state.cycle_sub_grouping() == "by Account"
+        assert state.sub_grouping_mode == ViewMode.ACCOUNT
+
+        assert state.cycle_sub_grouping() == "Detail"
+        assert state.sub_grouping_mode is None
+
+        # Back to Merchant
+        assert state.cycle_sub_grouping() == "by Merchant"
+        assert state.sub_grouping_mode == ViewMode.MERCHANT
+
+    def test_cycle_grouping_delegates_to_sub_grouping_when_drilled_down(self):
+        """When drilled down, cycle_grouping should delegate to sub-grouping."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+
+        result = state.cycle_grouping()
+
+        # Should have called cycle_sub_grouping
+        assert state.sub_grouping_mode == ViewMode.CATEGORY
+        assert result == "by Category"
+
+    def test_cycle_grouping_works_normally_when_not_drilled_down(self):
+        """When not drilled down, should cycle top-level views."""
+        state = AppState()
+        state.view_mode = ViewMode.MERCHANT
+
+        result = state.cycle_grouping()
+
+        # Should cycle to Category view
+        assert state.view_mode == ViewMode.CATEGORY
+        assert result == "Categories"
+
+    def test_go_back_clears_sub_grouping_first(self):
+        """Escape should clear sub-grouping before going back."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+        state.sub_grouping_mode = ViewMode.CATEGORY
+
+        success, cursor = state.go_back()
+
+        # Should clear sub-grouping, stay drilled into Amazon
+        assert success is True
+        assert state.sub_grouping_mode is None
+        assert state.selected_merchant == "Amazon"
+        assert state.view_mode == ViewMode.DETAIL
+
+    def test_go_back_then_clears_drill_down(self):
+        """Second Escape should clear drill-down."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+        state.sub_grouping_mode = ViewMode.CATEGORY
+        state.navigation_history.append((ViewMode.MERCHANT, 5))
+
+        # First escape: clear sub-grouping
+        success1, _ = state.go_back()
+        assert success1 is True
+        assert state.sub_grouping_mode is None
+        assert state.selected_merchant == "Amazon"
+
+        # Second escape: clear drill-down
+        success2, cursor = state.go_back()
+        assert success2 is True
+        assert state.selected_merchant is None
+        assert state.view_mode == ViewMode.MERCHANT
+        assert cursor == 5
+
+    def test_breadcrumb_shows_sub_grouping(self):
+        """Breadcrumb should show sub-grouping mode."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+        state.sub_grouping_mode = ViewMode.CATEGORY
+        state.start_date = date(2025, 1, 1)
+        state.end_date = date(2025, 12, 31)
+        state.time_frame = TimeFrame.THIS_YEAR
+
+        breadcrumb = state.get_breadcrumb()
+
+        assert "Merchants" in breadcrumb
+        assert "Amazon" in breadcrumb
+        assert "(by Category)" in breadcrumb
+        assert "Year 2025" in breadcrumb
+
+    def test_breadcrumb_multi_level_drill_down(self):
+        """Breadcrumb should show multiple drill-down levels."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+        state.selected_category = "Groceries"
+        state.start_date = date(2025, 10, 1)
+        state.end_date = date(2025, 10, 31)
+        state.time_frame = TimeFrame.THIS_MONTH
+
+        breadcrumb = state.get_breadcrumb()
+
+        assert "Merchants" in breadcrumb
+        assert "Amazon" in breadcrumb
+        assert "Groceries" in breadcrumb
+        assert "October 2025" in breadcrumb
+
+    def test_multi_level_go_back_clears_deepest_first(self):
+        """Multi-level drill-down should clear deepest selection first."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+        state.selected_category = "Groceries"
+
+        # First go_back: clear category (deepest)
+        success, _ = state.go_back()
+        assert success is True
+        assert state.selected_category is None
+        assert state.selected_merchant == "Amazon"
+
+        # Second go_back: clear merchant
+        success, _ = state.go_back()
+        assert success is True
+        assert state.selected_merchant is None
