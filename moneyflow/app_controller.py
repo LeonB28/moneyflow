@@ -579,11 +579,11 @@ class AppController:
         sort_name = self.state.sort_by.value.capitalize()
 
         if self.state.view_mode == ViewMode.MERCHANT:
-            return f"Enter=Drill | m=✏️ Merchant (bulk) | s=Sort({sort_name}) | g=Group | ←/→=Period"
+            return f"Enter=Drill | m=✏️ Merchant (bulk) | c=✏️ Category (bulk) | s=Sort({sort_name}) | g=Group"
         elif self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP]:
-            return f"Enter=Drill | c=✏️ Category (bulk) | s=Sort({sort_name}) | g=Group | ←/→=Period"
+            return f"Enter=Drill | m=✏️ Merchant (bulk) | c=✏️ Category (bulk) | s=Sort({sort_name}) | g=Group"
         elif self.state.view_mode == ViewMode.ACCOUNT:
-            return f"Enter=Drill | s=Sort({sort_name}) | g=Group | ←/→=Period"
+            return f"Enter=Drill | m=✏️ Merchant (bulk) | c=✏️ Category (bulk) | s=Sort({sort_name}) | g=Group"
         else:  # DETAIL
             # Check if we're in a drilled-down view or ungrouped view
             if self.state.selected_merchant or self.state.selected_category or self.state.selected_group or self.state.selected_account:
