@@ -99,10 +99,11 @@ plugins:
   # - social  # Disabled - requires imaging dependencies (cairosvg, PIL)
 
 nav:
-  - Home: index.md
+  - Home:
+    - Overview: index.md
+    - Quick Start: getting-started/quickstart.md
   - Getting Started:
     - Installation: getting-started/installation.md
-    - Quick Start: getting-started/quickstart.md
     - First Run: getting-started/first-run.md
   - User Guide:
     - Keyboard Shortcuts: guide/keyboard-shortcuts.md
