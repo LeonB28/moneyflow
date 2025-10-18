@@ -476,7 +476,7 @@ class TestRealWorldScenarios:
         assert updated.filter(pl.col("id") == "txn3")["merchant"][0] == "Starbucks"  # Unchanged
         assert updated.filter(pl.col("id") == "txn4")["merchant"][0] == "Amazon"
 
-    def test_recategorize_with_group_update(self):
+    def test_edit_category_with_group_update(self):
         """Should handle recategorization with group updates."""
         df = pl.DataFrame({
             "id": ["txn1"],
@@ -535,7 +535,7 @@ class TestRealWorldScenarios:
         assert updated.filter(pl.col("id") == "txn3")["hideFromReports"][0] is False
 
     def test_complex_workflow_sequence(self):
-        """Test realistic workflow: rename merchant, recategorize, hide."""
+        """Test realistic workflow: rename merchant, edit_category, hide."""
         df = pl.DataFrame({
             "id": ["txn1"],
             "merchant": ["WHOLE FOODS MKT #123"],
@@ -552,7 +552,7 @@ class TestRealWorldScenarios:
         edits = [
             # Step 1: Clean up merchant name
             TransactionEdit("txn1", "merchant", "WHOLE FOODS MKT #123", "Whole Foods", datetime.now()),
-            # Step 2: Recategorize to Groceries
+            # Step 2: Edit Category to Groceries
             TransactionEdit("txn1", "category", "cat_misc", "cat_groceries", datetime.now()),
         ]
 

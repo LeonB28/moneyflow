@@ -160,7 +160,7 @@ class TestIndividualEdits:
             updated = mock_mm.get_transaction_by_id(txn_id)
             assert updated["merchant"]["name"] == new_merchant
 
-    async def test_recategorize_transaction(self, loaded_data_manager, mock_mm):
+    async def test_edit_category_transaction(self, loaded_data_manager, mock_mm):
         """Test changing category for a transaction."""
         dm, df, categories, _ = loaded_data_manager
 
@@ -555,7 +555,7 @@ class TestEdgeCase:
         txn_2 = mock_mm.get_transaction_by_id("txn_2")
         assert txn_2["merchant"]["name"] == "New Name"
 
-    async def test_recategorize_with_invalid_category_id(self, loaded_data_manager, mock_mm):
+    async def test_edit_category_with_invalid_category_id(self, loaded_data_manager, mock_mm):
         """Test that recategorizing with invalid category ID fails gracefully."""
         dm, df, _, _ = loaded_data_manager
 

@@ -60,7 +60,7 @@ class DemoDataGenerator:
         Create comprehensive category list including all categories from CATEGORY_GROUPS.
 
         This provides the full set of categories available when using Monarch Money,
-        making the demo experience realistic. Users can recategorize transactions
+        making the demo experience realistic. Users can edit_category transactions
         to any category they would have in the real app.
 
         We start with hardcoded IDs for categories used in transaction generation
@@ -512,7 +512,7 @@ class DemoDataGenerator:
             name = random.choice(amazon_names)
             amount = -random.uniform(15, 250)
 
-            # Sometimes miscategorized (should be recategorized in demo)
+            # Sometimes miscategorized (should be edit_categoryd in demo)
             category = random.choice(
                 [
                     "cat_amazon",

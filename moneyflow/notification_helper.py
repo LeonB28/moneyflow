@@ -113,19 +113,19 @@ class NotificationHelper:
         return ("Category changed. Press w to review and commit.", "information", 2)
 
     @staticmethod
-    def bulk_recategorize_queued(count: int, old_cat: str, new_cat: str) -> NotificationTuple:
+    def bulk_edit_category_queued(count: int, old_cat: str, new_cat: str) -> NotificationTuple:
         """Bulk recategorization queued."""
         return (
-            f"Queued {count} transactions to recategorize: {old_cat} → {new_cat}. Press w to commit.",
+            f"Queued {count} transactions to edit_category: {old_cat} → {new_cat}. Press w to commit.",
             "information",
             3,
         )
 
     @staticmethod
-    def bulk_recategorize_from_group(count: int, group: str, new_cat: str) -> NotificationTuple:
+    def bulk_edit_category_from_group(count: int, group: str, new_cat: str) -> NotificationTuple:
         """Bulk recategorization from group queued."""
         return (
-            f"Queued {count} transactions from {group} to recategorize to {new_cat}. Press w to commit.",
+            f"Queued {count} transactions from {group} to edit_category to {new_cat}. Press w to commit.",
             "information",
             3,
         )

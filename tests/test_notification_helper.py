@@ -125,8 +125,8 @@ class TestEditNotifications:
         assert "Category changed" in msg
         assert "Press w" in msg
 
-    def test_bulk_recategorize_queued(self):
-        msg, severity, timeout = NotificationHelper.bulk_recategorize_queued(
+    def test_bulk_edit_category_queued(self):
+        msg, severity, timeout = NotificationHelper.bulk_edit_category_queued(
             50, "Food & Dining", "Groceries"
         )
         assert "50 transactions" in msg

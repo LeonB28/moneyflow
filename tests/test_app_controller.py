@@ -291,7 +291,7 @@ class TestActionHints:
         assert "bulk" in hints.lower()
 
     async def test_category_view_hints(self, controller, mock_view):
-        """Category view should show recategorize hint."""
+        """Category view should show edit_category hint."""
         controller.state.view_mode = ViewMode.CATEGORY
 
         controller.refresh_view()

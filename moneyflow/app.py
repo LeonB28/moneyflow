@@ -135,7 +135,7 @@ class MoneyflowApp(App):
         Binding("right", "next_period", "→ Next", show=True),
         # Editing
         Binding("m", "edit_merchant", "Edit Merchant", show=False),
-        Binding("c", "recategorize", "Recategorize", show=False),
+        Binding("c", "edit_category", "Edit Category", show=False),
         Binding("d", "delete_transaction", "Delete", show=False),
         Binding("h", "toggle_hide_from_reports", "Hide/Unhide", show=False),
         Binding("i", "show_transaction_details", "Info", show=False),
@@ -1070,7 +1070,7 @@ class MoneyflowApp(App):
                 if saved_cursor_row < table.row_count:
                     table.move_cursor(row=saved_cursor_row)
 
-    def action_recategorize(self) -> None:
+    def action_edit_category(self) -> None:
         """Change category for current selection (works in aggregate and detail views)."""
 
         logger = get_logger(__name__)
@@ -1078,25 +1078,25 @@ class MoneyflowApp(App):
         if self.data_manager is None:
             return
 
-        logger.debug(f"action_recategorize called, view_mode={self.state.view_mode}")
+        logger.debug(f"action_edit_category called, view_mode={self.state.view_mode}")
 
         # Check if in aggregate view (MERCHANT, CATEGORY or GROUP) or detail view
         if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP]:
-            logger.debug("Calling _bulk_recategorize_from_aggregate()")
-            # Aggregate view - recategorize all transactions for this merchant/category/group
-            self.run_worker(self._bulk_recategorize_from_aggregate(), exclusive=False)
+            logger.debug("Calling _bulk_edit_category_from_aggregate()")
+            # Aggregate view - edit_category all transactions for this merchant/category/group
+            self.run_worker(self._bulk_edit_category_from_aggregate(), exclusive=False)
         else:
             logger.debug(
-                f"Calling _recategorize() - view_mode {self.state.view_mode} not in aggregate views"
+                f"Calling _edit_category() - view_mode {self.state.view_mode} not in aggregate views"
             )
-            # Detail view - recategorize selected transaction(s)
-            self.run_worker(self._recategorize(), exclusive=False)
+            # Detail view - edit_category selected transaction(s)
+            self.run_worker(self._edit_category(), exclusive=False)
 
-    async def _bulk_recategorize_from_aggregate(self) -> None:
-        """Recategorize all transactions in selected merchant/category/group."""
+    async def _bulk_edit_category_from_aggregate(self) -> None:
+        """Edit Category all transactions in selected merchant/category/group."""
         logger = get_logger(__name__)
 
-        logger.debug(f"_bulk_recategorize_from_aggregate called, view_mode={self.state.view_mode}")
+        logger.debug(f"_bulk_edit_category_from_aggregate called, view_mode={self.state.view_mode}")
 
         if self.state.current_data is None:
             logger.warning("current_data is None, returning")
@@ -1151,12 +1151,12 @@ class MoneyflowApp(App):
         # Show success notification
         new_cat_name = self.data_manager.categories.get(new_category_id, {}).get("name", "Unknown")
         self.notify(
-            f"Queued {count} transactions from {field_name} to recategorize to {new_cat_name}. Press w to commit.",
+            f"Queued {count} transactions from {field_name} to edit_category to {new_cat_name}. Press w to commit.",
             timeout=3,
         )
         self.refresh_view()
 
-    async def _recategorize(self) -> None:
+    async def _edit_category(self) -> None:
         """Show category selection and apply (for detail view)."""
         if self.state.current_data is None:
             return
@@ -1171,7 +1171,7 @@ class MoneyflowApp(App):
 
             # Check if multi-select is active
             if len(self.state.selected_ids) > 0:
-                # Multi-select recategorize
+                # Multi-select edit_category
                 num_selected = len(self.state.selected_ids)
 
                 # Show category selection (no transaction details for bulk)
@@ -1198,7 +1198,7 @@ class MoneyflowApp(App):
                     )
                     self.refresh_view()
             else:
-                # Single transaction recategorize
+                # Single transaction edit_category
                 # Pass transaction details for context
                 txn_details = {
                     "date": row_data.get("date"),
@@ -1230,7 +1230,7 @@ class MoneyflowApp(App):
                     if saved_cursor_row < table.row_count:
                         table.move_cursor(row=saved_cursor_row)
         else:
-            self.notify("Recategorize only works in transaction detail view", timeout=2)
+            self.notify("Edit Category only works in transaction detail view", timeout=2)
 
     def action_toggle_hide_from_reports(self) -> None:
         """Toggle hide from reports flag for current transaction(s)."""
