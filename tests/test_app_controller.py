@@ -1056,3 +1056,65 @@ class TestTimeNavigationFacade:
 
         assert should_fallback is False
         assert "April" in description or "Apr" in description
+
+
+class TestMultiSelectGroups:
+    """Tests for multi-selecting groups in aggregate views."""
+
+    async def test_get_transactions_from_selected_merchants(self, controller, mock_view):
+        """Should get all transactions from selected merchants."""
+        controller.state.selected_group_keys = {"Amazon", "Starbucks"}
+
+        result = controller.get_transactions_from_selected_groups("merchant")
+
+        assert not result.is_empty()
+        # Should have transactions from both merchants
+        merchants = set(result["merchant"].unique().to_list())
+        assert "Amazon" in merchants
+        assert "Starbucks" in merchants
+
+    async def test_get_transactions_from_selected_categories(self, controller, mock_view):
+        """Should get all transactions from selected categories."""
+        controller.state.selected_group_keys = {"Groceries", "Dining"}
+
+        result = controller.get_transactions_from_selected_groups("category")
+
+        assert not result.is_empty()
+        categories = set(result["category"].unique().to_list())
+        assert "Groceries" in categories or "Dining" in categories
+
+    async def test_get_transactions_empty_when_no_selections(self, controller, mock_view):
+        """Should return empty DataFrame when no groups selected."""
+        controller.state.selected_group_keys = set()
+
+        result = controller.get_transactions_from_selected_groups("merchant")
+
+        assert result.is_empty()
+
+    async def test_toggle_group_selection(self, controller, mock_view):
+        """Should toggle group selection."""
+        controller.state.toggle_group_selection("Amazon")
+        assert "Amazon" in controller.state.selected_group_keys
+
+        controller.state.toggle_group_selection("Amazon")
+        assert "Amazon" not in controller.state.selected_group_keys
+
+    async def test_clear_selection_clears_both(self, controller, mock_view):
+        """Should clear both transaction and group selections."""
+        controller.state.selected_ids.add("txn1")
+        controller.state.selected_group_keys.add("Amazon")
+
+        controller.state.clear_selection()
+
+        assert len(controller.state.selected_ids) == 0
+        assert len(controller.state.selected_group_keys) == 0
+
+    async def test_view_switch_clears_selections(self, controller, mock_view):
+        """Switching views should clear all selections."""
+        controller.state.selected_group_keys.add("Amazon")
+        controller.state.selected_ids.add("txn1")
+
+        controller.switch_to_category_view()
+
+        assert len(controller.state.selected_group_keys) == 0
+        assert len(controller.state.selected_ids) == 0

@@ -942,19 +942,44 @@ class MoneyflowApp(App):
         # Save cursor position
         saved_cursor_row = table.cursor_row
 
-        # Get the transaction ID from current row
         row_data = self.state.current_data.row(table.cursor_row, named=True)
-        txn_id = row_data.get("id")
 
-        if txn_id:
-            self.state.toggle_selection(txn_id)
-            count = len(self.state.selected_ids)
+        # Check if we're in aggregate view or detail view
+        if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
+            # Aggregate view - toggle group selection
+            # Get the group name from first column
+            group_name = str(row_data.get(self.state.current_data.columns[0]))
+            self.state.toggle_group_selection(group_name)
+            count = len(self.state.selected_group_keys)
             # Refresh view to show checkmark
             self.refresh_view()
             # Restore cursor position
             if saved_cursor_row < table.row_count:
                 table.move_cursor(row=saved_cursor_row)
-            self.notify(f"Selected: {count} transaction(s)", timeout=1)
+            self.notify(f"Selected: {count} group(s)", timeout=1)
+
+        elif self.state.view_mode == ViewMode.DETAIL and self.state.is_drilled_down() and self.state.sub_grouping_mode:
+            # Sub-grouped view - toggle group selection
+            group_name = str(row_data.get(self.state.current_data.columns[0]))
+            self.state.toggle_group_selection(group_name)
+            count = len(self.state.selected_group_keys)
+            self.refresh_view()
+            if saved_cursor_row < table.row_count:
+                table.move_cursor(row=saved_cursor_row)
+            self.notify(f"Selected: {count} group(s)", timeout=1)
+
+        else:
+            # Detail view - toggle transaction selection
+            txn_id = row_data.get("id")
+            if txn_id:
+                self.state.toggle_selection(txn_id)
+                count = len(self.state.selected_ids)
+                # Refresh view to show checkmark
+                self.refresh_view()
+                # Restore cursor position
+                if saved_cursor_row < table.row_count:
+                    table.move_cursor(row=saved_cursor_row)
+                self.notify(f"Selected: {count} transaction(s)", timeout=1)
 
     def action_edit_merchant(self) -> None:
         """Edit merchant name for current selection."""
@@ -970,8 +995,14 @@ class MoneyflowApp(App):
             self.run_worker(self._edit_merchant_detail(), exclusive=False)
 
     async def _bulk_edit_merchant_from_aggregate(self) -> None:
-        """Edit merchant for all transactions in selected aggregate row."""
+        """Edit merchant for all transactions in selected aggregate row(s)."""
         if self.state.current_data is None:
+            return
+
+        # Check if multi-select is active
+        if len(self.state.selected_group_keys) > 0:
+            # Multi-select: edit all transactions from all selected groups
+            await self._bulk_edit_merchant_from_selected_groups()
             return
 
         table = self.query_one("#data-table", DataTable)
@@ -1014,6 +1045,52 @@ class MoneyflowApp(App):
                 self.refresh_view()
         else:
             self.notify("Edit merchant only works from Merchant view", timeout=2)
+
+    async def _bulk_edit_merchant_from_selected_groups(self) -> None:
+        """Edit merchant for all transactions in all selected groups."""
+        # Determine which field we're grouping by
+        field_map = {
+            ViewMode.MERCHANT: "merchant",
+            ViewMode.CATEGORY: "category",
+            ViewMode.GROUP: "group",
+            ViewMode.ACCOUNT: "account",
+        }
+
+        # Check if we're in sub-grouped view
+        if self.state.is_drilled_down() and self.state.sub_grouping_mode:
+            group_field = field_map.get(self.state.sub_grouping_mode, "merchant")
+        else:
+            group_field = field_map.get(self.state.view_mode, "merchant")
+
+        # Get all transactions from selected groups
+        all_txns = self.controller.get_transactions_from_selected_groups(group_field)
+
+        if all_txns.is_empty():
+            self.notify("No transactions in selected groups", timeout=2)
+            return
+
+        total_count = len(all_txns)
+
+        # Get merchant suggestions
+        all_merchants = self.controller.get_merchant_suggestions()
+
+        # Show edit modal
+        new_merchant = await self.push_screen(
+            EditMerchantScreen(
+                f"{len(self.state.selected_group_keys)} groups",
+                total_count,
+                all_merchants,
+            ),
+            wait_for_dismiss=True,
+        )
+
+        if new_merchant:
+            # Queue edits for all transactions
+            count = self.controller.queue_merchant_edits(all_txns, "multiple", new_merchant)
+
+            self.state.clear_selection()
+            self._notify(NotificationHelper.edit_queued(count))
+            self.refresh_view()
 
     async def _edit_merchant_detail(self) -> None:
         """Edit merchant in detail view."""
@@ -1109,6 +1186,12 @@ class MoneyflowApp(App):
 
         logger.debug(f"_bulk_edit_category_from_aggregate called, view_mode={self.state.view_mode}")
 
+        # Check if multi-select is active
+        if len(self.state.selected_group_keys) > 0:
+            # Multi-select: edit all transactions from all selected groups
+            await self._bulk_edit_category_from_selected_groups()
+            return
+
         if self.state.current_data is None:
             logger.warning("current_data is None, returning")
             return
@@ -1163,6 +1246,55 @@ class MoneyflowApp(App):
         new_cat_name = self.data_manager.categories.get(new_category_id, {}).get("name", "Unknown")
         self.notify(
             f"Queued {count} transactions from {field_name} to edit_category to {new_cat_name}. Press w to commit.",
+            timeout=3,
+        )
+        self.refresh_view()
+
+    async def _bulk_edit_category_from_selected_groups(self) -> None:
+        """Edit category for all transactions in all selected groups."""
+        # Determine which field we're grouping by
+        field_map = {
+            ViewMode.MERCHANT: "merchant",
+            ViewMode.CATEGORY: "category",
+            ViewMode.GROUP: "group",
+            ViewMode.ACCOUNT: "account",
+        }
+
+        # Check if we're in sub-grouped view
+        if self.state.is_drilled_down() and self.state.sub_grouping_mode:
+            group_field = field_map.get(self.state.sub_grouping_mode, "merchant")
+        else:
+            group_field = field_map.get(self.state.view_mode, "merchant")
+
+        # Get all transactions from selected groups
+        all_txns = self.controller.get_transactions_from_selected_groups(group_field)
+
+        if all_txns.is_empty():
+            self.notify("No transactions in selected groups", timeout=2)
+            return
+
+        total_count = len(all_txns)
+
+        # Show category selection modal
+        new_category_id = await self.push_screen(
+            SelectCategoryScreen(
+                self.data_manager.categories,
+                None,  # No single category (multiple groups)
+                None,  # No transaction details for bulk
+            ),
+            wait_for_dismiss=True,
+        )
+
+        if not new_category_id:
+            return
+
+        # Queue edits for all transactions
+        count = self.controller.queue_category_edits(all_txns, new_category_id)
+
+        self.state.clear_selection()
+        new_cat_name = self.data_manager.categories.get(new_category_id, {}).get("name", "Unknown")
+        self.notify(
+            f"Queued {count} transactions from {len(self.state.selected_group_keys)} groups to {new_cat_name}. Press w to commit.",
             timeout=3,
         )
         self.refresh_view()

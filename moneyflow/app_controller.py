@@ -291,6 +291,7 @@ class AppController:
         self.state.selected_category = None
         self.state.selected_group = None
         self.state.selected_account = None
+        self.state.clear_selection()  # Clear all multi-select
         # Reset sort to valid field for aggregate views (now includes field name)
         if self.state.sort_by not in [SortMode.MERCHANT, SortMode.COUNT, SortMode.AMOUNT]:
             self.state.sort_by = SortMode.AMOUNT
@@ -303,6 +304,7 @@ class AppController:
         self.state.selected_category = None
         self.state.selected_group = None
         self.state.selected_account = None
+        self.state.clear_selection()  # Clear all multi-select
         if self.state.sort_by not in [SortMode.CATEGORY, SortMode.COUNT, SortMode.AMOUNT]:
             self.state.sort_by = SortMode.AMOUNT
         self.refresh_view()
@@ -314,6 +316,7 @@ class AppController:
         self.state.selected_category = None
         self.state.selected_group = None
         self.state.selected_account = None
+        self.state.clear_selection()  # Clear all multi-select
         if self.state.sort_by not in [SortMode.GROUP, SortMode.COUNT, SortMode.AMOUNT]:
             self.state.sort_by = SortMode.AMOUNT
         self.refresh_view()
@@ -325,6 +328,7 @@ class AppController:
         self.state.selected_category = None
         self.state.selected_group = None
         self.state.selected_account = None
+        self.state.clear_selection()  # Clear all multi-select
         if self.state.sort_by not in [SortMode.ACCOUNT, SortMode.COUNT, SortMode.AMOUNT]:
             self.state.sort_by = SortMode.AMOUNT
         self.refresh_view()
@@ -341,6 +345,7 @@ class AppController:
         self.state.selected_category = None
         self.state.selected_group = None
         self.state.selected_account = None
+        self.state.clear_selection()  # Clear all multi-select
         if set_default_sort:
             self.state.sort_by = SortMode.DATE
             self.state.sort_direction = SortDirection.DESC
@@ -818,3 +823,41 @@ class AppController:
             )
             self.refresh_view(force_rebuild=False)
             logger.debug(f"After refresh: view_mode={self.state.view_mode}")
+
+    def get_transactions_from_selected_groups(self, group_by_field: str) -> pl.DataFrame:
+        """
+        Get all transactions from selected groups in aggregate view.
+
+        Args:
+            group_by_field: Field to filter by ('merchant', 'category', 'group', 'account')
+
+        Returns:
+            DataFrame of all transactions from selected groups
+        """
+        if not self.state.selected_group_keys:
+            return pl.DataFrame()
+
+        filtered_df = self.state.get_filtered_df()
+        if filtered_df is None:
+            return pl.DataFrame()
+
+        # Filter to transactions in any of the selected groups
+        all_txns = pl.DataFrame()
+        for group_key in self.state.selected_group_keys:
+            if group_by_field == "merchant":
+                group_txns = self.data_manager.filter_by_merchant(filtered_df, group_key)
+            elif group_by_field == "category":
+                group_txns = self.data_manager.filter_by_category(filtered_df, group_key)
+            elif group_by_field == "group":
+                group_txns = self.data_manager.filter_by_group(filtered_df, group_key)
+            elif group_by_field == "account":
+                group_txns = self.data_manager.filter_by_account(filtered_df, group_key)
+            else:
+                continue
+
+            if all_txns.is_empty():
+                all_txns = group_txns
+            else:
+                all_txns = pl.concat([all_txns, group_txns])
+
+        return all_txns

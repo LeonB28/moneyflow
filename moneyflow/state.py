@@ -199,9 +199,17 @@ class AppState:
         else:
             self.selected_ids.add(transaction_id)
 
+    def toggle_group_selection(self, group_key: str):
+        """Toggle selection of a group (merchant/category/etc) for bulk operations."""
+        if group_key in self.selected_group_keys:
+            self.selected_group_keys.remove(group_key)
+        else:
+            self.selected_group_keys.add(group_key)
+
     def clear_selection(self):
-        """Clear all selected transactions."""
+        """Clear all selected transactions and groups."""
         self.selected_ids.clear()
+        self.selected_group_keys.clear()
 
     def set_timeframe(
         self,
