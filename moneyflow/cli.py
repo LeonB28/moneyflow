@@ -46,17 +46,54 @@ def cli(ctx, year, since, mtd, cache, refresh, demo):
     )
 
 
-@cli.group()
-def amazon():
-    """Amazon purchase analysis mode."""
-    pass
+@cli.group(invoke_without_command=True)
+@click.option('--db-path', type=click.Path(), default=None,
+              help='Path to Amazon SQLite database (default: ~/.moneyflow/amazon.db)')
+@click.pass_context
+def amazon(ctx, db_path):
+    """Amazon purchase analysis mode.
+
+    Run 'moneyflow amazon' to launch the UI.
+    Use subcommands for import/status operations.
+    """
+    # Store db_path in context for subcommands
+    ctx.ensure_object(dict)
+    ctx.obj['db_path'] = db_path
+
+    # If no subcommand, launch the UI
+    if ctx.invoked_subcommand is None:
+        from moneyflow.app import launch_amazon_mode
+        from moneyflow.backends.amazon import AmazonBackend
+
+        backend = AmazonBackend(db_path=db_path)
+
+        # Check if database exists
+        if not backend.db_path.exists():
+            click.echo("No Amazon data found.")
+            click.echo("\nPlease import your Amazon purchase data first:")
+            click.echo("  $ moneyflow amazon import ~/Downloads/amazon-purchases.csv")
+            click.echo("\nFor help:")
+            click.echo("  $ moneyflow amazon --help")
+            raise click.Abort()
+
+        # Check if database has data
+        stats = backend.get_database_stats()
+        if stats['total_transactions'] == 0:
+            click.echo("Amazon database is empty.")
+            click.echo("\nPlease import your Amazon purchase data:")
+            click.echo("  $ moneyflow amazon import ~/Downloads/amazon-purchases.csv")
+            raise click.Abort()
+
+        # Launch the UI
+        launch_amazon_mode(db_path=db_path)
 
 
 @amazon.command(name='import')
+@click.pass_context
 @click.argument('csv_path', type=click.Path(exists=True))
 @click.option('--force', is_flag=True,
               help='Force reimport of duplicates (overwrites existing)')
-def amazon_import(csv_path, force):
+def amazon_import(ctx, csv_path, force):
     """Import Amazon purchases from CSV file.
 
     Expected CSV format:
@@ -71,7 +108,8 @@ def amazon_import(csv_path, force):
     click.echo(f"Importing Amazon purchases from {csv_path}...")
 
     try:
-        backend = AmazonBackend()
+        db_path = ctx.obj.get('db_path')
+        backend = AmazonBackend(db_path=db_path)
         stats = import_amazon_csv(csv_path, backend=backend, force=force)
 
         click.echo(f"Parsed {stats['total_rows']} items from CSV")
@@ -104,11 +142,13 @@ def amazon_import(csv_path, force):
 
 
 @amazon.command(name='status')
-def amazon_status():
+@click.pass_context
+def amazon_status(ctx):
     """Show Amazon database status and import history."""
     from moneyflow.backends.amazon import AmazonBackend
 
-    backend = AmazonBackend()
+    db_path = ctx.obj.get('db_path')
+    backend = AmazonBackend(db_path=db_path)
 
     # Check if database exists
     if not backend.db_path.exists():
@@ -141,43 +181,6 @@ def amazon_status():
 
         if len(history) > 5:
             click.echo(f"  ... and {len(history) - 5} more")
-
-
-@amazon.command()
-def launch():
-    """Launch Amazon purchase viewer UI.
-
-    Opens the moneyflow TUI in Amazon mode, showing your purchase history
-    with the same powerful interface as Monarch mode.
-    """
-    from moneyflow.app import launch_amazon_mode
-    from moneyflow.backends.amazon import AmazonBackend
-
-    backend = AmazonBackend()
-
-    # Check if database exists
-    if not backend.db_path.exists():
-        click.echo("No Amazon data found.")
-        click.echo("\nPlease import your Amazon purchase data first:")
-        click.echo("  $ moneyflow amazon import ~/Downloads/amazon-purchases.csv")
-        click.echo("\nFor help:")
-        click.echo("  $ moneyflow amazon --help")
-        raise click.Abort()
-
-    # Check if database has data
-    stats = backend.get_database_stats()
-    if stats['total_transactions'] == 0:
-        click.echo("Amazon database is empty.")
-        click.echo("\nPlease import your Amazon purchase data:")
-        click.echo("  $ moneyflow amazon import ~/Downloads/amazon-purchases.csv")
-        raise click.Abort()
-
-    # Launch the UI
-    launch_amazon_mode()
-
-
-# Make 'moneyflow amazon' (without subcommand) launch the UI
-amazon.invoke_without_command = False
 
 
 if __name__ == "__main__":

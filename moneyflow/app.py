@@ -1759,11 +1759,14 @@ def launch_monarch_mode(
         sys.exit(1)
 
 
-def launch_amazon_mode() -> None:
+def launch_amazon_mode(db_path: Optional[str] = None) -> None:
     """
     Launch moneyflow in Amazon purchase analysis mode.
 
-    Uses the AmazonBackend with data stored in ~/.moneyflow/amazon.db.
+    Args:
+        db_path: Path to Amazon SQLite database (default: ~/.moneyflow/amazon.db)
+
+    Uses the AmazonBackend with data stored in SQLite.
     Data must be imported first using: moneyflow amazon import <csv>
     """
     from moneyflow.backend_config import BackendConfig
@@ -1775,7 +1778,7 @@ def launch_amazon_mode() -> None:
 
     try:
         # Create Amazon backend and config
-        backend = AmazonBackend()
+        backend = AmazonBackend(db_path=db_path)
         config = BackendConfig.for_amazon()
 
         # Create MoneyflowApp in Amazon mode
