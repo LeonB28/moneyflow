@@ -1,6 +1,6 @@
-"""Entry point for python -m monarch_tui"""
+"""Entry point for python -m moneyflow"""
 
-from .app import main
+from .cli import cli
 
 if __name__ == "__main__":
-    main()
+    cli()
