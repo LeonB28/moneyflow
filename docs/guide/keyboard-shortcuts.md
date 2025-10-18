@@ -68,7 +68,7 @@ moneyflow is designed to be used entirely with the keyboard. Here's your complet
 | Key | Action |
 |-----|--------|
 | ++m++ | Edit merchant name |
-| ++r++ | Recategorize |
+| ++c++ | Edit category |
 | ++h++ | Hide/unhide from reports |
 | ++d++ | Delete (with confirmation) |
 | ++i++ | View full transaction details |
@@ -79,15 +79,15 @@ moneyflow is designed to be used entirely with the keyboard. Here's your complet
 |-----|--------|
 | ++space++ | Toggle selection (shows ✓) |
 | ++m++ | Edit merchant for all selected |
-| ++r++ | Recategorize all selected |
+| ++c++ | Edit category for all selected |
 | ++h++ | Hide/unhide all selected |
 
 !!! example "Bulk Workflow"
     1. Press ++space++ on multiple transactions (shows ✓)
-    2. Press ++r++ to recategorize them all
+    2. Press ++c++ to edit category for all
     3. Select new category
     4. Press ++w++ to review
-    5. Press ++c++ to commit
+    5. Press ++enter++ to commit
 
 ---
 
@@ -97,8 +97,8 @@ When viewing **Merchants**, **Categories**, or **Groups**:
 
 | Key | Action |
 |-----|--------|
-| ++m++ | Edit merchant for ALL transactions (Merchants view only) |
-| ++r++ | Recategorize ALL transactions in selected row |
+| ++m++ | Edit merchant for ALL transactions in selected row |
+| ++c++ | Edit category for ALL transactions in selected row |
 | ++enter++ | Drill down to see individual transactions |
 
 This lets you rename a merchant or recategorize hundreds of transactions in one operation.
@@ -160,15 +160,15 @@ This lets you rename a merchant or recategorize hundreds of transactions in one 
 2. Navigate to merchant
 3. ++m++ (edit merchant)
 4. Type new name, ++enter++
-5. ++w++ (review), ++c++ (commit)
+5. ++w++ (review), ++enter++ (commit)
 
-**Recategorize transactions:**
+**Edit categories for transactions:**
 
 1. ++u++ (all transactions)
 2. ++space++ on each transaction to select
-3. ++r++ (recategorize)
+3. ++c++ (edit category)
 4. Type to filter categories, ++enter++ to select
-5. ++w++ (review), ++c++ (commit)
+5. ++w++ (review), ++enter++ (commit)
 
 **Monthly spending review:**
 
@@ -205,7 +205,7 @@ When in a modal dialog (edit merchant, select category, etc.):
 !!! tip "Speed Up Editing"
     - Stay in detail view (++u++) for rapid transaction editing
     - Use ++space++ to queue multiple edits before committing
-    - The cursor stays in place after edits - keep pressing ++m++ or ++r++
+    - The cursor stays in place after edits - keep pressing ++m++ or ++c++
 
 !!! tip "Time Navigation"
     - ++left++/++right++ maintain context (month→month, year→year)
@@ -214,7 +214,7 @@ When in a modal dialog (edit merchant, select category, etc.):
 !!! tip "Review Before Committing"
     - ++w++ shows ALL pending changes before saving
     - Review screen shows old → new values
-    - Press ++escape++ to cancel, ++c++ to confirm
+    - Press ++escape++ to cancel, ++enter++ to commit
 
 ---
 
@@ -225,10 +225,11 @@ Print this for reference:
 ```
 Views:       g (cycle)  u (all)  D (duplicates)
 Time:        y (year)   t (month)  a (all)  ←/→ (navigate)
-Edit:        m (merchant)  r (category)  h (hide)  d (delete)
+Edit:        m (merchant)  c (category)  h (hide)  d (delete)
 Select:      Space (multi-select)
 Sort:        s (toggle field)  v (reverse)
-Other:       / (search)  f (filter)  w (commit)  ? (help)  q (quit)
+Other:       / (search)  f (filter)  w (review)  ? (help)  q (quit)
+Commit:      w (review) then Enter (confirm)
 ```
 
 ---

@@ -102,7 +102,7 @@ Let's rename a merchant:
 4. Press ++m++ to edit merchant name
 5. Type the new name, press ++enter++
 6. Press ++w++ to review changes
-7. Press ++c++ to commit to Monarch Money
+7. Press ++enter++ to commit to Monarch Money
 
 Done! The change is now saved.
 

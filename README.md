@@ -264,21 +264,21 @@ Time period changes are applied instantly using client-side filtering.
 1. Launch: moneyflow
 2. Press 'g' to cycle to merchants view
 3. Navigate to a merchant with arrow keys (e.g., "AMZN*ABC123")
-4. Press 'e' to edit all transactions for that merchant
+4. Press 'm' to edit all transactions for that merchant
 5. Type the clean name (e.g., "Amazon") and press Enter
 6. Press 'w' to review changes
-7. Press 'c' to commit changes
+7. Press 'Enter' to commit changes
 ```
 
-### Example 2: Bulk Recategorize Transactions
+### Example 2: Bulk Edit Categories
 
 ```
 1. Press 'u' to view all transactions
 2. Press Space to select multiple transactions (shows ✓)
-3. Press 'r' to recategorize
+3. Press 'c' to edit category
 4. Type to filter categories, press Enter to select
 5. Press 'w' to review all pending changes
-6. Press 'c' to save to your account
+6. Press 'Enter' to commit to your account
 ```
 
 ### Example 3: Monthly Spending Review
@@ -309,7 +309,7 @@ Time period changes are applied instantly using client-side filtering.
 
 ### Editing (in detail view)
 - `m`: Edit merchant name
-- `r`: Recategorize
+- `c`: Edit category
 - `h`: Hide/unhide from reports
 - `d`: Delete transaction
 - `Space`: Multi-select

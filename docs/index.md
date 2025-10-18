@@ -88,14 +88,14 @@ See exactly what changes you're making before saving. All edits are queued and r
 **Edit transactions:**
 
 - ++m++ - Rename merchant
-- ++r++ - Recategorize
+- ++c++ - Edit category
 - ++h++ - Hide/unhide from reports
 - ++space++ - Select multiple (bulk operations)
 
 **Review and save:**
 
 - ++w++ - Review pending changes
-- ++c++ - Confirm and commit to backend
+- ++enter++ - Commit changes to backend
 
 [Full keyboard reference →](guide/keyboard-shortcuts.md)
 
