@@ -79,7 +79,7 @@ class TestPrepareAggregationColumns:
             "merchant", SortMode.COUNT, SortDirection.DESC
         )
 
-        assert len(cols) == 3
+        assert len(cols) == 4
         assert cols[0]["label"] == "Merchant"
         assert cols[0]["key"] == "merchant"
         assert cols[0]["width"] == 40
@@ -89,6 +89,9 @@ class TestPrepareAggregationColumns:
 
         assert cols[2]["label"] == "Total"
         assert cols[2]["key"] == "total"
+
+        assert cols[3]["label"] == ""
+        assert cols[3]["key"] == "flags"
 
     def test_category_columns(self):
         """Should create correct columns for category view."""
@@ -133,8 +136,8 @@ class TestFormatAggregationRows:
         rows = ViewPresenter.format_aggregation_rows(df)
 
         assert len(rows) == 2
-        assert rows[0] == ("Amazon", "50", "$-1,234.56")
-        assert rows[1] == ("Starbucks", "30", "$-89.70")
+        assert rows[0] == ("Amazon", "50", "$-1,234.56", "")
+        assert rows[1] == ("Starbucks", "30", "$-89.70", "")
 
     def test_formats_category_rows(self):
         """Should format category aggregation rows correctly."""
@@ -146,8 +149,8 @@ class TestFormatAggregationRows:
 
         rows = ViewPresenter.format_aggregation_rows(df)
 
-        assert rows[0] == ("Groceries", "100", "$-2,500.00")
-        assert rows[1] == ("Dining", "45", "$-567.89")
+        assert rows[0] == ("Groceries", "100", "$-2,500.00", "")
+        assert rows[1] == ("Dining", "45", "$-567.89", "")
 
     def test_handles_null_names(self):
         """Should handle null merchant/category names."""
@@ -184,7 +187,7 @@ class TestFormatAggregationRows:
 
         rows = ViewPresenter.format_aggregation_rows(df)
 
-        assert rows[0] == ("BigCorp", "1000", "$-123,456.78")
+        assert rows[0] == ("BigCorp", "1000", "$-123,456.78", "")
 
     def test_formats_positive_amounts(self):
         """Should format positive amounts (income) correctly."""
@@ -196,7 +199,73 @@ class TestFormatAggregationRows:
 
         rows = ViewPresenter.format_aggregation_rows(df)
 
-        assert rows[0] == ("Employer", "2", "$5,000.00")
+        assert rows[0] == ("Employer", "2", "$5,000.00", "")
+
+    def test_shows_pending_edit_indicator(self):
+        """Should show * for groups with pending edits."""
+        # Aggregated data
+        agg_df = pl.DataFrame({
+            "merchant": ["Amazon", "Starbucks", "Target"],
+            "count": [50, 30, 20],
+            "total": [-1234.56, -89.70, -456.78]
+        })
+
+        # Detail data with full transactions
+        detail_df = pl.DataFrame({
+            "id": ["txn1", "txn2", "txn3", "txn4"],
+            "merchant": ["Amazon", "Amazon", "Starbucks", "Target"],
+            "amount": [-100.0, -200.0, -89.70, -456.78]
+        })
+
+        # Amazon has pending edits (txn1 and txn2)
+        pending_edit_ids = {"txn1", "txn2"}
+
+        rows = ViewPresenter.format_aggregation_rows(
+            agg_df, detail_df=detail_df, group_by_field="merchant", pending_edit_ids=pending_edit_ids
+        )
+
+        assert rows[0] == ("Amazon", "50", "$-1,234.56", "*")  # Has pending edits
+        assert rows[1] == ("Starbucks", "30", "$-89.70", "")   # No pending edits
+        assert rows[2] == ("Target", "20", "$-456.78", "")     # No pending edits
+
+    def test_no_pending_edits_shows_empty_flag(self):
+        """Should show empty flags when no pending edits."""
+        agg_df = pl.DataFrame({
+            "category": ["Groceries", "Dining"],
+            "count": [100, 45],
+            "total": [-2500.00, -567.89]
+        })
+
+        detail_df = pl.DataFrame({
+            "id": ["txn1", "txn2"],
+            "category": ["Groceries", "Dining"],
+            "amount": [-2500.0, -567.89]
+        })
+
+        # No pending edits
+        pending_edit_ids = set()
+
+        rows = ViewPresenter.format_aggregation_rows(
+            agg_df, detail_df=detail_df, group_by_field="category", pending_edit_ids=pending_edit_ids
+        )
+
+        assert rows[0] == ("Groceries", "100", "$-2,500.00", "")
+        assert rows[1] == ("Dining", "45", "$-567.89", "")
+
+    def test_pending_edits_without_detail_df(self):
+        """Should handle missing detail_df gracefully."""
+        agg_df = pl.DataFrame({
+            "merchant": ["Amazon"],
+            "count": [50],
+            "total": [-1234.56]
+        })
+
+        # No detail_df provided
+        rows = ViewPresenter.format_aggregation_rows(
+            agg_df, detail_df=None, group_by_field="merchant", pending_edit_ids={"txn1"}
+        )
+
+        assert rows[0] == ("Amazon", "50", "$-1,234.56", "")  # No indicator without detail_df
 
 
 class TestPrepareAggregationView:
@@ -215,10 +284,10 @@ class TestPrepareAggregationView:
         )
 
         assert view["empty"] is False
-        assert len(view["columns"]) == 3
+        assert len(view["columns"]) == 4
         assert len(view["rows"]) == 2
         assert view["columns"][0]["label"] == "Merchant"
-        assert view["rows"][0] == ("Amazon", "50", "$-1,234.56")
+        assert view["rows"][0] == ("Amazon", "50", "$-1,234.56", "")
 
     def test_empty_dataframe_view(self):
         """Should handle empty DataFrame gracefully."""
@@ -233,7 +302,7 @@ class TestPrepareAggregationView:
         )
 
         assert view["empty"] is True
-        assert len(view["columns"]) == 3
+        assert len(view["columns"]) == 4
         assert view["rows"] == []
 
     def test_category_view_with_sort_indicators(self):

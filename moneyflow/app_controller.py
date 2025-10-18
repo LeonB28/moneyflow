@@ -229,8 +229,17 @@ class AppController:
             agg = agg.sort(sort_col, descending=descending)
 
         self.state.current_data = agg
+
+        # Get pending edit transaction IDs for flags column
+        pending_edit_ids = {edit.transaction_id for edit in self.data_manager.pending_edits}
+
         return ViewPresenter.prepare_aggregation_view(
-            agg, field_name, self.state.sort_by, self.state.sort_direction
+            agg,
+            field_name,
+            self.state.sort_by,
+            self.state.sort_direction,
+            detail_df=filtered_df,
+            pending_edit_ids=pending_edit_ids,
         )
 
     # View mode switching operations

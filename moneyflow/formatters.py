@@ -152,21 +152,30 @@ class ViewPresenter:
             {"label": name_label, "key": group_by_field, "width": 40},
             {"label": f"Count {count_arrow}".strip(), "key": "count", "width": 10},
             {"label": f"Total {amount_arrow}".strip(), "key": "total", "width": 15},
+            {"label": "", "key": "flags", "width": 2},  # Flags column for pending edits
         ]
 
         return columns
 
     @staticmethod
-    def format_aggregation_rows(df: pl.DataFrame) -> list[tuple[str, str, str]]:
+    def format_aggregation_rows(
+        df: pl.DataFrame,
+        detail_df: pl.DataFrame = None,
+        group_by_field: str = None,
+        pending_edit_ids: set[str] = None,
+    ) -> list[tuple[str, str, str, str]]:
         """
         Format aggregation DataFrame rows for display.
 
         Args:
             df: Aggregated DataFrame with columns: [name_field, count, total]
                 First column can be merchant/category/group/account
+            detail_df: Optional full detail DataFrame to check for pending edits
+            group_by_field: Field being grouped by (merchant/category/etc)
+            pending_edit_ids: Set of transaction IDs with pending edits
 
         Returns:
-            List of tuples (name, count_str, total_str)
+            List of tuples (name, count_str, total_str, flags_str)
 
         Examples:
             >>> import polars as pl
@@ -177,9 +186,20 @@ class ViewPresenter:
             ... })
             >>> rows = ViewPresenter.format_aggregation_rows(df)
             >>> rows[0]
-            ('Amazon', '50', '$-1,234.56')
+            ('Amazon', '50', '$-1,234.56', '')
         """
-        rows: list[tuple[str, str, str]] = []
+        # Pre-compute which groups have pending edits (single Polars operation)
+        groups_with_pending_edits = set()
+        if detail_df is not None and group_by_field and pending_edit_ids:
+            # Filter to only transactions with pending edits
+            pending_transactions = detail_df.filter(pl.col("id").is_in(list(pending_edit_ids)))
+            if not pending_transactions.is_empty():
+                # Get unique group values that have pending edits
+                groups_with_pending_edits = set(
+                    pending_transactions[group_by_field].unique().to_list()
+                )
+
+        rows: list[tuple[str, str, str, str]] = []
 
         for row_dict in df.iter_rows(named=True):
             # Get the name from first column (merchant/category/group/account)
@@ -187,7 +207,10 @@ class ViewPresenter:
             count = row_dict["count"]
             total = row_dict["total"]
 
-            rows.append((name, str(count), f"${total:,.2f}"))
+            # Check if this group has pending edits (simple set lookup)
+            flags = "*" if name in groups_with_pending_edits else ""
+
+            rows.append((name, str(count), f"${total:,.2f}", flags))
 
         return rows
 
@@ -197,6 +220,8 @@ class ViewPresenter:
         group_by_field: AggregationField,
         sort_by: SortMode,
         sort_direction: SortDirection,
+        detail_df: pl.DataFrame = None,
+        pending_edit_ids: set[str] = None,
     ) -> PreparedView:
         """
         Prepare complete aggregation view data.
@@ -209,6 +234,8 @@ class ViewPresenter:
             group_by_field: Field used for grouping
             sort_by: Sort mode
             sort_direction: Sort direction
+            detail_df: Optional full detail DataFrame to check for pending edits
+            pending_edit_ids: Set of transaction IDs with pending edits
 
         Returns:
             PreparedView with columns and formatted rows
@@ -225,14 +252,16 @@ class ViewPresenter:
             >>> view["empty"]
             False
             >>> len(view["columns"])
-            3
+            4
         """
         columns = ViewPresenter.prepare_aggregation_columns(group_by_field, sort_by, sort_direction)
 
         if df.is_empty():
             return PreparedView(columns=columns, rows=[], empty=True)
 
-        rows = ViewPresenter.format_aggregation_rows(df)
+        rows = ViewPresenter.format_aggregation_rows(
+            df, detail_df, group_by_field, pending_edit_ids
+        )
 
         return PreparedView(columns=columns, rows=rows, empty=False)
 
