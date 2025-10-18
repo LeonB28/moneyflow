@@ -20,52 +20,47 @@ the UI layer thin and focused on rendering and user interaction.
 """
 
 import argparse
-import asyncio
-import os
 import sys
 import traceback
-from datetime import datetime, timedelta, date as date_type
+from datetime import date as date_type
+from datetime import datetime
 from pathlib import Path
-from typing import Optional, Callable
-import polars as pl
+from typing import Any, Optional
 
+import polars as pl
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
-from textual.widgets import Header, Footer, DataTable, Static, LoadingIndicator
 from textual.reactive import reactive
+from textual.widgets import DataTable, Footer, Header, LoadingIndicator, Static
 
-from .backends import MonarchBackend, DemoBackend, get_backend
+from .app_controller import AppController
+from .backends import DemoBackend, get_backend
 from .cache_manager import CacheManager
 from .credentials import CredentialManager
 from .data_manager import DataManager
 from .duplicate_detector import DuplicateDetector
-from .logging_config import setup_logging, get_logger
-from .retry_logic import retry_with_backoff, RetryAborted
-from .state import AppState, ViewMode, SortMode, SortDirection, TimeFrame, TransactionEdit
-from .widgets.help_screen import HelpScreen
-from .formatters import ViewPresenter, AggregationField
-from .time_navigator import TimeNavigator
-from .commit_orchestrator import CommitOrchestrator
+from .logging_config import get_logger, setup_logging
 from .notification_helper import NotificationHelper
-from .modal_helper import ModalHelper
-from .app_controller import AppController
-from .textual_view import TextualViewPresenter
+from .retry_logic import RetryAborted, retry_with_backoff
 
 # Screen imports
 from .screens.credential_screens import (
     BackendSelectionScreen,
+    CachePromptScreen,
     CredentialSetupScreen,
     CredentialUnlockScreen,
-    CachePromptScreen,
     FilterScreen,
     QuitConfirmationScreen,
 )
 from .screens.duplicates_screen import DuplicatesScreen
-from .screens.edit_screens import EditMerchantScreen, SelectCategoryScreen, DeleteConfirmationScreen
+from .screens.edit_screens import DeleteConfirmationScreen, EditMerchantScreen, SelectCategoryScreen
 from .screens.review_screen import ReviewChangesScreen
 from .screens.search_screen import SearchScreen
 from .screens.transaction_detail_screen import TransactionDetailScreen
+from .state import AppState, ViewMode
+from .textual_view import TextualViewPresenter
+from .widgets.help_screen import HelpScreen
 
 
 class MoneyflowApp(App):
@@ -258,8 +253,8 @@ class MoneyflowApp(App):
                 loading_status = self.query_one("#loading-status", Static)
                 loading_status.update(f"❌ Startup failed: {e}\n\nPress 'q' to quit")
                 loading_status.display = True
-            except:
-                pass
+            except Exception:
+                pass  # UI not ready yet, error will be shown in console
             raise
 
     def _setup_loading_ui(self):
@@ -647,10 +642,10 @@ class MoneyflowApp(App):
 
             # Show helpful error
             loading_status.update(
-                f"❌ Session error.\n\n"
-                f"Could not authenticate with backend.\n"
-                f"Please restart the app to login fresh.\n\n"
-                f"Press 'q' to quit"
+                "❌ Session error.\n\n"
+                "Could not authenticate with backend.\n"
+                "Please restart the app to login fresh.\n\n"
+                "Press 'q' to quit"
             )
         else:
             error_msg = f"Failed to load data: {error}"
@@ -1187,8 +1182,6 @@ class MoneyflowApp(App):
             # Check if multi-select is active
             if len(self.state.selected_ids) > 0:
                 # Multi-select edit_category
-                num_selected = len(self.state.selected_ids)
-
                 # Show category selection (no transaction details for bulk)
                 new_category_id = await self.push_screen(
                     SelectCategoryScreen(
@@ -1463,7 +1456,7 @@ class MoneyflowApp(App):
                 # Check if it's an auth error (session expired)
                 error_msg = str(e).lower()
                 if "401" in error_msg or "unauthorized" in error_msg or "token" in error_msg:
-                    logger.debug(f"Commit failed with auth error, attempting session refresh")
+                    logger.debug("Commit failed with auth error, attempting session refresh")
                     # Show clear message to user
                     self._notify(NotificationHelper.session_expired())
                     # Try to refresh session once
@@ -1696,7 +1689,7 @@ def main():
         )
 
         app.run()
-    except Exception as e:
+    except Exception:
         # Print full traceback to console
         print("\n" + "=" * 80, file=sys.stderr)
         print("FATAL ERROR - moneyflow TUI crashed!", file=sys.stderr)
@@ -1755,7 +1748,7 @@ def launch_monarch_mode(
             force_refresh=refresh,
         )
         app.run()
-    except Exception as e:
+    except Exception:
         print("\n" + "=" * 80, file=sys.stderr)
         print("FATAL ERROR - moneyflow TUI crashed!", file=sys.stderr)
         print("=" * 80, file=sys.stderr)
@@ -1773,8 +1766,8 @@ def launch_amazon_mode() -> None:
     Uses the AmazonBackend with data stored in ~/.moneyflow/amazon.db.
     Data must be imported first using: moneyflow amazon import <csv>
     """
-    from moneyflow.backends.amazon import AmazonBackend
     from moneyflow.backend_config import BackendConfig
+    from moneyflow.backends.amazon import AmazonBackend
 
     # Initialize logging
     logger = setup_logging(console_output=False)
@@ -1794,7 +1787,7 @@ def launch_amazon_mode() -> None:
         app.title = "moneyflow [Amazon]"
 
         app.run()
-    except Exception as e:
+    except Exception:
         print("\n" + "=" * 80, file=sys.stderr)
         print("FATAL ERROR - moneyflow Amazon mode crashed!", file=sys.stderr)
         print("=" * 80, file=sys.stderr)

@@ -5,8 +5,8 @@ Provides Click-based CLI for launching moneyflow in different modes
 (Monarch, Amazon, Demo) and managing data imports.
 """
 
+
 import click
-from pathlib import Path
 
 
 @click.group(invoke_without_command=True)
@@ -65,8 +65,8 @@ def amazon_import(csv_path, force):
     Example:
         moneyflow amazon import ~/Downloads/amazon-purchases.csv
     """
-    from moneyflow.importers.amazon_csv import import_amazon_csv
     from moneyflow.backends.amazon import AmazonBackend
+    from moneyflow.importers.amazon_csv import import_amazon_csv
 
     click.echo(f"Importing Amazon purchases from {csv_path}...")
 
@@ -89,14 +89,14 @@ def amazon_import(csv_path, force):
 
         # Show database stats
         db_stats = backend.get_database_stats()
-        click.echo(f"\nDatabase summary:")
+        click.echo("\nDatabase summary:")
         click.echo(f"  Total transactions: {db_stats['total_transactions']}")
         click.echo(f"  Date range: {db_stats['earliest_date']} to {db_stats['latest_date']}")
         click.echo(f"  Total spent: ${abs(db_stats['total_amount']):,.2f}")
         click.echo(f"  Unique items: {db_stats['item_count']}")
         click.echo(f"  Categories: {db_stats['category_count']}")
 
-        click.echo(f"\nLaunch moneyflow: $ moneyflow amazon")
+        click.echo("\nLaunch moneyflow: $ moneyflow amazon")
 
     except Exception as e:
         click.echo(f"Import failed: {e}", err=True)
@@ -122,7 +122,7 @@ def amazon_status():
 
     click.echo("Amazon Purchase Database")
     click.echo(f"\nLocation: {backend.db_path}")
-    click.echo(f"\nStatistics:")
+    click.echo("\nStatistics:")
     click.echo(f"  Total transactions: {db_stats['total_transactions']}")
     click.echo(f"  Date range: {db_stats['earliest_date']} to {db_stats['latest_date']}")
     click.echo(f"  Total spent: ${abs(db_stats['total_amount']):,.2f}")
@@ -133,7 +133,7 @@ def amazon_status():
     history = backend.get_import_history()
 
     if history:
-        click.echo(f"\nImport History:")
+        click.echo("\nImport History:")
         for record in history[:5]:  # Show last 5 imports
             click.echo(f"  {record['import_date']}: {record['filename']} "
                       f"({record['record_count']} imported, "

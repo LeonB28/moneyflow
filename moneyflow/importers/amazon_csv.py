@@ -8,11 +8,11 @@ Order Date, Title, Category, Quantity, Item Total, ...
 
 import sqlite3
 from pathlib import Path
-from typing import Dict, Tuple, Optional
+from typing import Dict, Optional, Tuple
+
 import polars as pl
 
 from moneyflow.backends.amazon import AmazonBackend
-
 
 # Category normalization mapping
 CATEGORY_NORMALIZATIONS = {
