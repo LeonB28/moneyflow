@@ -175,17 +175,32 @@ class MoneyflowApp(App):
         demo_mode: bool = False,
         cache_path: Optional[str] = None,
         force_refresh: bool = False,
+        backend: Optional[Any] = None,
+        config: Optional[Any] = None,
     ):
         super().__init__()
         self.demo_mode = demo_mode
         self.start_year = start_year
+
+        # Backend configuration (for Amazon/YNAB/etc)
+        # Import here to avoid circular dependency
+        from moneyflow.backend_config import BackendConfig
+
+        self.backend_config = config or BackendConfig.for_monarch()
+
         # Backend will be initialized in initialize_data() based on credentials
-        self.backend = None
-        if demo_mode:
+        # unless explicitly provided (e.g., for Amazon mode)
+        self.backend = backend
+        if backend is not None:
+            # Backend provided externally (Amazon mode, etc.)
+            pass
+        elif demo_mode:
             self.backend = DemoBackend(year=start_year or 2025)
             self.title = "moneyflow [DEMO MODE]"
         else:
+            # Monarch mode - backend will be set in initialize_data()
             self.title = "moneyflow"
+
         self.data_manager: Optional[DataManager] = None
         self.state = AppState()
         self.loading = False
@@ -1685,6 +1700,103 @@ def main():
         # Print full traceback to console
         print("\n" + "=" * 80, file=sys.stderr)
         print("FATAL ERROR - moneyflow TUI crashed!", file=sys.stderr)
+        print("=" * 80, file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        print("\n" + "=" * 80, file=sys.stderr)
+        print("Please report this error with the traceback above.", file=sys.stderr)
+        print("=" * 80 + "\n", file=sys.stderr)
+        sys.exit(1)
+
+
+def launch_monarch_mode(
+    year: Optional[int] = None,
+    since: Optional[str] = None,
+    mtd: bool = False,
+    cache: Optional[str] = None,
+    refresh: bool = False,
+    demo: bool = False,
+) -> None:
+    """
+    Launch moneyflow in Monarch Money mode.
+
+    Args:
+        year: Only load transactions from this year onwards
+        since: Only load transactions from this date onwards (overrides year)
+        mtd: Load month-to-date transactions only
+        cache: Cache directory path (enables caching if provided)
+        refresh: Force refresh from API, skip cache
+        demo: Run in demo mode with sample data
+    """
+    from datetime import date as date_type
+
+    # Initialize logging
+    logger = setup_logging(console_output=False)
+    logger.info("Starting moneyflow in Monarch mode")
+
+    # Determine start year or date range
+    start_year = None
+    custom_start_date = None
+
+    if mtd:
+        today = date_type.today()
+        first_of_month = date_type(today.year, today.month, 1)
+        custom_start_date = first_of_month.strftime("%Y-%m-%d")
+    elif since:
+        custom_start_date = since
+    elif year:
+        start_year = year
+
+    try:
+        app = MoneyflowApp(
+            start_year=start_year,
+            custom_start_date=custom_start_date,
+            demo_mode=demo,
+            cache_path=cache,
+            force_refresh=refresh,
+        )
+        app.run()
+    except Exception as e:
+        print("\n" + "=" * 80, file=sys.stderr)
+        print("FATAL ERROR - moneyflow TUI crashed!", file=sys.stderr)
+        print("=" * 80, file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        print("\n" + "=" * 80, file=sys.stderr)
+        print("Please report this error with the traceback above.", file=sys.stderr)
+        print("=" * 80 + "\n", file=sys.stderr)
+        sys.exit(1)
+
+
+def launch_amazon_mode() -> None:
+    """
+    Launch moneyflow in Amazon purchase analysis mode.
+
+    Uses the AmazonBackend with data stored in ~/.moneyflow/amazon.db.
+    Data must be imported first using: moneyflow amazon import <csv>
+    """
+    from moneyflow.backends.amazon import AmazonBackend
+    from moneyflow.backend_config import BackendConfig
+
+    # Initialize logging
+    logger = setup_logging(console_output=False)
+    logger.info("Starting moneyflow in Amazon mode")
+
+    try:
+        # Create Amazon backend and config
+        backend = AmazonBackend()
+        config = BackendConfig.for_amazon()
+
+        # Create MoneyflowApp in Amazon mode
+        app = MoneyflowApp(
+            demo_mode=False,
+            backend=backend,
+            config=config,
+        )
+        app.title = "moneyflow [Amazon]"
+
+        app.run()
+    except Exception as e:
+        print("\n" + "=" * 80, file=sys.stderr)
+        print("FATAL ERROR - moneyflow Amazon mode crashed!", file=sys.stderr)
         print("=" * 80, file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
         print("\n" + "=" * 80, file=sys.stderr)
