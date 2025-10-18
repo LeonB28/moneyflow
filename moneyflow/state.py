@@ -266,23 +266,26 @@ class AppState:
         """
         Cycle through sub-grouping modes when drilled down.
 
-        Order: CATEGORY → GROUP → ACCOUNT → None (detail) → CATEGORY
+        Order: MERCHANT → CATEGORY → GROUP → ACCOUNT → None (detail) → MERCHANT
 
-        Skips the current top-level grouping (e.g., if drilled into merchant,
-        don't offer merchant as sub-grouping).
+        Skips the field we're already drilled into (e.g., if drilled into Category > Groceries,
+        don't offer Category as sub-grouping since we're already filtered by that).
 
         Returns:
             Name of the new sub-grouping mode for notification
         """
-        # Define cycle order (excluding the parent grouping)
+        # Define cycle order (excluding the field we drilled into)
         available_modes = []
 
-        # Add modes that aren't the current top-level view
-        if self.view_mode != ViewMode.CATEGORY:
+        # Add modes based on what we're NOT already filtered by
+        # Check active selections, not view_mode (which is DETAIL when drilled down)
+        if not self.selected_merchant:
+            available_modes.append(ViewMode.MERCHANT)
+        if not self.selected_category:
             available_modes.append(ViewMode.CATEGORY)
-        if self.view_mode != ViewMode.GROUP:
+        if not self.selected_group:
             available_modes.append(ViewMode.GROUP)
-        if self.view_mode != ViewMode.ACCOUNT:
+        if not self.selected_account:
             available_modes.append(ViewMode.ACCOUNT)
 
         # Add None for detail view
@@ -301,6 +304,8 @@ class AppState:
         # Return display name
         if self.sub_grouping_mode is None:
             return "Detail"
+        elif self.sub_grouping_mode == ViewMode.MERCHANT:
+            return "by Merchant"
         elif self.sub_grouping_mode == ViewMode.CATEGORY:
             return "by Category"
         elif self.sub_grouping_mode == ViewMode.GROUP:
@@ -630,14 +635,14 @@ class AppState:
 
             # Add sub-grouping indicator if active
             if self.sub_grouping_mode:
-                if self.sub_grouping_mode == ViewMode.CATEGORY:
+                if self.sub_grouping_mode == ViewMode.MERCHANT:
+                    parts.append("(by Merchant)")
+                elif self.sub_grouping_mode == ViewMode.CATEGORY:
                     parts.append("(by Category)")
                 elif self.sub_grouping_mode == ViewMode.GROUP:
                     parts.append("(by Group)")
                 elif self.sub_grouping_mode == ViewMode.ACCOUNT:
                     parts.append("(by Account)")
-                elif self.sub_grouping_mode == ViewMode.MERCHANT:
-                    parts.append("(by Merchant)")
 
         # Add time frame with actual dates
         if self.time_frame == TimeFrame.THIS_YEAR and self.start_date:
