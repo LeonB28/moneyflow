@@ -163,6 +163,7 @@ class ViewPresenter:
         detail_df: pl.DataFrame = None,
         group_by_field: str = None,
         pending_edit_ids: set[str] = None,
+        selected_group_keys: set[str] = None,
     ) -> list[tuple[str, str, str, str]]:
         """
         Format aggregation DataFrame rows for display.
@@ -173,9 +174,11 @@ class ViewPresenter:
             detail_df: Optional full detail DataFrame to check for pending edits
             group_by_field: Field being grouped by (merchant/category/etc)
             pending_edit_ids: Set of transaction IDs with pending edits
+            selected_group_keys: Set of selected group names (for multi-select)
 
         Returns:
             List of tuples (name, count_str, total_str, flags_str)
+            flags_str can be: "✓" (selected), "*" (pending), "✓*" (both), or ""
 
         Examples:
             >>> import polars as pl
@@ -207,8 +210,12 @@ class ViewPresenter:
             count = row_dict["count"]
             total = row_dict["total"]
 
-            # Check if this group has pending edits (simple set lookup)
-            flags = "*" if name in groups_with_pending_edits else ""
+            # Build flags: ✓ for selected, * for pending edits
+            flags = ""
+            if selected_group_keys and name in selected_group_keys:
+                flags += "✓"
+            if name in groups_with_pending_edits:
+                flags += "*"
 
             rows.append((name, str(count), f"${total:,.2f}", flags))
 
@@ -222,6 +229,7 @@ class ViewPresenter:
         sort_direction: SortDirection,
         detail_df: pl.DataFrame = None,
         pending_edit_ids: set[str] = None,
+        selected_group_keys: set[str] = None,
     ) -> PreparedView:
         """
         Prepare complete aggregation view data.
@@ -260,7 +268,7 @@ class ViewPresenter:
             return PreparedView(columns=columns, rows=[], empty=True)
 
         rows = ViewPresenter.format_aggregation_rows(
-            df, detail_df, group_by_field, pending_edit_ids
+            df, detail_df, group_by_field, pending_edit_ids, selected_group_keys
         )
 
         return PreparedView(columns=columns, rows=rows, empty=False)

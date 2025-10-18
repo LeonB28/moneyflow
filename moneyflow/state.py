@@ -117,7 +117,8 @@ class AppState:
     sub_grouping_mode: Optional[ViewMode] = None
 
     # Multi-select for bulk operations
-    selected_ids: set[str] = dataclass_field(default_factory=set)
+    selected_ids: set[str] = dataclass_field(default_factory=set)  # Transaction IDs in detail view
+    selected_group_keys: set[str] = dataclass_field(default_factory=set)  # Group names in aggregate views
 
     # Search/filter
     search_query: str = ""

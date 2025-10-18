@@ -154,6 +154,7 @@ class AppController:
                     self.state.sort_direction,
                     detail_df=txns,
                     pending_edit_ids=pending_edit_ids,
+                    selected_group_keys=self.state.selected_group_keys,
                 )
             else:
                 # Show detail view (normal behavior)
@@ -279,6 +280,7 @@ class AppController:
             self.state.sort_direction,
             detail_df=filtered_df,
             pending_edit_ids=pending_edit_ids,
+            selected_group_keys=self.state.selected_group_keys,
         )
 
     # View mode switching operations
