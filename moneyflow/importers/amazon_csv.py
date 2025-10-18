@@ -67,8 +67,15 @@ def import_amazon_csv(
     if backend is None:
         backend = AmazonBackend()
 
-    # Read CSV with Polars
-    df = pl.read_csv(csv_path)
+    # Read CSV with Polars, treating problematic columns as strings
+    # This handles invalid values like "t" in Quantity column
+    df = pl.read_csv(
+        csv_path,
+        schema_overrides={
+            "Quantity": pl.Utf8,  # Read as string first
+            "Item Total": pl.Utf8,  # Read as string first
+        }
+    )
 
     # Validate required columns
     required_columns = ["Order Date", "Title", "Category", "Quantity", "Item Total"]
@@ -89,11 +96,16 @@ def import_amazon_csv(
             normalize_category, return_dtype=pl.Utf8
         ).alias("category"),
 
-        # Convert quantity to integer
-        pl.col("Quantity").cast(pl.Int64).alias("quantity"),
+        # Convert quantity to integer, treating invalid values as null
+        pl.col("Quantity").cast(pl.Int64, strict=False).fill_null(1).alias("quantity"),
 
-        # Convert Item Total to negative float (expenses are negative in moneyflow)
-        (pl.col("Item Total") * -1.0).alias("amount"),
+        # Convert Item Total to float, removing $ and commas if present
+        pl.col("Item Total")
+        .str.replace_all(r"[\$,]", "")
+        .cast(pl.Float64, strict=False)
+        .fill_null(0.0)
+        .mul(-1.0)  # Negate for expenses
+        .alias("amount"),
     ])
 
     # Calculate price per item
