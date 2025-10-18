@@ -98,7 +98,7 @@ class TestViewRefresh:
         controller.refresh_view()
 
         assert len(mock_view.hints) == 1
-        assert "Edit merchant" in mock_view.hints[0]
+        assert "Merchant" in mock_view.hints[0]
 
     async def test_refresh_view_updates_pending_changes(self, controller, mock_view):
         """Test that pending changes indicator is updated."""
@@ -287,8 +287,8 @@ class TestActionHints:
         controller.refresh_view()
 
         hints = mock_view.hints[-1]
-        assert "Edit merchant" in hints
-        assert "bulk" in hints
+        assert "Merchant" in hints
+        assert "bulk" in hints.lower()
 
     async def test_category_view_hints(self, controller, mock_view):
         """Category view should show recategorize hint."""
@@ -297,8 +297,8 @@ class TestActionHints:
         controller.refresh_view()
 
         hints = mock_view.hints[-1]
-        assert "Recategorize" in hints
-        assert "bulk" in hints
+        assert "Category" in hints
+        assert "bulk" in hints.lower()
 
     async def test_detail_view_hints(self, controller, mock_view):
         """Detail view should show transaction-level hints."""
@@ -307,8 +307,8 @@ class TestActionHints:
         controller.refresh_view()
 
         hints = mock_view.hints[-1]
-        assert "Info" in hints
-        assert "Edit Merchant" in hints
+        assert "Merchant" in hints
+        assert "Category" in hints
         assert "Space=Select" in hints
 
 

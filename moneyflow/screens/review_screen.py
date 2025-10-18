@@ -84,9 +84,9 @@ class ReviewChangesScreen(Screen):
             yield DataTable(id="changes-table", cursor_type="row", zebra_stripes=True)
 
             with Container(id="review-footer"):
-                yield Static("c=Commit | Esc=Cancel", classes="footer-instructions")
+                yield Static("Enter=Commit | Esc=Cancel", classes="footer-instructions")
                 with Container(id="button-container"):
-                    yield Button("Commit Changes (C)", variant="primary", id="commit-button")
+                    yield Button("Commit Changes (Enter)", variant="primary", id="commit-button")
                     yield Button("Cancel (Esc)", variant="default", id="cancel-button")
 
     async def on_mount(self) -> None:
@@ -137,6 +137,6 @@ class ReviewChangesScreen(Screen):
         if event.key == "escape":
             event.stop()  # Prevent event from bubbling to parent
             self.dismiss(False)  # Cancel
-        elif event.key == "c":
-            event.stop()  # Prevent 'c' from triggering action_view_categories
+        elif event.key == "enter":
+            event.stop()  # Prevent event from bubbling
             self.dismiss(True)  # Commit

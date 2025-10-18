@@ -135,7 +135,7 @@ class MoneyflowApp(App):
         Binding("right", "next_period", "→ Next", show=True),
         # Editing
         Binding("m", "edit_merchant", "Edit Merchant", show=False),
-        Binding("r", "recategorize", "Recategorize", show=False),
+        Binding("c", "recategorize", "Recategorize", show=False),
         Binding("d", "delete_transaction", "Delete", show=False),
         Binding("h", "toggle_hide_from_reports", "Hide/Unhide", show=False),
         Binding("i", "show_transaction_details", "Info", show=False),
@@ -779,9 +779,13 @@ class MoneyflowApp(App):
 
     def action_cycle_grouping(self) -> None:
         """Cycle through aggregation views (Merchant → Category → Group → Account)."""
-        view_name = self.controller.cycle_grouping()
-        if view_name:
-            self._notify(NotificationHelper.view_changed(view_name))
+        # If in detail view, go back to previous aggregate view instead of cycling
+        if self.state.view_mode == ViewMode.DETAIL:
+            self.action_go_back()
+        else:
+            view_name = self.controller.cycle_grouping()
+            if view_name:
+                self._notify(NotificationHelper.view_changed(view_name))
 
     def action_view_ungrouped(self) -> None:
         """Switch to ungrouped transactions view (all transactions in reverse chronological order)."""

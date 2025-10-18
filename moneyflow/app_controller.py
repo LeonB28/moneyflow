@@ -579,13 +579,17 @@ class AppController:
         sort_name = self.state.sort_by.value.capitalize()
 
         if self.state.view_mode == ViewMode.MERCHANT:
-            return f"Enter=Drill down | m=Edit merchant (bulk) | s=Sort({sort_name}) | g=Change grouping | ←/→=Change period"
+            return f"Enter=Drill | m=✏️ Merchant (bulk) | s=Sort({sort_name}) | g=Group | ←/→=Period"
         elif self.state.view_mode in [ViewMode.CATEGORY, ViewMode.GROUP]:
-            return f"Enter=Drill down | r=Recategorize (bulk) | s=Sort({sort_name}) | g=Change grouping | ←/→=Change period"
+            return f"Enter=Drill | c=✏️ Category (bulk) | s=Sort({sort_name}) | g=Group | ←/→=Period"
         elif self.state.view_mode == ViewMode.ACCOUNT:
-            return f"Enter=Drill down | s=Sort({sort_name}) | g=Change grouping | ←/→=Change period"
+            return f"Enter=Drill | s=Sort({sort_name}) | g=Group | ←/→=Period"
         else:  # DETAIL
-            return f"s=Sort({sort_name}) | i=Info | m=Edit Merchant | r=Recategorize | h=Hide/Unhide | d=Delete | Space=Select"
+            # Check if we're in a drilled-down view or ungrouped view
+            if self.state.selected_merchant or self.state.selected_category or self.state.selected_group or self.state.selected_account:
+                return f"Esc/g=Back | m=✏️ Merchant | c=✏️ Category | h=Hide | Space=Select"
+            else:
+                return f"g=Group | m=✏️ Merchant | c=✏️ Category | h=Hide | Space=Select"
 
     def queue_category_edits(self, transactions_df, new_category_id: str) -> int:
         """
