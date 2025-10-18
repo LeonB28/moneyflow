@@ -788,14 +788,15 @@ class MoneyflowApp(App):
         self.controller.switch_to_account_view()
 
     def action_cycle_grouping(self) -> None:
-        """Cycle through aggregation views (Merchant → Category → Group → Account)."""
-        # If in detail view, go back to previous aggregate view instead of cycling
-        if self.state.view_mode == ViewMode.DETAIL:
-            self.action_go_back()
-        else:
-            view_name = self.controller.cycle_grouping()
-            if view_name:
-                self._notify(NotificationHelper.view_changed(view_name))
+        """
+        Cycle through grouping views.
+
+        If drilled down: Cycle sub-groupings (Category/Group/Account/Detail)
+        If not drilled down: Cycle top-level views (Merchant/Category/Group/Account)
+        """
+        view_name = self.controller.cycle_grouping()
+        if view_name:
+            self._notify(NotificationHelper.view_changed(view_name))
 
     def action_view_ungrouped(self) -> None:
         """Switch to ungrouped transactions view (all transactions in reverse chronological order)."""
