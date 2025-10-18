@@ -102,42 +102,81 @@ class AppController:
             if filtered_df is None:
                 return
 
-            # Apply drill-down filters
+            # Apply drill-down filters (can have multiple levels)
+            # Apply in order: merchant → category → group → account
+            txns = filtered_df
+
             if self.state.selected_merchant:
-                txns = self.data_manager.filter_by_merchant(
-                    filtered_df, self.state.selected_merchant
+                txns = self.data_manager.filter_by_merchant(txns, self.state.selected_merchant)
+
+            if self.state.selected_category:
+                txns = self.data_manager.filter_by_category(txns, self.state.selected_category)
+
+            if self.state.selected_group:
+                txns = self.data_manager.filter_by_group(txns, self.state.selected_group)
+
+            if self.state.selected_account:
+                txns = self.data_manager.filter_by_account(txns, self.state.selected_account)
+
+            # Check if sub-grouping is active (drilled down with aggregation)
+            if self.state.is_drilled_down() and self.state.sub_grouping_mode:
+                # Show aggregated view within drill-down
+                sub_group_map = {
+                    ViewMode.CATEGORY: (self.data_manager.aggregate_by_category, "category"),
+                    ViewMode.GROUP: (self.data_manager.aggregate_by_group, "group"),
+                    ViewMode.ACCOUNT: (self.data_manager.aggregate_by_account, "account"),
+                    ViewMode.MERCHANT: (self.data_manager.aggregate_by_merchant, "merchant"),
+                }
+
+                aggregate_func, field_name = sub_group_map[self.state.sub_grouping_mode]
+                agg = aggregate_func(txns)
+
+                # Apply sorting
+                sort_col = self.state.sort_by.value
+                if sort_col == "amount":
+                    sort_col = "total"
+                elif sort_col in ["merchant", "category", "group", "account"]:
+                    sort_col = field_name
+
+                descending = ViewPresenter.should_sort_descending(sort_col, self.state.sort_direction)
+                if not agg.is_empty():
+                    agg = agg.sort(sort_col, descending=descending)
+
+                self.state.current_data = agg
+
+                # Get pending edit IDs for flags
+                pending_edit_ids = {edit.transaction_id for edit in self.data_manager.pending_edits}
+
+                view_data = ViewPresenter.prepare_aggregation_view(
+                    agg,
+                    field_name,
+                    self.state.sort_by,
+                    self.state.sort_direction,
+                    detail_df=txns,
+                    pending_edit_ids=pending_edit_ids,
                 )
-            elif self.state.selected_category:
-                txns = self.data_manager.filter_by_category(
-                    filtered_df, self.state.selected_category
-                )
-            elif self.state.selected_group:
-                txns = self.data_manager.filter_by_group(filtered_df, self.state.selected_group)
-            elif self.state.selected_account:
-                txns = self.data_manager.filter_by_account(filtered_df, self.state.selected_account)
             else:
-                txns = filtered_df
+                # Show detail view (normal behavior)
+                # Sort
+                if not txns.is_empty():
+                    sort_field = self.state.sort_by.value
+                    descending = ViewPresenter.should_sort_descending(
+                        sort_field, self.state.sort_direction
+                    )
+                    txns = txns.sort(sort_field, descending=descending)
 
-            # Sort
-            if not txns.is_empty():
-                sort_field = self.state.sort_by.value
-                descending = ViewPresenter.should_sort_descending(
-                    sort_field, self.state.sort_direction
+                self.state.current_data = txns
+
+                # Get pending edit IDs
+                pending_txn_ids = {edit.transaction_id for edit in self.data_manager.pending_edits}
+
+                view_data = ViewPresenter.prepare_transaction_view(
+                    txns,
+                    self.state.sort_by,
+                    self.state.sort_direction,
+                    self.state.selected_ids,
+                    pending_txn_ids,
                 )
-                txns = txns.sort(sort_field, descending=descending)
-
-            self.state.current_data = txns
-
-            # Get pending edit IDs
-            pending_txn_ids = {edit.transaction_id for edit in self.data_manager.pending_edits}
-
-            view_data = ViewPresenter.prepare_transaction_view(
-                txns,
-                self.state.sort_by,
-                self.state.sort_direction,
-                self.state.selected_ids,
-                pending_txn_ids,
-            )
         else:
             return
 

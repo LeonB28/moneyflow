@@ -111,6 +111,11 @@ class AppState:
     selected_account: Optional[str] = None
     selected_row: int = 0
 
+    # Sub-grouping when drilled down (e.g., "Merchant > Amazon (by Category)")
+    # When set, shows aggregated view of filtered data instead of detail view
+    # Cycles: Category → Group → Account → None (detail) → Category...
+    sub_grouping_mode: Optional[ViewMode] = None
+
     # Multi-select for bulk operations
     selected_ids: set[str] = dataclass_field(default_factory=set)
 
@@ -248,17 +253,77 @@ class AppState:
         else:
             self.sort_by = SortMode.COUNT
 
+    def is_drilled_down(self) -> bool:
+        """Check if we're currently drilled down into a specific item."""
+        return any([
+            self.selected_merchant,
+            self.selected_category,
+            self.selected_group,
+            self.selected_account,
+        ])
+
+    def cycle_sub_grouping(self) -> str:
+        """
+        Cycle through sub-grouping modes when drilled down.
+
+        Order: CATEGORY → GROUP → ACCOUNT → None (detail) → CATEGORY
+
+        Skips the current top-level grouping (e.g., if drilled into merchant,
+        don't offer merchant as sub-grouping).
+
+        Returns:
+            Name of the new sub-grouping mode for notification
+        """
+        # Define cycle order (excluding the parent grouping)
+        available_modes = []
+
+        # Add modes that aren't the current top-level view
+        if self.view_mode != ViewMode.CATEGORY:
+            available_modes.append(ViewMode.CATEGORY)
+        if self.view_mode != ViewMode.GROUP:
+            available_modes.append(ViewMode.GROUP)
+        if self.view_mode != ViewMode.ACCOUNT:
+            available_modes.append(ViewMode.ACCOUNT)
+
+        # Add None for detail view
+        available_modes.append(None)
+
+        # Find current index
+        try:
+            current_idx = available_modes.index(self.sub_grouping_mode)
+        except ValueError:
+            current_idx = -1
+
+        # Cycle to next
+        next_idx = (current_idx + 1) % len(available_modes)
+        self.sub_grouping_mode = available_modes[next_idx]
+
+        # Return display name
+        if self.sub_grouping_mode is None:
+            return "Detail"
+        elif self.sub_grouping_mode == ViewMode.CATEGORY:
+            return "by Category"
+        elif self.sub_grouping_mode == ViewMode.GROUP:
+            return "by Group"
+        elif self.sub_grouping_mode == ViewMode.ACCOUNT:
+            return "by Account"
+        else:
+            return ""
+
     def cycle_grouping(self) -> str:
         """
-        Cycle through aggregation view modes.
+        Cycle through grouping modes.
 
-        Order: MERCHANT → CATEGORY → GROUP → ACCOUNT → MERCHANT
-
-        Only works in aggregation views, not DETAIL view.
+        If drilled down: Cycle sub-groupings within current filter
+        If not drilled down: Cycle top-level aggregation views
 
         Returns:
             Name of the new view mode for notification
         """
+        # If drilled down, cycle sub-grouping instead
+        if self.is_drilled_down():
+            return self.cycle_sub_grouping()
+
         # Only cycle if in an aggregation view (not DETAIL)
         if self.view_mode == ViewMode.DETAIL:
             return ""
@@ -268,6 +333,7 @@ class AppState:
         self.selected_category = None
         self.selected_group = None
         self.selected_account = None
+        self.sub_grouping_mode = None  # Clear sub-grouping too
 
         # Reset sort to valid field for aggregate views if needed
         # Now includes field-based sorting (MERCHANT, CATEGORY, GROUP, ACCOUNT)
@@ -397,17 +463,52 @@ class AppState:
         """
         Go back to previous view.
 
+        If sub-grouping is active: Clear sub-grouping first (stay drilled down)
+        If drilled down (no sub-grouping): Go back to parent view
+        If at top-level: Do nothing
+
         Returns:
             Tuple of (success: bool, cursor_position: int)
             success=True if went back, False if already at root
             cursor_position=Row to restore cursor to (0 if none saved)
         """
+        # If in sub-grouped view, clear sub-grouping first (stay drilled down)
+        if self.is_drilled_down() and self.sub_grouping_mode:
+            self.sub_grouping_mode = None
+            return True, 0
+
         if self.view_mode == ViewMode.DETAIL:
-            # Clear drill-down selections
-            self.selected_merchant = None
-            self.selected_category = None
-            self.selected_group = None
-            self.selected_account = None
+            # Check if we have multiple levels of drill-down
+            # Clear the deepest level first (in reverse order: Account → Group → Category → Merchant)
+            if self.selected_account and not self.selected_category and not self.selected_group and not self.selected_merchant:
+                # At Account level only - go back to parent
+                self.selected_account = None
+            elif self.selected_group and not self.selected_category and not self.selected_merchant:
+                # At Group level only - go back to parent
+                self.selected_group = None
+            elif self.selected_category and not self.selected_merchant:
+                # At Category level only - go back to parent
+                self.selected_category = None
+            elif self.selected_account:
+                # Multi-level: clear deepest (Account)
+                self.selected_account = None
+                return True, 0
+            elif self.selected_group:
+                # Multi-level: clear deepest (Group)
+                self.selected_group = None
+                return True, 0
+            elif self.selected_category:
+                # Multi-level: clear deepest (Category)
+                self.selected_category = None
+                return True, 0
+            elif self.selected_merchant:
+                # Only Merchant selected - clear it
+                self.selected_merchant = None
+            else:
+                # Nothing selected, shouldn't get here
+                pass
+
+            self.sub_grouping_mode = None  # Clear sub-grouping too
 
             # Pop from history if available
             cursor_position = 0
@@ -497,21 +598,46 @@ class AppState:
         elif self.view_mode == ViewMode.ACCOUNT:
             parts.append("Accounts")
         elif self.view_mode == ViewMode.DETAIL:
-            # Show what we drilled down from
+            # Show all drill-down levels (can have multiple selections for sub-grouping)
+            # Order: Merchant → Category → Group → Account
+            has_any_selection = False
+
             if self.selected_merchant:
                 parts.append("Merchants")
                 parts.append(self.selected_merchant)
-            elif self.selected_category:
-                parts.append("Categories")
+                has_any_selection = True
+
+            if self.selected_category:
+                if not has_any_selection:
+                    parts.append("Categories")
                 parts.append(self.selected_category)
-            elif self.selected_group:
-                parts.append("Groups")
+                has_any_selection = True
+
+            if self.selected_group:
+                if not has_any_selection:
+                    parts.append("Groups")
                 parts.append(self.selected_group)
-            elif self.selected_account:
-                parts.append("Accounts")
+                has_any_selection = True
+
+            if self.selected_account:
+                if not has_any_selection:
+                    parts.append("Accounts")
                 parts.append(self.selected_account)
-            else:
+                has_any_selection = True
+
+            if not has_any_selection:
                 parts.append("All Transactions")
+
+            # Add sub-grouping indicator if active
+            if self.sub_grouping_mode:
+                if self.sub_grouping_mode == ViewMode.CATEGORY:
+                    parts.append("(by Category)")
+                elif self.sub_grouping_mode == ViewMode.GROUP:
+                    parts.append("(by Group)")
+                elif self.sub_grouping_mode == ViewMode.ACCOUNT:
+                    parts.append("(by Account)")
+                elif self.sub_grouping_mode == ViewMode.MERCHANT:
+                    parts.append("(by Merchant)")
 
         # Add time frame with actual dates
         if self.time_frame == TimeFrame.THIS_YEAR and self.start_date:

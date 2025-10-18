@@ -1594,20 +1594,37 @@ class MoneyflowApp(App):
 
     async def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection (Enter key)."""
-        if self.state.view_mode in [
+        table = self.query_one("#data-table", DataTable)
+        row_key = event.row_key
+        row = table.get_row(row_key)
+        item_name = str(row[0])
+
+        # Check if we're in a sub-grouped view (drilled down with sub-grouping)
+        if self.state.is_drilled_down() and self.state.sub_grouping_mode:
+            # Drilling down from sub-grouped view
+            # Set the appropriate selection based on sub_grouping_mode
+            if self.state.sub_grouping_mode == ViewMode.CATEGORY:
+                self.state.selected_category = item_name
+            elif self.state.sub_grouping_mode == ViewMode.GROUP:
+                self.state.selected_group = item_name
+            elif self.state.sub_grouping_mode == ViewMode.ACCOUNT:
+                self.state.selected_account = item_name
+            elif self.state.sub_grouping_mode == ViewMode.MERCHANT:
+                # This shouldn't happen (can't sub-group by same field), but handle it
+                self.state.selected_merchant = item_name
+
+            # Clear sub-grouping mode (show detail view at this level)
+            self.state.sub_grouping_mode = None
+            self.refresh_view()
+
+        elif self.state.view_mode in [
             ViewMode.MERCHANT,
             ViewMode.CATEGORY,
             ViewMode.GROUP,
             ViewMode.ACCOUNT,
         ]:
-            # Drill down - save cursor position for restoration on go_back
-            table = self.query_one("#data-table", DataTable)
+            # Drill down from top-level view - save cursor position for restoration on go_back
             cursor_position = table.cursor_row
-            row_key = event.row_key
-            row = table.get_row(row_key)
-
-            # First column is the item name
-            item_name = str(row[0])
             self.state.drill_down(item_name, cursor_position)
             self.refresh_view()
 
