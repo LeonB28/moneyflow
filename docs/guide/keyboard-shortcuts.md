@@ -93,7 +93,9 @@ moneyflow is designed to be used entirely with the keyboard. Here's your complet
 
 ## Bulk Edit from Aggregate View
 
-When viewing **Merchants**, **Categories**, or **Groups**:
+### Single Group
+
+When viewing **Merchants**, **Categories**, **Groups**, or **Accounts**:
 
 | Key | Action |
 |-----|--------|
@@ -102,6 +104,26 @@ When viewing **Merchants**, **Categories**, or **Groups**:
 | ++enter++ | Drill down to see individual transactions |
 
 This lets you rename a merchant or recategorize hundreds of transactions in one operation.
+
+### Multi-Select Groups
+
+Press ++space++ to select multiple groups, then edit all their transactions at once:
+
+| Key | Action |
+|-----|--------|
+| ++space++ | Toggle group selection (shows ✓) |
+| ++m++ | Edit merchant for ALL transactions in ALL selected groups |
+| ++c++ | Edit category for ALL transactions in ALL selected groups |
+
+!!! example "Multi-Select Workflow"
+    1. Merchants view
+    2. ++space++ on "Amazon" → ✓
+    3. ++space++ on "eBay" → ✓
+    4. ++space++ on "Etsy" → ✓
+    5. Press ++c++ → Select "Online Shopping"
+    6. All transactions from 3 merchants recategorized!
+
+Works in all aggregate views and sub-grouped views.
 
 ---
 
