@@ -972,3 +972,172 @@ class TestSubGrouping:
         success, _ = state.go_back()
         assert success is True
         assert state.selected_merchant is None
+
+
+class TestSmartSearchEscape:
+    """Tests for smart search escape behavior."""
+
+    def test_get_navigation_depth_top_level(self):
+        """Top-level views should have depth 0."""
+        state = AppState()
+        state.view_mode = ViewMode.MERCHANT
+        assert state.get_navigation_depth() == 0
+
+    def test_get_navigation_depth_one_level(self):
+        """Drilled once should have depth 1."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+        assert state.get_navigation_depth() == 1
+
+    def test_get_navigation_depth_two_levels(self):
+        """Drilled twice should have depth 2."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+        state.selected_category = "Groceries"
+        assert state.get_navigation_depth() == 2
+
+    def test_set_search_saves_navigation_state(self):
+        """Setting search should save current navigation state."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+
+        state.set_search("coffee")
+
+        assert state.search_query == "coffee"
+        assert state.search_navigation_state is not None
+        assert state.search_navigation_state == (1, None)  # depth 1, no sub-grouping
+
+    def test_set_search_with_sub_grouping(self):
+        """Search with sub-grouping should save that state."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+        state.sub_grouping_mode = ViewMode.CATEGORY
+
+        state.set_search("grocery")
+
+        assert state.search_navigation_state == (1, ViewMode.CATEGORY)
+
+    def test_clear_search_clears_navigation_state(self):
+        """Clearing search should clear navigation state."""
+        state = AppState()
+        state.set_search("coffee")
+
+        state.set_search("")
+
+        assert state.search_query == ""
+        assert state.search_navigation_state is None
+
+    def test_escape_clears_search_when_no_navigation(self):
+        """Scenario 1: Search without further navigation, Escape clears search."""
+        state = AppState()
+        state.view_mode = ViewMode.MERCHANT
+        state.set_search("coffee")
+
+        # No navigation happened, just searched
+        success, _ = state.go_back()
+
+        assert success is True
+        assert state.search_query == ""
+        assert state.view_mode == ViewMode.MERCHANT  # Still in Merchants view
+
+    def test_escape_navigates_after_drill_down_with_search(self):
+        """Scenario 2: Search then drill down, Escape navigates (search persists)."""
+        state = AppState()
+        state.view_mode = ViewMode.MERCHANT
+        state.set_search("coffee")
+
+        # Drill down (navigation happened)
+        state.drill_down("Starbucks", 5)
+
+        # Now Escape should navigate back, not clear search
+        success, cursor = state.go_back()
+
+        assert success is True
+        assert state.search_query == "coffee"  # Search still active
+        assert state.view_mode == ViewMode.MERCHANT
+        assert cursor == 5
+
+    def test_escape_twice_after_drill_clears_search(self):
+        """After navigating back to search level, second Escape clears search."""
+        state = AppState()
+        state.view_mode = ViewMode.MERCHANT
+        state.set_search("coffee")
+        state.drill_down("Starbucks", 5)
+
+        # First Escape: navigate back
+        state.go_back()
+        assert state.search_query == "coffee"  # Still active
+
+        # Second Escape: clear search (back at original depth)
+        success, _ = state.go_back()
+        assert success is True
+        assert state.search_query == ""
+
+    def test_escape_with_search_and_sub_grouping(self):
+        """Scenario 3: Search then sub-group, Escape clears sub-grouping first."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+        state.set_search("grocery")
+
+        # Sub-group (navigation happened - depth same but state changed)
+        state.sub_grouping_mode = ViewMode.CATEGORY
+
+        # Escape should clear sub-grouping (search still active, navigation happened)
+        success, _ = state.go_back()
+
+        assert success is True
+        assert state.sub_grouping_mode is None
+        assert state.search_query == "grocery"  # Search persists
+        assert state.selected_merchant == "Amazon"  # Still drilled down
+
+    def test_escape_after_clearing_sub_grouping_clears_search(self):
+        """After clearing sub-grouping, if back at search level, Escape clears search."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+        state.set_search("grocery")
+        state.sub_grouping_mode = ViewMode.CATEGORY
+
+        # First Escape: clear sub-grouping
+        state.go_back()
+        assert state.sub_grouping_mode is None
+        assert state.search_query == "grocery"
+
+        # Now we're at same state as when search was set
+        # Second Escape: should clear search
+        success, _ = state.go_back()
+        assert success is True
+        assert state.search_query == ""
+        assert state.selected_merchant == "Amazon"  # Still drilled down
+
+    def test_search_persists_across_navigation(self):
+        """Search should stay active when navigating away and back."""
+        state = AppState()
+        state.view_mode = ViewMode.MERCHANT
+        state.set_search("coffee")
+        state.drill_down("Starbucks", 5)
+
+        # Navigate back
+        state.go_back()
+
+        # Search should still be active
+        assert state.search_query == "coffee"
+
+    def test_get_navigation_state_comparison(self):
+        """Navigation state should change when sub-grouping changes."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+
+        state1 = state.get_navigation_state()
+        assert state1 == (1, None)
+
+        state.sub_grouping_mode = ViewMode.CATEGORY
+        state2 = state.get_navigation_state()
+        assert state2 == (1, ViewMode.CATEGORY)
+        assert state1 != state2

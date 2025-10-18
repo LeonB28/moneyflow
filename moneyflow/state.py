@@ -124,6 +124,11 @@ class AppState:
     show_transfers: bool = False  # Whether to show Transfer category transactions
     show_hidden: bool = True  # Whether to show transactions hidden from reports
 
+    # Track navigation state when search was applied (for smart Escape behavior)
+    # If user hasn't navigated since search, Escape clears search
+    # If user has navigated deeper, Escape does normal back navigation
+    search_navigation_state: Optional[tuple] = None  # (depth, sub_grouping_mode)
+
     # Change tracking
     pending_edits: List[TransactionEdit] = dataclass_field(default_factory=list)
     undo_stack: List[TransactionEdit] = dataclass_field(default_factory=list)
@@ -261,6 +266,49 @@ class AppState:
             self.selected_group,
             self.selected_account,
         ])
+
+    def get_navigation_depth(self) -> int:
+        """
+        Get current navigation depth (how many levels drilled down).
+
+        Returns:
+            0 = Top-level view (Merchants, Categories, etc.)
+            1 = Drilled once (Merchant > Amazon)
+            2 = Drilled twice (Merchant > Amazon > Groceries)
+            etc.
+        """
+        if self.view_mode != ViewMode.DETAIL:
+            return 0
+
+        depth = 0
+        if self.selected_merchant:
+            depth += 1
+        if self.selected_category:
+            depth += 1
+        if self.selected_group:
+            depth += 1
+        if self.selected_account:
+            depth += 1
+
+        return depth
+
+    def get_navigation_state(self) -> tuple:
+        """Get current navigation state for comparison."""
+        return (self.get_navigation_depth(), self.sub_grouping_mode)
+
+    def set_search(self, query: str) -> None:
+        """
+        Set search query and save current navigation state.
+
+        Args:
+            query: Search query string
+        """
+        self.search_query = query
+        # Save navigation state when search is applied
+        if query:
+            self.search_navigation_state = self.get_navigation_state()
+        else:
+            self.search_navigation_state = None
 
     def cycle_sub_grouping(self) -> str:
         """
@@ -468,15 +516,27 @@ class AppState:
         """
         Go back to previous view.
 
-        If sub-grouping is active: Clear sub-grouping first (stay drilled down)
-        If drilled down (no sub-grouping): Go back to parent view
-        If at top-level: Do nothing
+        Priority order:
+        1. If search is active and no navigation since search: Clear search
+        2. If sub-grouping is active: Clear sub-grouping first (stay drilled down)
+        3. If drilled down (no sub-grouping): Go back to parent view
+        4. If at top-level: Do nothing
 
         Returns:
             Tuple of (success: bool, cursor_position: int)
             success=True if went back, False if already at root
             cursor_position=Row to restore cursor to (0 if none saved)
         """
+        # Check if search should be cleared (highest priority)
+        if self.search_query and self.search_navigation_state:
+            current_state = self.get_navigation_state()
+            # If we're still at the same navigation state as when search was applied
+            if current_state == self.search_navigation_state:
+                # Clear search instead of navigating
+                self.search_query = ""
+                self.search_navigation_state = None
+                return True, 0
+
         # If in sub-grouped view, clear sub-grouping first (stay drilled down)
         if self.is_drilled_down() and self.sub_grouping_mode:
             self.sub_grouping_mode = None

@@ -509,14 +509,14 @@ class AppController:
         Returns:
             Count of filtered results
         """
-        self.state.search_query = query
+        self.state.set_search(query)
         self.refresh_view()
         filtered = self.state.get_filtered_df()
         return len(filtered) if filtered is not None else 0
 
     def clear_search(self):
         """Clear search query."""
-        self.state.search_query = ""
+        self.state.set_search("")
         self.refresh_view()
 
     def apply_filters(self, show_transfers: bool, show_hidden: bool):
