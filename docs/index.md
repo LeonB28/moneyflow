@@ -58,8 +58,8 @@ Select multiple transactions. Rename merchants or recategorize hundreds of trans
 </div>
 
 <div class="feature-card" markdown>
-### Smart Views
-Aggregate by merchant, category, group, or account. Drill down to individual transactions. Navigate time periods with arrow keys.
+### Smart Views & Drill-Down
+Aggregate by merchant, category, group, or account. Drill down and sub-group within any view—see your Amazon purchases by category, or your Groceries spending by merchant.
 </div>
 
 <div class="feature-card" markdown>
