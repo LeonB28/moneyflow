@@ -6,6 +6,7 @@ A keyboard-driven terminal UI for managing personal finance transactions. Design
 
 **Currently Supported Platforms:**
 - ✅ **Monarch Money** (full support)
+- ✅ **Amazon Purchases** (import and analyze purchase history)
 - ✅ **Demo Mode** (synthetic data for testing)
 - 🚧 Other platforms (YNAB, Lunch Money - planned)
 
@@ -39,8 +40,12 @@ uv run moneyflow
 # Try demo mode first (no account needed!)
 moneyflow --demo
 
-# Connect your finance account (currently supports Monarch Money)
+# Connect your Monarch Money account
 moneyflow
+
+# Analyze your Amazon purchase history
+moneyflow amazon import ~/Downloads/amazon-purchases.csv
+moneyflow amazon
 
 # Load only recent data for faster startup
 moneyflow --year 2025
@@ -79,6 +84,46 @@ moneyflow --year 2025
 - ✅ Hide from reports
 
 > **New to Monarch Money?** [Sign up here](https://www.monarchmoney.com/) and experience the best personal finance platform for power users.
+
+### Amazon Purchases (Supported ✅)
+
+Analyze your Amazon purchase history with the same powerful TUI. Import CSV files from your personal Amazon purchase tracking or Amazon's official order history exports.
+
+**Features:**
+- ✅ Import CSV purchase data with automatic deduplication
+- ✅ Category normalization and management
+- ✅ View purchases by Item, Category, or time period
+- ✅ Edit item names and categories
+- ✅ Track quantity and price per item
+- ✅ SQLite storage (no cloud dependencies)
+
+**Getting started:**
+```bash
+# Import your Amazon purchase CSV
+moneyflow amazon import ~/Downloads/amazon-purchases.csv
+
+# View import status
+moneyflow amazon status
+
+# Launch the UI
+moneyflow amazon
+
+# Use a custom database location
+moneyflow amazon --db-path ~/my-amazon-data.db
+```
+
+**Expected CSV format:**
+```csv
+Order Date,Title,Category,Quantity,Item Total
+01/15/2024,Python Crash Course,Books,1,39.99
+01/20/2024,USB-C Cable,Electronics,2,15.99
+```
+
+**Features:**
+- Automatic duplicate detection (safe to re-import)
+- Category normalization (handles typos and variants)
+- Incremental imports (preserves manual edits)
+- Same powerful UI as Monarch mode
 
 ### Other Platforms (Coming Soon)
 
