@@ -110,6 +110,7 @@ nav:
     - Editing Transactions: guide/editing.md
     - Time Navigation: guide/time-navigation.md
     - Filters & Search: guide/filters.md
+    - Amazon Mode: guide/amazon-mode.md
   - Configuration:
     - Credentials: config/credentials.md
     - Caching: config/caching.md

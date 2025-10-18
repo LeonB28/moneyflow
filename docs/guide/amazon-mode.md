@@ -24,7 +24,7 @@ moneyflow amazon import ~/Downloads/amazon-purchases.csv
 
 The import will:
 - Parse the CSV and validate data
-- Normalize category names (e.g., "BOoks" í "Books")
+- Normalize category names (e.g., "BOoks" ‚Üí "Books")
 - Detect and skip duplicates
 - Calculate price per item
 - Store everything in SQLite
@@ -103,9 +103,9 @@ moneyflow amazon import purchases.csv
 ### Category Normalization
 
 Common category variants are automatically normalized:
-- `BOoks` í `Books`
-- `VIdeo Game` í `Video Game`
-- `Office Products` í `Office Product`
+- `BOoks` ‚Üí `Books`
+- `VIdeo Game` ‚Üí `Video Game`
+- `Office Products` ‚Üí `Office Product`
 
 This ensures consistent categorization even if your CSV has typos or variants.
 
@@ -143,7 +143,7 @@ Amazon mode uses the same keyboard shortcuts as Monarch mode:
 - `y` - Current year
 - `t` - Current month
 - `a` - All time
-- `ê/í` - Previous/next period
+- `‚Üê/‚Üí` - Previous/next period
 
 ### Editing
 - `m` - Edit item name
@@ -261,4 +261,4 @@ moneyflow amazon import ~/path/to/purchases.csv
 
 ## Questions?
 
-See the main [README](../../README.md) or [open an issue](https://github.com/wesm/moneyflow/issues).
+See the main [documentation](../index.md) or [open an issue](https://github.com/wesm/moneyflow/issues).
