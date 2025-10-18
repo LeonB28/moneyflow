@@ -753,6 +753,43 @@ class MoneyflowApp(App):
         """Update loading progress message."""
         self.status_message = f"{message} ({current}/{total})"
 
+    def _save_table_position(self) -> dict:
+        """
+        Save current table cursor and scroll position.
+
+        Returns:
+            Dict with cursor_row and scroll_y
+        """
+        try:
+            table = self.query_one("#data-table", DataTable)
+            return {
+                "cursor_row": table.cursor_row,
+                "scroll_y": table.scroll_y,
+            }
+        except Exception:
+            return {"cursor_row": 0, "scroll_y": 0}
+
+    def _restore_table_position(self, saved_position: dict) -> None:
+        """
+        Restore table cursor and scroll position after refresh.
+
+        Args:
+            saved_position: Dict from _save_table_position()
+        """
+        try:
+            table = self.query_one("#data-table", DataTable)
+            cursor_row = saved_position.get("cursor_row", 0)
+            scroll_y = saved_position.get("scroll_y", 0)
+
+            # Restore cursor (bounded by current row count)
+            if cursor_row < table.row_count:
+                table.move_cursor(row=cursor_row)
+
+            # Restore scroll position
+            table.scroll_y = scroll_y
+        except Exception:
+            pass  # Table might not be ready yet
+
     def refresh_view(self, force_rebuild: bool = True) -> None:
         """
         Refresh the current view based on state.
@@ -1032,9 +1069,8 @@ class MoneyflowApp(App):
             )
 
             if new_merchant:
-                # Save cursor position before refresh
-                table = self.query_one("#data-table", DataTable)
-                saved_cursor_row = table.cursor_row
+                # Save cursor and scroll position before refresh
+                saved_position = self._save_table_position()
 
                 # Get all transactions for this merchant
                 filtered_df = self.state.get_filtered_df()
@@ -1048,10 +1084,8 @@ class MoneyflowApp(App):
                 self._notify(NotificationHelper.edit_queued(count))
                 self.refresh_view()
 
-                # Try to restore cursor position
-                table = self.query_one("#data-table", DataTable)
-                if saved_cursor_row < table.row_count:
-                    table.move_cursor(row=saved_cursor_row)
+                # Restore cursor and scroll position
+                self._restore_table_position(saved_position)
         else:
             self.notify("Edit merchant only works from Merchant view", timeout=2)
 
@@ -1094,9 +1128,8 @@ class MoneyflowApp(App):
         )
 
         if new_merchant:
-            # Save cursor position before refresh
-            table = self.query_one("#data-table", DataTable)
-            saved_cursor_row = table.cursor_row
+            # Save cursor and scroll position before refresh
+            saved_position = self._save_table_position()
 
             # Queue edits for all transactions
             count = self.controller.queue_merchant_edits(all_txns, "multiple", new_merchant)
@@ -1105,10 +1138,8 @@ class MoneyflowApp(App):
             self._notify(NotificationHelper.edit_queued(count))
             self.refresh_view()
 
-            # Try to restore cursor position
-            table = self.query_one("#data-table", DataTable)
-            if saved_cursor_row < table.row_count:
-                table.move_cursor(row=saved_cursor_row)
+            # Restore cursor and scroll position
+            self._restore_table_position(saved_position)
 
     async def _edit_merchant_detail(self) -> None:
         """Edit merchant in detail view."""
@@ -1135,6 +1166,9 @@ class MoneyflowApp(App):
             )
 
             if new_merchant:
+                # Save cursor and scroll position before refresh
+                saved_position = self._save_table_position()
+
                 # Use controller helper to queue edits for all selected transactions
                 selected_txns = self.state.current_data.filter(
                     pl.col("id").is_in(list(self.state.selected_ids))
@@ -1147,6 +1181,9 @@ class MoneyflowApp(App):
                 self.notify(f"Queued {count} edits. Press w to review and commit.", timeout=3)
                 # Refresh to update the * markers but stay in current view
                 self.refresh_view()
+
+                # Restore cursor and scroll position
+                self._restore_table_position(saved_position)
         else:
             # Edit single transaction - pass details for context
             txn_details = {
@@ -1161,8 +1198,8 @@ class MoneyflowApp(App):
             )
 
             if new_merchant:
-                # Save cursor position before refresh
-                saved_cursor_row = table.cursor_row
+                # Save cursor and scroll position before refresh
+                saved_position = self._save_table_position()
 
                 # Use controller helper for consistency
                 txn_id = row_data["id"]
@@ -1172,9 +1209,9 @@ class MoneyflowApp(App):
                 self._notify(NotificationHelper.merchant_changed())
                 # Refresh to show * marker, stays in detail view since view_mode unchanged
                 self.refresh_view()
-                # Restore cursor position
-                if saved_cursor_row < table.row_count:
-                    table.move_cursor(row=saved_cursor_row)
+
+                # Restore cursor and scroll position
+                self._restore_table_position(saved_position)
 
     def action_edit_category(self) -> None:
         """Change category for current selection (works in aggregate and detail views)."""
@@ -1253,9 +1290,8 @@ class MoneyflowApp(App):
         if not new_category_id or (current_category_id and new_category_id == current_category_id):
             return
 
-        # Save cursor position before refresh
-        table = self.query_one("#data-table", DataTable)
-        saved_cursor_row = table.cursor_row
+        # Save cursor and scroll position before refresh
+        saved_position = self._save_table_position()
 
         # Get all transactions for this merchant/category/group
         filtered_df = self.state.get_filtered_df()
@@ -1272,10 +1308,8 @@ class MoneyflowApp(App):
         )
         self.refresh_view()
 
-        # Try to restore cursor position
-        table = self.query_one("#data-table", DataTable)
-        if saved_cursor_row < table.row_count:
-            table.move_cursor(row=saved_cursor_row)
+        # Restore cursor and scroll position
+        self._restore_table_position(saved_position)
 
     async def _bulk_edit_category_from_selected_groups(self) -> None:
         """Edit category for all transactions in all selected groups."""
@@ -1315,9 +1349,8 @@ class MoneyflowApp(App):
         if not new_category_id:
             return
 
-        # Save cursor position before refresh
-        table = self.query_one("#data-table", DataTable)
-        saved_cursor_row = table.cursor_row
+        # Save cursor and scroll position before refresh
+        saved_position = self._save_table_position()
 
         # Queue edits for all transactions
         count = self.controller.queue_category_edits(all_txns, new_category_id)
@@ -1330,10 +1363,8 @@ class MoneyflowApp(App):
         )
         self.refresh_view()
 
-        # Try to restore cursor position
-        table = self.query_one("#data-table", DataTable)
-        if saved_cursor_row < table.row_count:
-            table.move_cursor(row=saved_cursor_row)
+        # Restore cursor and scroll position
+        self._restore_table_position(saved_position)
 
     async def _edit_category(self) -> None:
         """Show category selection and apply (for detail view)."""
@@ -1362,6 +1393,9 @@ class MoneyflowApp(App):
                 )
 
                 if new_category_id:
+                    # Save cursor and scroll position before refresh
+                    saved_position = self._save_table_position()
+
                     # Use controller helper to queue edits for all selected transactions
                     selected_txns = self.state.current_data.filter(
                         pl.col("id").is_in(list(self.state.selected_ids))
@@ -1374,6 +1408,9 @@ class MoneyflowApp(App):
                         timeout=3,
                     )
                     self.refresh_view()
+
+                    # Restore cursor and scroll position
+                    self._restore_table_position(saved_position)
             else:
                 # Single transaction edit_category
                 # Pass transaction details for context
@@ -1392,8 +1429,8 @@ class MoneyflowApp(App):
                 )
 
                 if new_category_id:
-                    # Save cursor position before refresh
-                    saved_cursor_row = table.cursor_row
+                    # Save cursor and scroll position before refresh
+                    saved_position = self._save_table_position()
 
                     # Use controller helper to queue edit for single transaction
                     txn_id = row_data["id"]
@@ -1403,9 +1440,9 @@ class MoneyflowApp(App):
                     self.notify("Category changed. Press w to review and commit.", timeout=2)
                     # Refresh to show * marker, stays in detail view since view_mode unchanged
                     self.refresh_view()
-                    # Restore cursor position
-                    if saved_cursor_row < table.row_count:
-                        table.move_cursor(row=saved_cursor_row)
+
+                    # Restore cursor and scroll position
+                    self._restore_table_position(saved_position)
         else:
             self.notify("Edit Category only works in transaction detail view", timeout=2)
 
