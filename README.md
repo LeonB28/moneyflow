@@ -2,15 +2,15 @@
 
 **Track your moneyflow from the terminal.**
 
-A keyboard-driven terminal UI for managing personal finance transactions. Designed for users who prefer efficiency and direct control over their financial data.
+A keyboard-driven terminal UI for managing personal finance transactions. Built for users who prefer efficiency and direct control over their financial data.
 
-**Currently Supported Platforms:**
+**Supported Platforms:**
 - ✅ **Monarch Money** (full support)
 - ✅ **Amazon Purchases** (import and analyze purchase history)
 - ✅ **Demo Mode** (synthetic data for testing)
 - 🚧 Other platforms (YNAB, Lunch Money - planned)
 
-**Disclaimer**: This is an independent open-source project and is **not affiliated with, endorsed by, or connected to Monarch Money, Inc.** Monarch Money is a trademark of Monarch Money, Inc.
+**Disclaimer**: Independent open-source project. Not affiliated with or endorsed by Monarch Money, Inc.
 
 ## Installation
 
@@ -53,62 +53,51 @@ moneyflow --year 2025
 
 ## Features
 
-- **Keyboard-driven**: Vim-inspired keyboard shortcuts (hjkl, Enter to drill down, Esc to go back)
-- **Aggregated views**: View spending by Merchant, Category, or Category Group
-- **Bulk editing**: Multi-select transactions with Space and batch update merchant names or categories
-- **Type-to-search**: Filter categories and merchants as you type
-- **Offline-first**: Fetch all data once, edit locally, then commit changes back
-- **Time navigation**: Navigate between months and years with arrow keys
-- **Review before commit**: See all pending changes before syncing to your account
+- **Keyboard-driven**: Vim-inspired navigation (hjkl, Enter to drill down, Esc to go back)
+- **Aggregated views**: Group by merchant, category, or account
+- **Bulk editing**: Multi-select with Space and batch update merchant names or categories
+- **Type-to-search**: Filter as you type
+- **Offline-first**: Download once, edit locally, commit changes when ready
+- **Time navigation**: Switch between months and years with arrow keys
+- **Review before commit**: Preview all changes before syncing
 - **Encrypted credentials**: AES-128 encryption with PBKDF2 key derivation (100,000 iterations)
-- **Pluggable backends**: Extensible architecture supports multiple finance platforms
+- **Pluggable backends**: Extensible architecture for multiple platforms
 
 ## Supported Platforms
 
-### Monarch Money (Fully Supported ✅)
+### Monarch Money
 
-**[Monarch Money](https://www.monarchmoney.com/)** is a modern personal finance platform with powerful features and beautiful design. moneyflow provides full integration with Monarch Money's API.
+[Monarch Money](https://www.monarchmoney.com/) is a modern personal finance platform. moneyflow provides full integration with Monarch's API, combining their excellent web/mobile interface with keyboard-driven power-user workflows.
 
-**Why Monarch Money + moneyflow is perfect:**
-- **Best of both worlds**: Monarch's excellent web/mobile app + moneyflow's keyboard-driven power-user workflows
-- **Bulk operations**: Fix dozens of merchant names or recategorize hundreds of transactions in seconds
-- **Offline speed**: Download once, work locally, commit when ready
-- **All features supported**: Full transaction editing, categories, merchant names, hiding from reports
+**Supported operations:**
+- Bulk transaction editing (merchant names, categories)
+- Multi-select operations
+- Advanced search and filtering
+- Time-based navigation
+- Duplicate detection
+- Hide from reports
 
-**Features supported:**
-- ✅ Bulk transaction editing (merchant names, categories)
-- ✅ Multi-select operations
-- ✅ Advanced search and filtering
-- ✅ Time-based navigation and analysis
-- ✅ Duplicate transaction detection
-- ✅ Hide from reports
+### Amazon Purchases
 
-> **New to Monarch Money?** [Sign up here](https://www.monarchmoney.com/) and experience the best personal finance platform for power users.
-
-### Amazon Purchases (Supported ✅)
-
-Analyze your Amazon purchase history with the same powerful TUI. Import CSV files from your personal Amazon purchase tracking or Amazon's official order history exports.
+Analyze Amazon purchase history with the same interface. Import CSV files from your personal tracking or Amazon's order history exports.
 
 **Features:**
-- ✅ Import CSV purchase data with automatic deduplication
-- ✅ Category normalization and management
-- ✅ View purchases by Item, Category, or time period
-- ✅ Edit item names and categories
-- ✅ Track quantity and price per item
-- ✅ SQLite storage (no cloud dependencies)
+- Import CSV with automatic deduplication
+- Category normalization
+- View by item, category, or time period
+- Edit item names and categories
+- Track quantity and price per item
+- SQLite storage (no cloud dependencies)
 
 **Getting started:**
 ```bash
-# Import your Amazon purchase CSV
+# Import your CSV
 moneyflow amazon import ~/Downloads/amazon-purchases.csv
-
-# View import status
-moneyflow amazon status
 
 # Launch the UI
 moneyflow amazon
 
-# Use a custom database location
+# Use custom database location
 moneyflow amazon --db-path ~/my-amazon-data.db
 ```
 
@@ -119,79 +108,44 @@ Order Date,Title,Category,Quantity,Item Total
 01/20/2024,USB-C Cable,Electronics,2,15.99
 ```
 
-**Features:**
-- Automatic duplicate detection (safe to re-import)
-- Category normalization (handles typos and variants)
-- Incremental imports (preserves manual edits)
-- Same powerful UI as Monarch mode
-
-### Other Platforms (Coming Soon)
-
-moneyflow uses a pluggable backend architecture. Support for additional platforms is planned:
-
-- 🚧 **YNAB** (You Need A Budget) - planned
-- 🚧 **Lunch Money** - planned
-- 🚧 **Custom backends** - contribute your own!
-
-Want to help add support for your platform? See [CLAUDE.md](CLAUDE.md) for development docs.
-
 ### Demo Mode
+
 Try the application without any account:
 
 ```bash
 moneyflow --demo
 ```
 
-Demo mode provides:
-- **No authentication required** - skips credential setup
-- **Realistic synthetic data** - ~1000 transactions for a dual-income household
-- **Safe exploration** - changes don't affect any real account
-- **All features enabled** - edit, search, categorize, filter, etc.
+- No authentication required
+- Realistic synthetic data (~1000 transactions for dual-income household)
+- Safe exploration (changes don't affect real accounts)
+- All features enabled
 
-Perfect for:
-- Trying before signing up for a finance platform
-- Learning the interface
-- Showcasing features
-- Development without affecting real data
+Perfect for learning the interface or showcasing features.
 
-## Development Setup
+### Other Platforms (Planned)
 
-If you want to contribute or modify the code:
-
-```bash
-# Clone the repository
-git clone https://github.com/wesm/moneyflow.git
-cd moneyflow
-
-# Install dependencies
-uv sync
-
-# Run from source
-uv run moneyflow
-
-# Run tests
-uv run pytest
-```
+moneyflow uses a pluggable backend architecture. Planned platforms:
+- 🚧 YNAB (You Need A Budget)
+- 🚧 Lunch Money
+- 🚧 Custom backends (contributions welcome)
 
 ## CLI Options
 
-By default, moneyflow fetches **all transactions** from your account. For large accounts or quick monthly reviews, you can limit the data range:
+By default, moneyflow fetches all transactions. For faster startup, limit the data range:
 
-**Load current month only (fastest):**
+**Current month only:**
 ```bash
-# Month-to-date: Load from 1st of current month to today
 moneyflow --mtd
 ```
 
-**Fetch only recent years:**
+**Recent years:**
 ```bash
-# Only load transactions from 2025 onwards
 moneyflow --year 2025
 ```
 
-**Fetch from a specific date:**
+**From specific date:**
 ```bash
-# Load transactions from June 1, 2024 onwards
 moneyflow --since 2024-06-01
 ```
 
@@ -204,20 +158,17 @@ moneyflow --cache
 moneyflow --refresh
 ```
 
-**View all options:**
+**All options:**
 ```bash
 moneyflow --help
 ```
 
-**Note**: Limiting the date range reduces initial load time but you won't see older transactions in your analysis.
+## First Run Setup (Monarch Money)
 
-### First Run Setup (Monarch Money)
+On first run, moneyflow will guide you through credential setup:
 
-On first run with Monarch Money, the TUI will walk you through credential setup:
-
-1. **Get your 2FA secret** (before you start):
-   - Log into Monarch Money on the web
-   - Go to Settings → Security
+1. **Get your 2FA secret** (before starting):
+   - Log into Monarch Money → Settings → Security
    - Disable and re-enable 2FA
    - Click "Can't scan?" to view the secret key
    - Copy the BASE32 secret (e.g., `JBSWY3DPEHPK3PXP`)
@@ -227,7 +178,7 @@ On first run with Monarch Money, the TUI will walk you through credential setup:
    - Your 2FA secret key
    - A new encryption password (for moneyflow only)
 
-3. **Done!** Next time you launch, just enter your encryption password.
+3. **Done!** Next time, just enter your encryption password.
 
 Your credentials are encrypted with AES-128 and stored in `~/.moneyflow/credentials.enc`.
 
@@ -235,57 +186,43 @@ Your credentials are encrypted with AES-128 and stored in `~/.moneyflow/credenti
 
 ## Time Navigation
 
-moneyflow downloads all transactions once, then filters client-side for fast switching between time periods.
+moneyflow downloads all transactions once, then filters client-side for instant switching.
 
 **Keyboard shortcuts:**
-- `y` - View current year
-- `t` - View current month
-- `a` - View all time
-- `1-9` - View specific months (1=Jan, 2=Feb, etc.)
-- `←` / `→` - Navigate to previous/next period
-
-**Workflow:**
-```
-1. Launch TUI (downloads all transactions, may take 1-2 minutes for large accounts)
-2. Default view: Current year
-3. Press 't' to switch to current month
-4. Press '←' to view previous month
-5. Press 'y' to return to year view
-6. Press 'a' to view all time
-```
-
-Time period changes are applied instantly using client-side filtering.
+- `y` - Current year
+- `t` - Current month
+- `a` - All time
+- `1-9` - Specific months (1=Jan, 2=Feb, etc.)
+- `←` / `→` - Previous/next period
 
 ## Usage Examples
 
-### Example 1: Clean Up Merchant Names
+### Clean Up Merchant Names
 
 ```
 1. Launch: moneyflow
 2. Press 'g' to cycle to merchants view
-3. Navigate to a merchant with arrow keys (e.g., "AMZN*ABC123")
+3. Navigate to a merchant (e.g., "AMZN*ABC123")
 4. Press 'm' to edit all transactions for that merchant
-5. Type the clean name (e.g., "Amazon") and press Enter
-6. Press 'w' to review changes
-7. Press 'Enter' to commit changes
+5. Type clean name (e.g., "Amazon") and press Enter
+6. Press 'w' to review, then Enter to commit
 ```
 
-### Example 2: Bulk Edit Categories
+### Bulk Edit Categories
 
 ```
 1. Press 'u' to view all transactions
 2. Press Space to select multiple transactions (shows ✓)
 3. Press 'c' to edit category
-4. Type to filter categories, press Enter to select
-5. Press 'w' to review all pending changes
-6. Press 'Enter' to commit to your account
+4. Type to filter, press Enter to select
+5. Press 'w' to review, then Enter to commit
 ```
 
-### Example 3: Monthly Spending Review
+### Monthly Spending Review
 
 ```
-1. Press 't' to view current month
-2. Press 'c' to group by category
+1. Press 't' for current month
+2. Press 'g' to group by category
 3. Press Enter on a category to see transactions
 4. Review and edit as needed
 5. Press '←' to view previous month
@@ -297,29 +234,23 @@ Time period changes are applied instantly using client-side filtering.
 - `g`: Cycle grouping (Merchant → Category → Group → Account)
 - `u`: All transactions (ungrouped)
 - `D`: Find duplicates
-- `c`: Categories (direct)
-- `A`: Accounts (direct)
 
-### Time Navigation
+### Time
 - `y`: Current year
 - `t`: Current month
 - `a`: All time
-- `1-9`: Specific months (1=Jan, 2=Feb, etc.)
 - `←` / `→`: Previous/next period
 
-### Editing (in detail view)
-- `m`: Edit merchant name
+### Editing (detail view)
+- `m`: Edit merchant
 - `c`: Edit category
 - `h`: Hide/unhide from reports
-- `d`: Delete transaction
 - `Space`: Multi-select
-- `i`: View transaction details
-
-### Sorting
-- `s`: Toggle count/amount
-- `v`: Reverse order
+- `i`: View details
 
 ### Other
+- `s`: Toggle sort (count/amount)
+- `v`: Reverse sort order
 - `f`: Filters (transfers, hidden items)
 - `w`: Review and commit changes
 - `q`: Quit
@@ -327,111 +258,70 @@ Time period changes are applied instantly using client-side filtering.
 
 ## Architecture
 
-### Pluggable Backend System
-The application uses a backend abstraction layer, allowing support for multiple finance platforms:
+### Backend System
+- Abstract base class defines required methods
+- Monarch Backend: GraphQL API implementation
+- Demo Backend: Synthetic data generator
+- Extensible for YNAB, Lunch Money, or custom platforms
 
-- **Backend Interface**: Abstract base class defines required methods
-- **Monarch Backend**: Implementation for Monarch Money GraphQL API
-- **Demo Backend**: Synthetic data for testing
-- **Future**: Easy to add YNAB, Lunch Money, or other platforms
-
-### Technology Stack
-- **Polars**: Fast data aggregation and filtering
+### Technology
+- **Polars**: Fast data aggregation
 - **Textual**: Terminal UI framework
-- **Python 3.11+**: Required runtime
-- **Parquet**: Optional caching format (when --cache used)
+- **Python 3.11+**: Required
+- **Parquet**: Caching format (when --cache used)
 
-## Performance
-
+### Performance
 - Fetches all transactions on startup (1000 per batch)
-- Aggregations performed locally using Polars (instant filtering and grouping)
-- Updates committed in parallel to backend API for speed
+- Local aggregations using Polars (instant filtering/grouping)
+- Parallel API updates for speed
 
 ## Troubleshooting
 
-### "ModuleNotFoundError" when running
+### ModuleNotFoundError
 
-**Problem**: You see errors like `ModuleNotFoundError: No module named 'textual'`
-
-**Solution**: Reinstall moneyflow:
+**Solution**: Reinstall dependencies
 ```bash
 pip install --upgrade moneyflow
-```
-
-Or if running from source:
-```bash
-cd moneyflow
-uv sync
+# Or from source: uv sync
 ```
 
 ### "uv: command not found"
 
-**Problem**: After installing uv, the terminal says it can't find the command
-
-**Solution**: Restart your terminal, or manually add uv to your PATH:
+**Solution**: Restart terminal or add to PATH:
 ```bash
-# macOS/Linux - add to ~/.bashrc or ~/.zshrc
 export PATH="$HOME/.cargo/bin:$PATH"
 source ~/.bashrc  # or ~/.zshrc
 ```
 
 ### Login fails with "Incorrect password"
 
-**Problem**: The TUI says "Incorrect password" when trying to unlock credentials
-
 **Solutions**:
-1. Make sure you're entering the **encryption password** (the one you created for moneyflow), not your Monarch Money password
-2. If you forgot it, click "Reset Credentials" and go through setup again
-3. If setup fails, you can manually delete: `rm -rf ~/.moneyflow/`
+1. Enter the **encryption password** (moneyflow password), not Monarch password
+2. If forgotten, click "Reset Credentials"
+3. Manually delete: `rm -rf ~/.moneyflow/`
 
 ### 2FA/TOTP secret not working
 
-**Problem**: Login fails even with correct credentials
-
 **Solutions**:
-1. Make sure you copied the **BASE32 secret** (the long string like `JBSWY3DPEHPK3PXP`), not the QR code
-2. Remove any spaces from the secret key
-3. Get a fresh secret by disabling and re-enabling 2FA in Monarch Money settings
+1. Copy the **BASE32 secret** (long string like `JBSWY3DPEHPK3PXP`), not QR code
+2. Remove any spaces from the secret
+3. Get fresh secret by disabling/re-enabling 2FA
 
-### Terminal displays weird characters or colors
+### Terminal displays weird characters
 
-**Problem**: The UI looks broken with strange characters
-
-**Solution**: Use a modern terminal emulator that supports Unicode and ANSI colors:
-- **macOS**: Terminal.app (built-in) or [iTerm2](https://iterm2.com/)
+**Solution**: Use a modern terminal with Unicode and ANSI support:
+- **macOS**: Terminal.app or [iTerm2](https://iterm2.com/)
 - **Linux**: GNOME Terminal, Alacritty, or Kitty
 - **Windows**: [Windows Terminal](https://apps.microsoft.com/store/detail/windows-terminal/9N0DX20HK701)
 
-### "Cannot import name 'PBKDF2HMAC'"
+### Complete reset
 
-**Problem**: Error about cryptography imports
-
-**Solution**: Your dependencies are out of date. Run:
 ```bash
-uv sync --reinstall
-```
-
-### The TUI is blank or frozen after login
-
-**Problem**: TUI launches but nothing shows up after entering credentials
-
-**Solution**: This may be a data loading issue. Try:
-1. Check your internet connection
-2. Check the terminal size (make it larger)
-3. Wait 30 seconds for data to load
-4. Run with `--dev` flag to see error messages: `moneyflow --dev`
-
-### I want to start over completely
-
-To completely reset:
-```bash
-# Delete all stored data
+# Delete all data
 rm -rf ~/.moneyflow/
-
-# Delete session
 rm -rf .mm/
 
-# Reinstall (if installed from PyPI)
+# Reinstall
 pip install --upgrade --force-reinstall moneyflow
 
 # Run again
@@ -440,31 +330,51 @@ moneyflow
 
 ## Getting Help
 
-- **Bug Reports**: [Open an issue on GitHub](https://github.com/wesm/moneyflow/issues)
+- **Bug Reports**: [GitHub Issues](https://github.com/wesm/moneyflow/issues)
 - **Questions**: Check existing issues or open a new one
-- **Development**: See [CLAUDE.md](CLAUDE.md) for development documentation
 
 ## Security
 
-- Credentials are encrypted with AES-128 using PBKDF2 (100,000 iterations)
+- Credentials encrypted with AES-128 using PBKDF2 (100,000 iterations)
 - Encryption password never leaves your machine
 - Stored in `~/.moneyflow/credentials.enc` with 600 permissions (owner-only)
-- See [SECURITY.md](SECURITY.md) for full security documentation
+- See [SECURITY.md](SECURITY.md) for details
 
 ## Contributing
 
-Contributions welcome! See [CLAUDE.md](CLAUDE.md) for:
-- Development setup
-- Test-driven development workflow
-- Code style guidelines
-- How to run tests
+Contributions welcome! This project uses:
+- **uv** for dependency management: `uv sync`
+- **pytest** for testing: `uv run pytest`
+- **pyright** for type checking: `uv run pyright moneyflow/`
+- **ruff** for linting/formatting: `uv run ruff check moneyflow/`
+
+Development workflow:
+```bash
+# Clone and setup
+git clone https://github.com/wesm/moneyflow.git
+cd moneyflow
+uv sync
+
+# Run tests (must pass before committing)
+uv run pytest
+
+# Type check
+uv run pyright moneyflow/
+
+# Format and lint
+uv run ruff format moneyflow/ tests/
+uv run ruff check moneyflow/ tests/
+
+# Run from source
+uv run moneyflow --demo
+```
 
 ## Acknowledgments
 
 ### Monarch Money Integration
 This project's Monarch Money backend uses code derived from the [monarchmoney](https://github.com/hammem/monarchmoney) Python client library by hammem, used under the MIT License. See [licenses/monarchmoney-LICENSE](licenses/monarchmoney-LICENSE) for details.
 
-Monarch Money® is a trademark of Monarch Money, Inc. This project is an independent tool and is not affiliated with, endorsed by, or officially connected to Monarch Money, Inc.
+Monarch Money® is a trademark of Monarch Money, Inc. This project is independent and not affiliated with, endorsed by, or officially connected to Monarch Money, Inc.
 
 ## License
 

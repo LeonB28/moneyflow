@@ -81,7 +81,7 @@ moneyflow/
 │   ├── screens/                 # UI screens and modals
 │   ├── widgets/                 # Custom UI widgets
 │   └── styles/                  # Textual CSS
-├── tests/                       # Test suite (465+ tests)
+├── tests/                       # Test suite (744 tests)
 │   ├── conftest.py              # Pytest fixtures
 │   ├── mock_backend.py          # Mock MonarchMoney API
 │   ├── test_state.py            # State management tests
