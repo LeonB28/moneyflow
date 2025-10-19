@@ -1720,10 +1720,14 @@ class MoneyflowApp(App):
         """Show review screen and commit if confirmed."""
         logger = get_logger(__name__)
 
-        # Save view state before showing review screen
+        # Save view state AND table position before showing review screen
         saved_state = self.state.save_view_state()
+        saved_table_position = self._save_table_position()
         logger.debug(
             f"Saved view state: view_mode={saved_state['view_mode']}, selected_category={saved_state.get('selected_category')}"
+        )
+        logger.debug(
+            f"Saved table position: cursor_row={saved_table_position['cursor_row']}, scroll_y={saved_table_position['scroll_y']}"
         )
 
         # Show review screen with category names for readable display
@@ -1741,6 +1745,8 @@ class MoneyflowApp(App):
                 f"After restore: view_mode={self.state.view_mode}, selected_category={self.state.selected_category}"
             )
             self.refresh_view(force_rebuild=False)
+            # Restore table position after refresh
+            self._restore_table_position(saved_table_position)
 
             count = len(self.data_manager.pending_edits)
             self._notify(NotificationHelper.commit_starting(count))
@@ -1771,14 +1777,20 @@ class MoneyflowApp(App):
                     saved_state=saved_state,
                     cache_filters=cache_filters,
                 )
+                # Restore table position after commit completes
+                self._restore_table_position(saved_table_position)
             except Exception as e:
                 self._notify(NotificationHelper.commit_error(str(e)))
                 # View already restored above, just refresh to show current state
                 self.refresh_view(force_rebuild=False)
+                # Restore table position after error refresh
+                self._restore_table_position(saved_table_position)
         else:
             # User pressed Escape - restore view state and refresh to go back to where they were
             self.state.restore_view_state(saved_state)
             self.refresh_view(force_rebuild=False)
+            # Restore table position after cancel
+            self._restore_table_position(saved_table_position)
 
     def action_quit_app(self) -> None:
         """Quit the application - show confirmation first."""
