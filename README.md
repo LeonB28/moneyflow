@@ -192,7 +192,6 @@ moneyflow downloads all transactions once, then filters client-side for instant 
 - `y` - Current year
 - `t` - Current month
 - `a` - All time
-- `1-9` - Specific months (1=Jan, 2=Feb, etc.)
 - `←` / `→` - Previous/next period
 
 ## Usage Examples
