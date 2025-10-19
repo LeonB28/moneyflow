@@ -9,10 +9,11 @@ These tests ensure that the retry mechanism handles:
 - Auth error detection and session refresh
 """
 
-import pytest
 import asyncio
-from datetime import datetime
-from moneyflow.retry_logic import retry_with_backoff, RetryAborted
+
+import pytest
+
+from moneyflow.retry_logic import RetryAborted, retry_with_backoff
 
 
 class TestRetryLogic:
@@ -31,7 +32,7 @@ class TestRetryLogic:
             operation=successful_operation,
             operation_name="Test operation",
             max_retries=3,
-            initial_wait=0.1  # Fast for testing
+            initial_wait=0.1,  # Fast for testing
         )
 
         assert result == "success"
@@ -52,7 +53,7 @@ class TestRetryLogic:
             operation=flaky_operation,
             operation_name="Flaky operation",
             max_retries=3,
-            initial_wait=0.01  # Fast for testing
+            initial_wait=0.01,  # Fast for testing
         )
 
         assert result == "success after retry"
@@ -73,7 +74,7 @@ class TestRetryLogic:
             operation=very_flaky_operation,
             operation_name="Very flaky operation",
             max_retries=5,
-            initial_wait=0.01  # Fast for testing
+            initial_wait=0.01,  # Fast for testing
         )
 
         assert result == "finally succeeded"
@@ -93,7 +94,7 @@ class TestRetryLogic:
                 operation=always_failing_operation,
                 operation_name="Always failing",
                 max_retries=3,
-                initial_wait=0.01
+                initial_wait=0.01,
             )
 
         assert call_count[0] == 3  # All 3 attempts made
@@ -114,12 +115,14 @@ class TestRetryLogic:
         async def cancelling_operation():
             """Simulate user pressing Ctrl-C during retry wait."""
             # Start the retry operation
-            task = asyncio.create_task(retry_with_backoff(
-                operation=operation_that_gets_cancelled,
-                operation_name="Operation",
-                max_retries=5,
-                initial_wait=0.5  # Long enough to cancel
-            ))
+            task = asyncio.create_task(
+                retry_with_backoff(
+                    operation=operation_that_gets_cancelled,
+                    operation_name="Operation",
+                    max_retries=5,
+                    initial_wait=0.5,  # Long enough to cancel
+                )
+            )
 
             # Give it time to fail once and start waiting
             await asyncio.sleep(0.05)
@@ -158,7 +161,7 @@ class TestRetryLogic:
             operation_name="Backoff test",
             max_retries=5,
             initial_wait=0.05,  # 50ms for faster tests
-            on_retry=on_retry_callback
+            on_retry=on_retry_callback,
         )
 
         # Should have 3 retries (attempts 1, 2, 3)
@@ -166,8 +169,8 @@ class TestRetryLogic:
 
         # Check exponential backoff: 0.05s, 0.1s, 0.2s
         assert retry_times[0] == (1, 0.05)  # 0.05 * 2^0 = 0.05
-        assert retry_times[1] == (2, 0.1)   # 0.05 * 2^1 = 0.1
-        assert retry_times[2] == (3, 0.2)   # 0.05 * 2^2 = 0.2
+        assert retry_times[1] == (2, 0.1)  # 0.05 * 2^1 = 0.1
+        assert retry_times[2] == (3, 0.2)  # 0.05 * 2^2 = 0.2
 
     @pytest.mark.asyncio
     async def test_on_retry_callback_invoked(self):
@@ -189,7 +192,7 @@ class TestRetryLogic:
             operation_name="Test",
             max_retries=5,
             initial_wait=0.1,
-            on_retry=callback
+            on_retry=callback,
         )
 
         # Should have been called twice (after first and second failures)
@@ -213,7 +216,7 @@ class TestRetryLogic:
             operation_name="Test",
             max_retries=3,
             initial_wait=0.1,
-            on_retry=callback
+            on_retry=callback,
         )
 
         assert not callback_called[0]  # Should never be called
@@ -233,7 +236,7 @@ class TestRetryLogic:
             operation=auth_error_operation,
             operation_name="Auth test",
             max_retries=3,
-            initial_wait=0.01
+            initial_wait=0.01,
         )
 
         assert result == "success after auth"
@@ -251,10 +254,7 @@ class TestRetryLogic:
         # Test with max_retries=1
         with pytest.raises(Exception):
             await retry_with_backoff(
-                operation=always_fail,
-                operation_name="Test",
-                max_retries=1,
-                initial_wait=0.01
+                operation=always_fail, operation_name="Test", max_retries=1, initial_wait=0.01
             )
 
         assert call_count[0] == 1
@@ -263,10 +263,7 @@ class TestRetryLogic:
         call_count[0] = 0
         with pytest.raises(Exception):
             await retry_with_backoff(
-                operation=always_fail,
-                operation_name="Test",
-                max_retries=7,
-                initial_wait=0.01
+                operation=always_fail, operation_name="Test", max_retries=7, initial_wait=0.01
             )
 
         assert call_count[0] == 7
@@ -289,7 +286,7 @@ class TestRetryLogic:
                 operation_name="Test",
                 max_retries=2,
                 initial_wait=0.05,
-                on_retry=callback
+                on_retry=callback,
             )
 
         # Should have 1 retry (attempt 1)
@@ -300,6 +297,7 @@ class TestRetryLogic:
     async def test_actual_wait_occurs(self):
         """Test that retry actually waits (not just calculates wait time)."""
         import time
+
         call_count = [0]
         start_time = time.time()
 
@@ -313,7 +311,7 @@ class TestRetryLogic:
             operation=failing_operation,
             operation_name="Wait test",
             max_retries=2,
-            initial_wait=0.1  # 100ms wait
+            initial_wait=0.1,  # 100ms wait
         )
 
         elapsed = time.time() - start_time

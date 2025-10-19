@@ -9,7 +9,8 @@ This module contains the critical business logic for:
 All functions are fully typed and have no UI dependencies.
 """
 
-from typing import Optional, Callable
+from typing import Callable
+
 import polars as pl
 
 from .state import TransactionEdit

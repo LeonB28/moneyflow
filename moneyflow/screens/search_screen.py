@@ -1,9 +1,9 @@
 """Search screen with live filtering."""
 
 from textual.app import ComposeResult
+from textual.containers import Container
 from textual.events import Key
 from textual.screen import ModalScreen
-from textual.containers import Container
 from textual.widgets import Input, Label, Static
 
 

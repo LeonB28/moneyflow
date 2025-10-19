@@ -20,7 +20,9 @@ class BackendConfig:
     merchant_field_name: str = "Merchant"  # Can be "Item" for Amazon
 
     # Available grouping modes (in order for cycling with 'g' key)
-    grouping_modes: list[str] = field(default_factory=lambda: ["merchant", "category", "group", "account"])
+    grouping_modes: list[str] = field(
+        default_factory=lambda: ["merchant", "category", "group", "account"]
+    )
 
     # Amazon-specific display options
     show_quantity: bool = False
@@ -55,7 +57,7 @@ class BackendConfig:
             show_quantity=True,
             show_price_per_item=True,
             has_accounts=False,  # Amazon doesn't have accounts
-            has_groups=False,    # Amazon doesn't have groups (for now)
+            has_groups=False,  # Amazon doesn't have groups (for now)
         )
 
     @staticmethod

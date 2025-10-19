@@ -6,16 +6,16 @@ Uses Fernet symmetric encryption with a user-provided password.
 Supports multiple backends (Monarch Money, YNAB, etc.).
 """
 
+import base64
 import json
 import os
-from pathlib import Path
-from typing import Optional, Dict
 from getpass import getpass
+from pathlib import Path
+from typing import Dict, Optional
 
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-import base64
 
 
 class CredentialManager:
@@ -264,7 +264,7 @@ def setup_credentials_interactive() -> None:
     print("✓ Setup Complete!")
     print("=" * 70)
     print()
-    print(f"Your credentials are encrypted and stored at:")
+    print("Your credentials are encrypted and stored at:")
     print(f"  {manager.credentials_file}")
     print()
     print("Next steps:")

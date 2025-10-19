@@ -4,9 +4,11 @@ Tests for duplicate transaction detection.
 Critical to test thoroughly since deletion is potentially destructive.
 """
 
-import pytest
 from datetime import date
+
 import polars as pl
+import pytest
+
 from moneyflow.duplicate_detector import DuplicateDetector
 
 

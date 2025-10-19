@@ -6,7 +6,6 @@ Supports the personal CSV format with columns:
 Order Date, Title, Category, Quantity, Item Total, ...
 """
 
-import sqlite3
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
@@ -75,7 +74,7 @@ def import_amazon_csv(
             "Order Date": pl.Utf8,  # Read as string first (handle multiple formats)
             "Quantity": pl.Utf8,  # Read as string first
             "Item Total": pl.Utf8,  # Read as string first
-        }
+        },
     )
 
     # Validate required columns
@@ -86,38 +85,45 @@ def import_amazon_csv(
 
     # Data cleaning and transformation
     # Handle multiple date formats: MM/DD/YYYY, MM/DD/YY, and YYYY-MM-DD (ISO)
-    df = df.with_columns([
-        # Try ISO format first (YYYY-MM-DD)
-        pl.col("Order Date")
-        .str.strptime(pl.Date, "%Y-%m-%d", strict=False)
-        .alias("date_iso")
-    ])
+    df = df.with_columns(
+        [
+            # Try ISO format first (YYYY-MM-DD)
+            pl.col("Order Date").str.strptime(pl.Date, "%Y-%m-%d", strict=False).alias("date_iso")
+        ]
+    )
 
-    df = df.with_columns([
-        # Try MM/DD/YYYY
-        pl.col("Order Date")
-        .str.strptime(pl.Date, "%m/%d/%Y", strict=False)
-        .alias("date_4digit")
-    ])
+    df = df.with_columns(
+        [
+            # Try MM/DD/YYYY
+            pl.col("Order Date")
+            .str.strptime(pl.Date, "%m/%d/%Y", strict=False)
+            .alias("date_4digit")
+        ]
+    )
 
-    df = df.with_columns([
-        # Try MM/DD/YY
-        pl.col("Order Date")
-        .str.strptime(pl.Date, "%m/%d/%y", strict=False)
-        .alias("date_2digit")
-    ])
+    df = df.with_columns(
+        [
+            # Try MM/DD/YY
+            pl.col("Order Date")
+            .str.strptime(pl.Date, "%m/%d/%y", strict=False)
+            .alias("date_2digit")
+        ]
+    )
 
-    df = df.with_columns([
-        # Priority: ISO format > 4-digit year (if valid) > 2-digit year
-        # This handles mixed formats in the CSV
-        pl.coalesce([
-            "date_iso",
-            pl.when(pl.col("date_4digit").dt.year() >= 1900)
-            .then(pl.col("date_4digit"))
-            .otherwise(pl.col("date_2digit"))
-        ])
-        .alias("parsed_date")
-    ]).drop(["date_iso", "date_4digit", "date_2digit"])
+    df = df.with_columns(
+        [
+            # Priority: ISO format > 4-digit year (if valid) > 2-digit year
+            # This handles mixed formats in the CSV
+            pl.coalesce(
+                [
+                    "date_iso",
+                    pl.when(pl.col("date_4digit").dt.year() >= 1900)
+                    .then(pl.col("date_4digit"))
+                    .otherwise(pl.col("date_2digit")),
+                ]
+            ).alias("parsed_date")
+        ]
+    ).drop(["date_iso", "date_4digit", "date_2digit"])
 
     # Check for unparseable dates (both formats failed)
     unparseable = df.filter(pl.col("parsed_date").is_null())
@@ -131,16 +137,15 @@ def import_amazon_csv(
 
     # Strict validation: Reject dates before 2000 or more than 2 years in future
     from datetime import datetime
+
     current_year = datetime.now().year
 
-    df = df.with_columns([
-        pl.col("parsed_date").dt.strftime("%Y-%m-%d").alias("date")
-    ])
+    df = df.with_columns([pl.col("parsed_date").dt.strftime("%Y-%m-%d").alias("date")])
 
     # Validate date range
     invalid_dates = df.filter(
-        (pl.col("parsed_date").dt.year() < 2000) |
-        (pl.col("parsed_date").dt.year() > current_year + 2)
+        (pl.col("parsed_date").dt.year() < 2000)
+        | (pl.col("parsed_date").dt.year() > current_year + 2)
     )
 
     if len(invalid_dates) > 0:
@@ -153,45 +158,44 @@ def import_amazon_csv(
 
     df = df.drop("parsed_date")
 
-    df = df.with_columns([
-
-        # Merchant is the item title
-        pl.col("Title").alias("merchant"),
-
-        # Normalize and clean category
-        pl.col("Category").fill_null("Misc.").map_elements(
-            normalize_category, return_dtype=pl.Utf8
-        ).alias("category"),
-
-        # Convert quantity to integer (strict - will fail on invalid values)
-        pl.col("Quantity").cast(pl.Int64).alias("quantity"),
-
-        # Convert Item Total to float, removing $ and commas if present
-        pl.col("Item Total")
-        .str.replace_all(r"[\$,]", "")
-        .cast(pl.Float64, strict=False)
-        .fill_null(0.0)
-        .mul(-1.0)  # Negate for expenses
-        .alias("amount"),
-    ])
+    df = df.with_columns(
+        [
+            # Merchant is the item title
+            pl.col("Title").alias("merchant"),
+            # Normalize and clean category
+            pl.col("Category")
+            .fill_null("Misc.")
+            .map_elements(normalize_category, return_dtype=pl.Utf8)
+            .alias("category"),
+            # Convert quantity to integer (strict - will fail on invalid values)
+            pl.col("Quantity").cast(pl.Int64).alias("quantity"),
+            # Convert Item Total to float, removing $ and commas if present
+            pl.col("Item Total")
+            .str.replace_all(r"[\$,]", "")
+            .cast(pl.Float64, strict=False)
+            .fill_null(0.0)
+            .mul(-1.0)  # Negate for expenses
+            .alias("amount"),
+        ]
+    )
 
     # Calculate price per item
-    df = df.with_columns([
-        (pl.col("amount") / pl.col("quantity")).alias("price_per_item")
-    ])
+    df = df.with_columns([(pl.col("amount") / pl.col("quantity")).alias("price_per_item")])
 
     # Filter out invalid rows (quantity <= 0)
     df = df.filter(pl.col("quantity") > 0)
 
     # Select only the columns we need
-    df = df.select([
-        "date",
-        "merchant",
-        "category",
-        "quantity",
-        "amount",
-        "price_per_item",
-    ])
+    df = df.select(
+        [
+            "date",
+            "merchant",
+            "category",
+            "quantity",
+            "amount",
+            "price_per_item",
+        ]
+    )
 
     total_rows = len(df)
     imported_count = 0
@@ -223,8 +227,7 @@ def import_amazon_csv(
 
     # Get category IDs mapping
     category_id_map = {
-        row[1]: row[0]
-        for row in conn.execute("SELECT id, name FROM categories").fetchall()
+        row[1]: row[0] for row in conn.execute("SELECT id, name FROM categories").fetchall()
     }
 
     # Import transactions
@@ -238,9 +241,7 @@ def import_amazon_csv(
         )
 
         # Check if transaction already exists
-        existing = conn.execute(
-            "SELECT id FROM transactions WHERE id = ?", (txn_id,)
-        ).fetchone()
+        existing = conn.execute("SELECT id FROM transactions WHERE id = ?", (txn_id,)).fetchone()
 
         if existing and not force:
             duplicate_count += 1
@@ -254,49 +255,58 @@ def import_amazon_csv(
 
         if existing and force:
             # Update existing transaction
-            conn.execute("""
+            conn.execute(
+                """
                 UPDATE transactions
                 SET date = ?, merchant = ?, category = ?, category_id = ?,
                     amount = ?, quantity = ?, price_per_item = ?, notes = ?
                 WHERE id = ?
-            """, (
-                row["date"],
-                row["merchant"],
-                row["category"],
-                category_id,
-                row["amount"],
-                row["quantity"],
-                row["price_per_item"],
-                notes,
-                txn_id,
-            ))
+            """,
+                (
+                    row["date"],
+                    row["merchant"],
+                    row["category"],
+                    category_id,
+                    row["amount"],
+                    row["quantity"],
+                    row["price_per_item"],
+                    notes,
+                    txn_id,
+                ),
+            )
             duplicate_count += 1
         else:
             # Insert new transaction
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT INTO transactions
                 (id, date, merchant, category, category_id, amount, quantity,
                  price_per_item, notes, hideFromReports)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
-            """, (
-                txn_id,
-                row["date"],
-                row["merchant"],
-                row["category"],
-                category_id,
-                row["amount"],
-                row["quantity"],
-                row["price_per_item"],
-                notes,
-            ))
+            """,
+                (
+                    txn_id,
+                    row["date"],
+                    row["merchant"],
+                    row["category"],
+                    category_id,
+                    row["amount"],
+                    row["quantity"],
+                    row["price_per_item"],
+                    notes,
+                ),
+            )
             imported_count += 1
 
     # Record import in history
     filename = Path(csv_path).name
-    conn.execute("""
+    conn.execute(
+        """
         INSERT INTO import_history (filename, record_count, duplicate_count)
         VALUES (?, ?, ?)
-    """, (filename, imported_count, duplicate_count))
+    """,
+        (filename, imported_count, duplicate_count),
+    )
 
     conn.commit()
     conn.close()
@@ -309,7 +319,9 @@ def import_amazon_csv(
     }
 
 
-def get_category_statistics(backend: Optional[AmazonBackend] = None) -> Dict[str, Tuple[int, float]]:
+def get_category_statistics(
+    backend: Optional[AmazonBackend] = None,
+) -> Dict[str, Tuple[int, float]]:
     """
     Get spending statistics by category.
 

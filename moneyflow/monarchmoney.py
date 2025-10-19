@@ -17,12 +17,11 @@ import json
 import os
 import pickle
 import time
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Union
 
 import oathtool
 from aiohttp import ClientSession, FormData
-from aiohttp.client import DEFAULT_TIMEOUT
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 from graphql import DocumentNode
@@ -2917,10 +2916,10 @@ class MonarchMoney(object):
                             raise LoginFailedException(f"HTTP Code {resp.status}: {resp.reason}")
 
                     response = await resp.json()
-                    print(f"[DEBUG] Login response received, setting token", file=sys.stderr)
+                    print("[DEBUG] Login response received, setting token", file=sys.stderr)
                     self.set_token(response["token"])
                     self._headers["Authorization"] = f"Token {self._token}"
-                    print(f"[DEBUG] Login successful", file=sys.stderr)
+                    print("[DEBUG] Login successful", file=sys.stderr)
         except (RequireMFAException, LoginFailedException):
             # Re-raise known exceptions as-is
             raise
@@ -2928,7 +2927,7 @@ class MonarchMoney(object):
             # Wrap any other exception with context
             import traceback
 
-            print(f"\n[DEBUG] Exception during _login_user:", file=sys.stderr)
+            print("\n[DEBUG] Exception during _login_user:", file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
             raise LoginFailedException(
                 f"Unexpected error during login: {type(e).__name__}: {e}"

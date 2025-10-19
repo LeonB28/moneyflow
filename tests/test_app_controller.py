@@ -8,14 +8,16 @@ They focus on the "data plane" bugs we recently fixed:
 - Table update sequencing
 """
 
-import pytest
-import polars as pl
 from datetime import datetime
+
+import polars as pl
+import pytest
+
 from moneyflow.app_controller import AppController
-from moneyflow.state import AppState, ViewMode, SortMode, SortDirection
 from moneyflow.data_manager import DataManager
+from moneyflow.state import AppState, SortDirection, SortMode, ViewMode
+
 from .mock_view import MockViewPresenter
-from .mock_backend import MockMonarchMoney
 
 
 @pytest.fixture
@@ -251,23 +253,26 @@ class TestStatsCalculation:
     async def test_stats_with_no_data(self, controller, mock_view):
         """Test stats with empty dataset."""
         # Clear data with proper schema
-        empty_df = pl.DataFrame({
-            "id": [],
-            "date": [],
-            "amount": [],
-            "merchant": [],
-            "category": [],
-            "group": [],
-            "hideFromReports": [],
-        }, schema={
-            "id": pl.Utf8,
-            "date": pl.Date,
-            "amount": pl.Float64,
-            "merchant": pl.Utf8,
-            "category": pl.Utf8,
-            "group": pl.Utf8,
-            "hideFromReports": pl.Boolean,
-        })
+        empty_df = pl.DataFrame(
+            {
+                "id": [],
+                "date": [],
+                "amount": [],
+                "merchant": [],
+                "category": [],
+                "group": [],
+                "hideFromReports": [],
+            },
+            schema={
+                "id": pl.Utf8,
+                "date": pl.Date,
+                "amount": pl.Float64,
+                "merchant": pl.Utf8,
+                "category": pl.Utf8,
+                "group": pl.Utf8,
+                "hideFromReports": pl.Boolean,
+            },
+        )
         controller.data_manager.df = empty_df
         controller.state.transactions_df = empty_df
         controller.state.view_mode = ViewMode.MERCHANT
@@ -380,7 +385,9 @@ class TestCommitHandling:
         initial_merchant = initial_df.filter(pl.col("id") == "txn_1")["merchant"][0]
 
         # Create edits
-        edits = [TransactionEdit("txn_1", "merchant", initial_merchant, "NewMerchant", datetime.now())]
+        edits = [
+            TransactionEdit("txn_1", "merchant", initial_merchant, "NewMerchant", datetime.now())
+        ]
         controller.data_manager.pending_edits = edits.copy()
 
         # Simulate successful commit
@@ -388,10 +395,7 @@ class TestCommitHandling:
         saved_state = controller.state.save_view_state()
 
         controller.handle_commit_result(
-            success_count=1,
-            failure_count=0,
-            edits=edits,
-            saved_state=saved_state
+            success_count=1, failure_count=0, edits=edits, saved_state=saved_state
         )
 
         # VERIFY: Edits applied locally
@@ -428,20 +432,19 @@ class TestCommitHandling:
         saved_state = controller.state.save_view_state()
 
         controller.handle_commit_result(
-            success_count=1,
-            failure_count=1,
-            edits=edits,
-            saved_state=saved_state
+            success_count=1, failure_count=1, edits=edits, saved_state=saved_state
         )
 
         # CRITICAL VERIFICATION: Edits should NOT be applied
         current_merchant = controller.data_manager.df.filter(pl.col("id") == "txn_1")["merchant"][0]
-        assert current_merchant == initial_merchant, \
+        assert current_merchant == initial_merchant, (
             "Edit should NOT be applied when there were failures (data corruption!)"
+        )
 
         # VERIFY: Pending edits still present (for retry)
-        assert len(controller.data_manager.pending_edits) == 2, \
+        assert len(controller.data_manager.pending_edits) == 2, (
             "Pending edits should be kept for retry"
+        )
 
     async def test_all_failures_does_not_apply_edits(self, controller, mock_view):
         """When ALL commits fail, nothing should be applied."""
@@ -459,15 +462,13 @@ class TestCommitHandling:
         saved_state = controller.state.save_view_state()
 
         controller.handle_commit_result(
-            success_count=0,
-            failure_count=2,
-            edits=edits,
-            saved_state=saved_state
+            success_count=0, failure_count=2, edits=edits, saved_state=saved_state
         )
 
         # VERIFY: DataFrame unchanged
-        assert controller.data_manager.df.equals(initial_df), \
+        assert controller.data_manager.df.equals(initial_df), (
             "DataFrame should be completely unchanged"
+        )
 
         # VERIFY: Pending edits preserved
         assert len(controller.data_manager.pending_edits) == 2
@@ -482,10 +483,7 @@ class TestCommitHandling:
         saved_state = controller.state.save_view_state()
 
         controller.handle_commit_result(
-            success_count=1,
-            failure_count=0,
-            edits=edits,
-            saved_state=saved_state
+            success_count=1, failure_count=0, edits=edits, saved_state=saved_state
         )
 
         # VERIFY: force_rebuild=False (no flash)
@@ -500,17 +498,16 @@ class TestCommitHandling:
         initial_merchant = controller.data_manager.df.filter(pl.col("id") == "txn_1")["merchant"][0]
 
         # Create edits (that will fail)
-        edits = [TransactionEdit("txn_1", "merchant", initial_merchant, "NewMerchant", datetime.now())]
+        edits = [
+            TransactionEdit("txn_1", "merchant", initial_merchant, "NewMerchant", datetime.now())
+        ]
         controller.data_manager.pending_edits = edits.copy()
 
         saved_state = controller.state.save_view_state()
 
         # Simulate failure
         controller.handle_commit_result(
-            success_count=0,
-            failure_count=1,
-            edits=edits,
-            saved_state=saved_state
+            success_count=0, failure_count=1, edits=edits, saved_state=saved_state
         )
 
         # VERIFY: DataFrame unchanged (edits NOT applied)
@@ -555,9 +552,7 @@ class TestEditQueueing:
     async def test_queue_category_edits_multiple_transactions(self, controller):
         """Test queueing category edits for multiple transactions."""
         # Get two transactions
-        txn_df = controller.data_manager.df.filter(
-            pl.col("id").is_in(["txn_1", "txn_2"])
-        )
+        txn_df = controller.data_manager.df.filter(pl.col("id").is_in(["txn_1", "txn_2"]))
         new_cat_id = "cat_bulk"
 
         count = controller.queue_category_edits(txn_df, new_cat_id)
@@ -614,15 +609,18 @@ class TestEditQueueing:
 
     async def test_queue_edits_empty_dataframe(self, controller):
         """Test queueing edits with empty DataFrame."""
-        empty_df = pl.DataFrame({
-            "id": [],
-            "merchant": [],
-            "category_id": [],
-        }, schema={
-            "id": pl.Utf8,
-            "merchant": pl.Utf8,
-            "category_id": pl.Utf8,
-        })
+        empty_df = pl.DataFrame(
+            {
+                "id": [],
+                "merchant": [],
+                "category_id": [],
+            },
+            schema={
+                "id": pl.Utf8,
+                "merchant": pl.Utf8,
+                "category_id": pl.Utf8,
+            },
+        )
 
         count = controller.queue_category_edits(empty_df, "cat_new")
         assert count == 0
@@ -630,9 +628,7 @@ class TestEditQueueing:
 
     async def test_queue_edits_preserves_transaction_ids(self, controller):
         """Test that transaction IDs are correctly preserved."""
-        txn_df = controller.data_manager.df.filter(
-            pl.col("id").is_in(["txn_1", "txn_3", "txn_5"])
-        )
+        txn_df = controller.data_manager.df.filter(pl.col("id").is_in(["txn_1", "txn_3", "txn_5"]))
 
         controller.queue_category_edits(txn_df, "cat_test")
 
@@ -1026,13 +1022,12 @@ class TestTimeNavigationFacade:
     async def test_navigate_prev_period_from_month(self, controller, mock_view):
         """Test navigating to previous period from a month."""
         from datetime import date as date_type
+
         from moneyflow.state import TimeFrame
 
         # Set to March 2025
         controller.state.set_timeframe(
-            TimeFrame.CUSTOM,
-            start_date=date_type(2025, 3, 1),
-            end_date=date_type(2025, 3, 31)
+            TimeFrame.CUSTOM, start_date=date_type(2025, 3, 1), end_date=date_type(2025, 3, 31)
         )
 
         should_fallback, description = controller.navigate_prev_period()
@@ -1043,13 +1038,12 @@ class TestTimeNavigationFacade:
     async def test_navigate_next_period(self, controller, mock_view):
         """Test navigating to next period."""
         from datetime import date as date_type
+
         from moneyflow.state import TimeFrame
 
         # Set to March 2025
         controller.state.set_timeframe(
-            TimeFrame.CUSTOM,
-            start_date=date_type(2025, 3, 1),
-            end_date=date_type(2025, 3, 31)
+            TimeFrame.CUSTOM, start_date=date_type(2025, 3, 1), end_date=date_type(2025, 3, 31)
         )
 
         should_fallback, description = controller.navigate_next_period()

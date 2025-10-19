@@ -2,16 +2,16 @@
 Tests for state management, undo/redo, and change tracking.
 """
 
-import pytest
+from datetime import date
+
 import polars as pl
-from datetime import date, datetime
+
 from moneyflow.state import (
     AppState,
-    ViewMode,
-    SortMode,
     SortDirection,
+    SortMode,
     TimeFrame,
-    TransactionEdit,
+    ViewMode,
 )
 
 
@@ -501,51 +501,52 @@ class TestNavigation:
         """Test drilling down from merchant view to detail view."""
         app_state.view_mode = ViewMode.MERCHANT
 
-        app_state.drill_down("Starbucks", cursor_position=5)
+        app_state.drill_down("Starbucks", cursor_position=5, scroll_y=150.5)
 
         assert app_state.view_mode == ViewMode.DETAIL
         assert app_state.selected_merchant == "Starbucks"
         assert app_state.selected_category is None
         assert app_state.selected_group is None
         assert len(app_state.navigation_history) == 1
-        assert app_state.navigation_history[0] == (ViewMode.MERCHANT, 5)
+        assert app_state.navigation_history[0] == (ViewMode.MERCHANT, 5, 150.5)
 
     def test_drill_down_from_category_view(self, app_state):
         """Test drilling down from category view to detail view."""
         app_state.view_mode = ViewMode.CATEGORY
 
-        app_state.drill_down("Groceries", cursor_position=3)
+        app_state.drill_down("Groceries", cursor_position=3, scroll_y=200.0)
 
         assert app_state.view_mode == ViewMode.DETAIL
         assert app_state.selected_category == "Groceries"
         assert app_state.selected_merchant is None
         assert app_state.selected_group is None
         assert len(app_state.navigation_history) == 1
-        assert app_state.navigation_history[0] == (ViewMode.CATEGORY, 3)
+        assert app_state.navigation_history[0] == (ViewMode.CATEGORY, 3, 200.0)
 
     def test_drill_down_from_group_view(self, app_state):
         """Test drilling down from group view to detail view."""
         app_state.view_mode = ViewMode.GROUP
 
-        app_state.drill_down("Food & Dining", cursor_position=10)
+        app_state.drill_down("Food & Dining", cursor_position=10, scroll_y=75.25)
 
         assert app_state.view_mode == ViewMode.DETAIL
         assert app_state.selected_group == "Food & Dining"
         assert app_state.selected_merchant is None
         assert app_state.selected_category is None
         assert len(app_state.navigation_history) == 1
-        assert app_state.navigation_history[0] == (ViewMode.GROUP, 10)
+        assert app_state.navigation_history[0] == (ViewMode.GROUP, 10, 75.25)
 
     def test_go_back_from_detail_to_previous_view(self, app_state):
         """Test going back from detail view to previous view."""
         app_state.view_mode = ViewMode.MERCHANT
-        app_state.drill_down("Starbucks", cursor_position=7)
+        app_state.drill_down("Starbucks", cursor_position=7, scroll_y=300.5)
 
         # Now go back
-        success, cursor_position = app_state.go_back()
+        success, cursor_position, scroll_y = app_state.go_back()
 
         assert success is True
         assert cursor_position == 7
+        assert scroll_y == 300.5
         assert app_state.view_mode == ViewMode.MERCHANT
         assert app_state.selected_merchant is None
         assert app_state.selected_category is None
@@ -558,10 +559,11 @@ class TestNavigation:
         app_state.view_mode = ViewMode.DETAIL
         app_state.selected_merchant = "Starbucks"
 
-        success, cursor_position = app_state.go_back()
+        success, cursor_position, scroll_y = app_state.go_back()
 
         assert success is True
         assert cursor_position == 0  # Default cursor position
+        assert scroll_y == 0.0  # Default scroll position
         assert app_state.view_mode == ViewMode.MERCHANT  # Default back to MERCHANT
         assert app_state.selected_merchant is None
 
@@ -569,35 +571,38 @@ class TestNavigation:
         """Test that go_back returns False when already at top-level view."""
         app_state.view_mode = ViewMode.MERCHANT
 
-        success, cursor_position = app_state.go_back()
+        success, cursor_position, scroll_y = app_state.go_back()
 
         assert success is False
         assert cursor_position == 0
+        assert scroll_y == 0.0
         assert app_state.view_mode == ViewMode.MERCHANT
 
     def test_multiple_drill_downs_and_backs(self, app_state):
-        """Test multiple drill-downs and back navigations."""
+        """Test multiple drill-downs and back navigations with scroll positions."""
         # Start at merchant view
         app_state.view_mode = ViewMode.MERCHANT
-        app_state.drill_down("Starbucks", cursor_position=2)
+        app_state.drill_down("Starbucks", cursor_position=2, scroll_y=100.0)
         assert app_state.view_mode == ViewMode.DETAIL
 
         # Go back to merchant
-        success, cursor_pos = app_state.go_back()
+        success, cursor_pos, scroll_y = app_state.go_back()
         assert success is True
         assert cursor_pos == 2
+        assert scroll_y == 100.0
         assert app_state.view_mode == ViewMode.MERCHANT
 
         # Switch to category view and drill down
         app_state.view_mode = ViewMode.CATEGORY
-        app_state.drill_down("Groceries", cursor_position=8)
+        app_state.drill_down("Groceries", cursor_position=8, scroll_y=250.5)
         assert app_state.view_mode == ViewMode.DETAIL
         assert app_state.selected_category == "Groceries"
 
         # Go back to category view
-        success, cursor_pos = app_state.go_back()
+        success, cursor_pos, scroll_y = app_state.go_back()
         assert success is True
         assert cursor_pos == 8
+        assert scroll_y == 250.5
         assert app_state.view_mode == ViewMode.CATEGORY
         assert app_state.selected_category is None
 
@@ -687,9 +692,7 @@ class TestBreadcrumbs:
         """Test breadcrumb for custom timeframe spanning a single month."""
         app_state.view_mode = ViewMode.MERCHANT
         app_state.set_timeframe(
-            TimeFrame.CUSTOM,
-            start_date=date(2024, 3, 1),
-            end_date=date(2024, 3, 31)
+            TimeFrame.CUSTOM, start_date=date(2024, 3, 1), end_date=date(2024, 3, 31)
         )
 
         breadcrumb = app_state.get_breadcrumb()
@@ -701,9 +704,7 @@ class TestBreadcrumbs:
         """Test breadcrumb for custom timeframe spanning multiple months."""
         app_state.view_mode = ViewMode.MERCHANT
         app_state.set_timeframe(
-            TimeFrame.CUSTOM,
-            start_date=date(2024, 1, 1),
-            end_date=date(2024, 6, 30)
+            TimeFrame.CUSTOM, start_date=date(2024, 1, 1), end_date=date(2024, 6, 30)
         )
 
         breadcrumb = app_state.get_breadcrumb()
@@ -720,9 +721,7 @@ class TestTimeFrameEdgeCases:
         """Test setting timeframe to ALL_TIME clears dates."""
         # First set some dates
         app_state.set_timeframe(
-            TimeFrame.CUSTOM,
-            start_date=date(2024, 1, 1),
-            end_date=date(2024, 12, 31)
+            TimeFrame.CUSTOM, start_date=date(2024, 1, 1), end_date=date(2024, 12, 31)
         )
         assert app_state.start_date is not None
         assert app_state.end_date is not None
@@ -738,7 +737,8 @@ class TestTimeFrameEdgeCases:
         """Test setting timeframe to THIS_MONTH handles December correctly."""
         # Mock today being in December - must mock in time_navigator module
         from unittest.mock import patch
-        with patch('moneyflow.time_navigator.date') as mock_date:
+
+        with patch("moneyflow.time_navigator.date") as mock_date:
             mock_date.today.return_value = date(2024, 12, 15)
             mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
 
@@ -750,7 +750,8 @@ class TestTimeFrameEdgeCases:
     def test_set_timeframe_this_month_february_leap_year(self, app_state):
         """Test THIS_MONTH handles February in a leap year."""
         from unittest.mock import patch
-        with patch('moneyflow.time_navigator.date') as mock_date:
+
+        with patch("moneyflow.time_navigator.date") as mock_date:
             mock_date.today.return_value = date(2024, 2, 15)  # 2024 is leap year
             mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
 
@@ -762,7 +763,8 @@ class TestTimeFrameEdgeCases:
     def test_set_timeframe_this_month_february_non_leap_year(self, app_state):
         """Test THIS_MONTH handles February in a non-leap year."""
         from unittest.mock import patch
-        with patch('moneyflow.time_navigator.date') as mock_date:
+
+        with patch("moneyflow.time_navigator.date") as mock_date:
             mock_date.today.return_value = date(2023, 2, 15)  # 2023 is not leap year
             mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
 
@@ -892,7 +894,7 @@ class TestSubGrouping:
         state.selected_merchant = "Amazon"
         state.sub_grouping_mode = ViewMode.CATEGORY
 
-        success, cursor = state.go_back()
+        success, cursor, _ = state.go_back()
 
         # Should clear sub-grouping, stay drilled into Amazon
         assert success is True
@@ -906,20 +908,21 @@ class TestSubGrouping:
         state.view_mode = ViewMode.DETAIL
         state.selected_merchant = "Amazon"
         state.sub_grouping_mode = ViewMode.CATEGORY
-        state.navigation_history.append((ViewMode.MERCHANT, 5))
+        state.navigation_history.append((ViewMode.MERCHANT, 5, 125.0))
 
         # First escape: clear sub-grouping
-        success1, _ = state.go_back()
+        success1, _, _ = state.go_back()
         assert success1 is True
         assert state.sub_grouping_mode is None
         assert state.selected_merchant == "Amazon"
 
         # Second escape: clear drill-down
-        success2, cursor = state.go_back()
+        success2, cursor, scroll_y = state.go_back()
         assert success2 is True
         assert state.selected_merchant is None
         assert state.view_mode == ViewMode.MERCHANT
         assert cursor == 5
+        assert scroll_y == 125.0
 
     def test_breadcrumb_shows_sub_grouping(self):
         """Breadcrumb should show sub-grouping mode."""
@@ -963,13 +966,13 @@ class TestSubGrouping:
         state.selected_category = "Groceries"
 
         # First go_back: clear category (deepest)
-        success, _ = state.go_back()
+        success, _, _ = state.go_back()
         assert success is True
         assert state.selected_category is None
         assert state.selected_merchant == "Amazon"
 
         # Second go_back: clear merchant
-        success, _ = state.go_back()
+        success, _, _ = state.go_back()
         assert success is True
         assert state.selected_merchant is None
 
@@ -1038,7 +1041,7 @@ class TestSmartSearchEscape:
         state.set_search("coffee")
 
         # No navigation happened, just searched
-        success, _ = state.go_back()
+        success, _, _ = state.go_back()
 
         assert success is True
         assert state.search_query == ""
@@ -1054,7 +1057,7 @@ class TestSmartSearchEscape:
         state.drill_down("Starbucks", 5)
 
         # Now Escape should navigate back, not clear search
-        success, cursor = state.go_back()
+        success, cursor, _ = state.go_back()
 
         assert success is True
         assert state.search_query == "coffee"  # Search still active
@@ -1073,7 +1076,7 @@ class TestSmartSearchEscape:
         assert state.search_query == "coffee"  # Still active
 
         # Second Escape: clear search (back at original depth)
-        success, _ = state.go_back()
+        success, _, _ = state.go_back()
         assert success is True
         assert state.search_query == ""
 
@@ -1088,7 +1091,7 @@ class TestSmartSearchEscape:
         state.sub_grouping_mode = ViewMode.CATEGORY
 
         # Escape should clear sub-grouping (search still active, navigation happened)
-        success, _ = state.go_back()
+        success, _, _ = state.go_back()
 
         assert success is True
         assert state.sub_grouping_mode is None
@@ -1110,7 +1113,7 @@ class TestSmartSearchEscape:
 
         # Now we're at same state as when search was set
         # Second Escape: should clear search
-        success, _ = state.go_back()
+        success, _, _ = state.go_back()
         assert success is True
         assert state.search_query == ""
         assert state.selected_merchant == "Amazon"  # Still drilled down

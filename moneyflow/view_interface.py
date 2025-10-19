@@ -12,7 +12,7 @@ This enables:
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Literal
+from typing import Any, Dict, List, Literal
 
 NotificationSeverity = Literal["information", "warning", "error"]
 

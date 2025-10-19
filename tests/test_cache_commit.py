@@ -6,8 +6,10 @@ when loading from cache. These tests ensure the backend is properly
 authenticated and ready to commit changes even when data is cached.
 """
 
-import pytest
 from datetime import datetime
+
+import pytest
+
 from moneyflow.state import TransactionEdit
 
 
@@ -25,9 +27,7 @@ class TestCacheAndCommit:
         await mock_mm.login()
 
         # Create edit
-        edits = [
-            TransactionEdit("txn_1", "merchant", "Old", "New", datetime.now())
-        ]
+        edits = [TransactionEdit("txn_1", "merchant", "Old", "New", datetime.now())]
 
         # Attempt commit
         success, failure = await data_manager.commit_pending_edits(edits)
@@ -65,9 +65,7 @@ class TestCacheAndCommit:
         # Don't login - simulate the bug scenario
         # mock_mm.login() NOT called
 
-        edits = [
-            TransactionEdit("txn_1", "merchant", "Old", "New", datetime.now())
-        ]
+        edits = [TransactionEdit("txn_1", "merchant", "Old", "New", datetime.now())]
 
         # This should either:
         # 1. Fail with clear error
@@ -161,11 +159,14 @@ class TestCommitFailureDoesNotCorruptLocalState:
 
         # Set up initial data
         import polars as pl
-        original_df = pl.DataFrame({
-            "id": ["txn_1", "txn_2"],
-            "merchant": ["OldMerchant1", "OldMerchant2"],
-            "amount": [-100.0, -200.0],
-        })
+
+        original_df = pl.DataFrame(
+            {
+                "id": ["txn_1", "txn_2"],
+                "merchant": ["OldMerchant1", "OldMerchant2"],
+                "amount": [-100.0, -200.0],
+            }
+        )
         data_manager.df = original_df.clone()
 
         # Make all commits fail
@@ -194,11 +195,14 @@ class TestCommitFailureDoesNotCorruptLocalState:
 
         # Set up initial data
         import polars as pl
-        original_df = pl.DataFrame({
-            "id": ["txn_1"],
-            "merchant": ["OldMerchant"],
-            "amount": [-100.0],
-        })
+
+        original_df = pl.DataFrame(
+            {
+                "id": ["txn_1"],
+                "merchant": ["OldMerchant"],
+                "amount": [-100.0],
+            }
+        )
         data_manager.df = original_df.clone()
 
         edits = [TransactionEdit("txn_1", "merchant", "OldMerchant", "NewMerchant", datetime.now())]

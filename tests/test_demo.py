@@ -9,13 +9,12 @@ household, with realistic spending patterns, merchant variations, and
 intentional edge cases for testing features.
 """
 
+from typing import Dict, List
+
 import pytest
-from datetime import date
-from typing import Dict, List, Any
 
-from moneyflow.demo_data_generator import DemoDataGenerator, generate_demo_data
 from moneyflow.backends import DemoBackend
-
+from moneyflow.demo_data_generator import DemoDataGenerator, generate_demo_data
 
 # ============================================================================
 # FIXTURES
@@ -79,8 +78,16 @@ class TestDemoDataGeneratorBasics:
         transactions, _, _ = sample_demo_data
 
         required_fields = [
-            "id", "date", "amount", "merchant", "category",
-            "account", "notes", "hideFromReports", "pending", "isRecurring"
+            "id",
+            "date",
+            "amount",
+            "merchant",
+            "category",
+            "account",
+            "notes",
+            "hideFromReports",
+            "pending",
+            "isRecurring",
         ]
 
         for txn in transactions[:10]:  # Check first 10
@@ -135,10 +142,7 @@ class TestDemoDataRealisticPatterns:
         transactions, _, _ = sample_demo_data
 
         # Find paycheck transactions
-        paychecks = [
-            txn for txn in transactions
-            if txn["category"]["id"] == "cat_paycheck"
-        ]
+        paychecks = [txn for txn in transactions if txn["category"]["id"] == "cat_paycheck"]
 
         # Should have ~24 paychecks per year (2 per month, 2 people)
         # 2 people * 2 paychecks/month * 12 months = 48 paychecks
@@ -155,10 +159,7 @@ class TestDemoDataRealisticPatterns:
         transactions, _, _ = sample_demo_data
 
         # Find rent transactions
-        rent_txns = [
-            txn for txn in transactions
-            if txn["category"]["id"] == "cat_rent"
-        ]
+        rent_txns = [txn for txn in transactions if txn["category"]["id"] == "cat_rent"]
 
         # Should have 12 rent payments (one per month)
         assert len(rent_txns) == 12
@@ -175,10 +176,7 @@ class TestDemoDataRealisticPatterns:
         streaming_services = ["Netflix", "Spotify Premium", "HBO Max"]
 
         for service in streaming_services:
-            service_txns = [
-                txn for txn in transactions
-                if service in txn["merchant"]["name"]
-            ]
+            service_txns = [txn for txn in transactions if service in txn["merchant"]["name"]]
 
             # Should have 12 transactions (one per month)
             assert len(service_txns) >= 10  # Allow some variation
@@ -229,10 +227,7 @@ class TestDemoDataRealisticPatterns:
         """Test that transfer transactions are marked hidden from reports."""
         transactions, _, _ = sample_demo_data
 
-        transfers = [
-            txn for txn in transactions
-            if txn["category"]["id"] == "cat_transfer"
-        ]
+        transfers = [txn for txn in transactions if txn["category"]["id"] == "cat_transfer"]
 
         # Should have some transfers
         assert len(transfers) > 0
@@ -363,7 +358,8 @@ class TestDemoDataMerchantVariations:
 
         # Look for merchants with variations (e.g., "Whole Foods" vs "WHOLE FOODS MARKET #123")
         whole_foods_variations = [
-            txn["merchant"]["name"] for txn in transactions
+            txn["merchant"]["name"]
+            for txn in transactions
             if "whole foods" in txn["merchant"]["name"].lower()
         ]
 
@@ -373,7 +369,8 @@ class TestDemoDataMerchantVariations:
 
         # Check for Starbucks variations
         starbucks_variations = [
-            txn["merchant"]["name"] for txn in transactions
+            txn["merchant"]["name"]
+            for txn in transactions
             if "starbucks" in txn["merchant"]["name"].lower()
         ]
 
@@ -382,8 +379,10 @@ class TestDemoDataMerchantVariations:
 
         # Check for Amazon variations
         amazon_variations = [
-            txn["merchant"]["name"] for txn in transactions
-            if "amazon" in txn["merchant"]["name"].lower() or "amzn" in txn["merchant"]["name"].lower()
+            txn["merchant"]["name"]
+            for txn in transactions
+            if "amazon" in txn["merchant"]["name"].lower()
+            or "amzn" in txn["merchant"]["name"].lower()
         ]
 
         unique_amazon = set(amazon_variations)
@@ -497,10 +496,7 @@ class TestDemoBackendDateFiltering:
     @pytest.mark.asyncio
     async def test_filter_by_start_date(self, demo_backend):
         """Test filtering by start date."""
-        result = await demo_backend.get_transactions(
-            limit=1000,
-            start_date="2025-06-01"
-        )
+        result = await demo_backend.get_transactions(limit=1000, start_date="2025-06-01")
 
         transactions = result["allTransactions"]["results"]
 
@@ -511,10 +507,7 @@ class TestDemoBackendDateFiltering:
     @pytest.mark.asyncio
     async def test_filter_by_end_date(self, demo_backend):
         """Test filtering by end date."""
-        result = await demo_backend.get_transactions(
-            limit=1000,
-            end_date="2025-06-30"
-        )
+        result = await demo_backend.get_transactions(limit=1000, end_date="2025-06-30")
 
         transactions = result["allTransactions"]["results"]
 
@@ -526,9 +519,7 @@ class TestDemoBackendDateFiltering:
     async def test_filter_by_date_range(self, demo_backend):
         """Test filtering by both start and end date."""
         result = await demo_backend.get_transactions(
-            limit=1000,
-            start_date="2025-03-01",
-            end_date="2025-03-31"
+            limit=1000, start_date="2025-03-01", end_date="2025-03-31"
         )
 
         transactions = result["allTransactions"]["results"]
@@ -550,9 +541,7 @@ class TestDemoBackendDateFiltering:
 
         # Get filtered transactions
         filtered_result = await demo_backend.get_transactions(
-            limit=10000,
-            start_date="2025-06-01",
-            end_date="2025-06-30"
+            limit=10000, start_date="2025-06-01", end_date="2025-06-30"
         )
         filtered_count = filtered_result["allTransactions"]["totalCount"]
 
@@ -574,10 +563,7 @@ class TestDemoBackendUpdateTransaction:
 
         # Update merchant name
         new_merchant = "Updated Merchant Name"
-        await demo_backend.update_transaction(
-            transaction_id=txn_id,
-            merchant_name=new_merchant
-        )
+        await demo_backend.update_transaction(transaction_id=txn_id, merchant_name=new_merchant)
 
         # Verify update was recorded
         assert len(demo_backend.update_calls) == 1
@@ -599,10 +585,7 @@ class TestDemoBackendUpdateTransaction:
 
         # Update category
         new_category_id = "cat_shopping"
-        await demo_backend.update_transaction(
-            transaction_id=txn_id,
-            category_id=new_category_id
-        )
+        await demo_backend.update_transaction(transaction_id=txn_id, category_id=new_category_id)
 
         # Verify update was applied
         updated_txn = demo_backend.get_transaction_by_id(txn_id)
@@ -620,10 +603,7 @@ class TestDemoBackendUpdateTransaction:
 
         # Toggle hide_from_reports
         new_hidden = not original_hidden
-        await demo_backend.update_transaction(
-            transaction_id=txn_id,
-            hide_from_reports=new_hidden
-        )
+        await demo_backend.update_transaction(transaction_id=txn_id, hide_from_reports=new_hidden)
 
         # Verify update was applied
         updated_txn = demo_backend.get_transaction_by_id(txn_id)
@@ -642,7 +622,7 @@ class TestDemoBackendUpdateTransaction:
             transaction_id=txn_id,
             merchant_name="New Merchant",
             category_id="cat_groceries",
-            hide_from_reports=True
+            hide_from_reports=True,
         )
 
         # Verify all updates were applied
@@ -656,8 +636,7 @@ class TestDemoBackendUpdateTransaction:
         """Test that updating a non-existent transaction raises an error."""
         with pytest.raises(Exception, match="Transaction not found"):
             await demo_backend.update_transaction(
-                transaction_id="nonexistent_id",
-                merchant_name="New Name"
+                transaction_id="nonexistent_id", merchant_name="New Name"
             )
 
     @pytest.mark.asyncio
@@ -670,16 +649,12 @@ class TestDemoBackendUpdateTransaction:
 
         # Update it
         new_merchant = "Persistent Update"
-        await demo_backend.update_transaction(
-            transaction_id=txn_id,
-            merchant_name=new_merchant
-        )
+        await demo_backend.update_transaction(transaction_id=txn_id, merchant_name=new_merchant)
 
         # Fetch transactions again
         result2 = await demo_backend.get_transactions(limit=10000)
         updated_txn = next(
-            (t for t in result2["allTransactions"]["results"] if t["id"] == txn_id),
-            None
+            (t for t in result2["allTransactions"]["results"] if t["id"] == txn_id), None
         )
 
         assert updated_txn is not None
@@ -865,10 +840,7 @@ class TestDemoModeIntegration:
 
         # 4. Update a transaction
         txn_id = transactions[0]["id"]
-        await demo_backend.update_transaction(
-            transaction_id=txn_id,
-            merchant_name="Test Update"
-        )
+        await demo_backend.update_transaction(transaction_id=txn_id, merchant_name="Test Update")
 
         # 5. Verify update
         updated = demo_backend.get_transaction_by_id(txn_id)

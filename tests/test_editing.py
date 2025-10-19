@@ -8,10 +8,11 @@ Tests the complete editing workflows including:
 - Edit queueing and committing
 """
 
-import pytest
 from datetime import datetime
+
 import polars as pl
-from moneyflow.state import AppState, ViewMode, TransactionEdit
+
+from moneyflow.state import TransactionEdit
 
 
 class TestBulkMerchantEdit:
@@ -37,7 +38,7 @@ class TestBulkMerchantEdit:
                     field="merchant",
                     old_value=merchant_name,
                     new_value=new_merchant,
-                    timestamp=datetime.now()
+                    timestamp=datetime.now(),
                 )
             )
 
@@ -62,7 +63,7 @@ class TestBulkMerchantEdit:
                     field="merchant",
                     old_value=merchant_name,
                     new_value=new_merchant,
-                    timestamp=datetime.now()
+                    timestamp=datetime.now(),
                 )
             )
 
@@ -109,7 +110,7 @@ class TestIndividualEdits:
                 field="merchant",
                 old_value=old_merchant,
                 new_value=new_merchant,
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
             )
         )
 
@@ -123,7 +124,9 @@ class TestIndividualEdits:
         updated = mock_mm.get_transaction_by_id(txn["id"])
         assert updated["merchant"]["name"] == new_merchant
 
-    async def test_edit_merchant_detail_view_with_multiselect(self, loaded_data_manager, mock_mm, app_state):
+    async def test_edit_merchant_detail_view_with_multiselect(
+        self, loaded_data_manager, mock_mm, app_state
+    ):
         """Test editing merchant with multiple selected transactions in detail view."""
         dm, df, _, _ = loaded_data_manager
 
@@ -145,7 +148,7 @@ class TestIndividualEdits:
                     field="merchant",
                     old_value=txn["merchant"],
                     new_value=new_merchant,
-                    timestamp=datetime.now()
+                    timestamp=datetime.now(),
                 )
             )
 
@@ -183,7 +186,7 @@ class TestIndividualEdits:
                 field="category",
                 old_value=old_category_id,
                 new_value=new_category_id,
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
             )
         )
 
@@ -211,7 +214,7 @@ class TestIndividualEdits:
                 field="merchant",
                 old_value=txn["merchant"],
                 new_value=new_merchant,
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
             )
         )
 
@@ -384,7 +387,9 @@ class TestDataFrameUpdates:
         new_hidden = not old_hidden
 
         # Verify current state
-        assert dm.df.filter(pl.col("id") == txn_id).row(0, named=True)["hideFromReports"] == old_hidden
+        assert (
+            dm.df.filter(pl.col("id") == txn_id).row(0, named=True)["hideFromReports"] == old_hidden
+        )
 
         # Make edit and commit
         dm.pending_edits.append(
@@ -422,13 +427,7 @@ class TestEdgeCase:
         new_merchant = "Trader Joe's & Co. (Main St.)"
 
         dm.pending_edits.append(
-            TransactionEdit(
-                txn["id"],
-                "merchant",
-                txn["merchant"],
-                new_merchant,
-                datetime.now()
-            )
+            TransactionEdit(txn["id"], "merchant", txn["merchant"], new_merchant, datetime.now())
         )
 
         success, failure = await dm.commit_pending_edits(dm.pending_edits)
@@ -445,13 +444,7 @@ class TestEdgeCase:
         new_merchant = "Café René"
 
         dm.pending_edits.append(
-            TransactionEdit(
-                txn["id"],
-                "merchant",
-                txn["merchant"],
-                new_merchant,
-                datetime.now()
-            )
+            TransactionEdit(txn["id"], "merchant", txn["merchant"], new_merchant, datetime.now())
         )
 
         success, failure = await dm.commit_pending_edits(dm.pending_edits)
@@ -492,13 +485,7 @@ class TestEdgeCase:
         new_merchant = "A" * 150
 
         dm.pending_edits.append(
-            TransactionEdit(
-                txn["id"],
-                "merchant",
-                txn["merchant"],
-                new_merchant,
-                datetime.now()
-            )
+            TransactionEdit(txn["id"], "merchant", txn["merchant"], new_merchant, datetime.now())
         )
 
         success, failure = await dm.commit_pending_edits(dm.pending_edits)
@@ -517,13 +504,7 @@ class TestEdgeCase:
         new_merchant = "A" * 100
 
         dm.pending_edits.append(
-            TransactionEdit(
-                txn["id"],
-                "merchant",
-                txn["merchant"],
-                new_merchant,
-                datetime.now()
-            )
+            TransactionEdit(txn["id"], "merchant", txn["merchant"], new_merchant, datetime.now())
         )
 
         success, failure = await dm.commit_pending_edits(dm.pending_edits)
@@ -537,9 +518,13 @@ class TestEdgeCase:
         # Create edits with mix of valid and invalid IDs
         edits = [
             TransactionEdit("txn_1", "merchant", "Old", "New Name", datetime.now()),  # Valid
-            TransactionEdit("invalid_999", "merchant", "Old", "New Name", datetime.now()),  # Invalid
+            TransactionEdit(
+                "invalid_999", "merchant", "Old", "New Name", datetime.now()
+            ),  # Invalid
             TransactionEdit("txn_2", "merchant", "Old", "New Name", datetime.now()),  # Valid
-            TransactionEdit("nonexistent", "merchant", "Old", "New Name", datetime.now()),  # Invalid
+            TransactionEdit(
+                "nonexistent", "merchant", "Old", "New Name", datetime.now()
+            ),  # Invalid
         ]
 
         success, failure = await data_manager.commit_pending_edits(edits)
@@ -564,11 +549,7 @@ class TestEdgeCase:
 
         dm.pending_edits.append(
             TransactionEdit(
-                txn["id"],
-                "category",
-                txn["category_id"],
-                invalid_category_id,
-                datetime.now()
+                txn["id"], "category", txn["category_id"], invalid_category_id, datetime.now()
             )
         )
 
@@ -621,13 +602,7 @@ class TestEdgeCase:
             txn_rows = df.filter(pl.col("id") == txn_id)
             txn = txn_rows.row(0, named=True)
             dm.pending_edits.append(
-                TransactionEdit(
-                    txn_id,
-                    "merchant",
-                    txn["merchant"],
-                    new_merchant,
-                    datetime.now()
-                )
+                TransactionEdit(txn_id, "merchant", txn["merchant"], new_merchant, datetime.now())
             )
 
         # Commit
@@ -666,14 +641,16 @@ class TestEdgeCase:
             "merchant",
             txn["merchant"],
             None,  # None as new value
-            datetime.now()
+            datetime.now(),
         )
 
         # The validation should happen at UI level, but test API behavior
         # This should not create a valid edit
         assert edit.new_value is None
 
-    async def test_multiple_edits_different_fields_same_transaction(self, loaded_data_manager, mock_mm):
+    async def test_multiple_edits_different_fields_same_transaction(
+        self, loaded_data_manager, mock_mm
+    ):
         """Test editing multiple fields on same transaction works correctly."""
         dm, df, _, _ = loaded_data_manager
 
@@ -684,7 +661,9 @@ class TestEdgeCase:
         # Edit both merchant and category
         edits = [
             TransactionEdit(txn["id"], "merchant", txn["merchant"], new_merchant, datetime.now()),
-            TransactionEdit(txn["id"], "category", txn["category_id"], new_category_id, datetime.now()),
+            TransactionEdit(
+                txn["id"], "category", txn["category_id"], new_category_id, datetime.now()
+            ),
         ]
 
         dm.pending_edits.extend(edits)
@@ -705,13 +684,7 @@ class TestEdgeCase:
 
         # First hide a transaction
         txn = df.row(0, named=True)
-        hide_edit = TransactionEdit(
-            txn["id"],
-            "hide_from_reports",
-            False,
-            True,
-            datetime.now()
-        )
+        hide_edit = TransactionEdit(txn["id"], "hide_from_reports", False, True, datetime.now())
 
         await dm.commit_pending_edits([hide_edit])
 
@@ -721,11 +694,7 @@ class TestEdgeCase:
 
         # Now edit the merchant on the hidden transaction
         merchant_edit = TransactionEdit(
-            txn["id"],
-            "merchant",
-            txn["merchant"],
-            "New Merchant Name",
-            datetime.now()
+            txn["id"], "merchant", txn["merchant"], "New Merchant Name", datetime.now()
         )
 
         success, failure = await dm.commit_pending_edits([merchant_edit])

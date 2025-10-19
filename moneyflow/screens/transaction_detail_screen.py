@@ -1,9 +1,9 @@
 """Transaction detail view screen."""
 
 from textual.app import ComposeResult
+from textual.containers import Container, VerticalScroll
 from textual.events import Key
 from textual.screen import ModalScreen
-from textual.containers import Container, VerticalScroll
 from textual.widgets import Label, Static
 
 

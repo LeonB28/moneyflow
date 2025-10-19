@@ -5,12 +5,12 @@ Merchant caching allows MTD mode to have complete merchant autocomplete
 without downloading all transactions.
 """
 
-import pytest
 import json
 from datetime import datetime, timedelta
-from pathlib import Path
+
+import pytest
+
 from moneyflow.data_manager import DataManager
-from .mock_backend import MockMonarchMoney
 
 
 @pytest.fixture

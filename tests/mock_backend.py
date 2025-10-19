@@ -5,10 +5,9 @@ This provides a safe way to test all business logic without risk of
 modifying real data.
 """
 
-from typing import Dict, List, Any, Optional
-from datetime import datetime, date
-from moneyflow.backends.base import FinanceBackend
+from typing import Any, Dict, List, Optional
 
+from moneyflow.backends.base import FinanceBackend
 
 # Simulate the MonarchMoney API interface without importing the real one
 # This keeps tests isolated and prevents accidental API calls

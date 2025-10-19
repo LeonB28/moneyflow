@@ -6,7 +6,8 @@ with intelligent retry behavior.
 """
 
 import asyncio
-from typing import Callable, TypeVar, Optional, Awaitable
+from typing import Awaitable, Callable, Optional, TypeVar
+
 from .logging_config import get_logger
 
 logger = get_logger(__name__)

@@ -6,11 +6,11 @@ and formatting descriptions. Completely decoupled from UI and state.
 All functions fully typed and testable.
 """
 
+import calendar
 from datetime import date
 from typing import Literal, NamedTuple
-import calendar
-from dateutil.relativedelta import relativedelta
 
+from dateutil.relativedelta import relativedelta
 
 PeriodType = Literal["year", "month"]
 

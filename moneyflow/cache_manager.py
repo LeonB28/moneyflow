@@ -6,10 +6,10 @@ Tracks filter parameters to ensure cache matches user's request.
 """
 
 import json
-import os
+from datetime import datetime
 from pathlib import Path
-from datetime import datetime, timedelta
-from typing import Optional, Dict, Tuple, Any
+from typing import Any, Dict, Optional, Tuple
+
 import polars as pl
 
 

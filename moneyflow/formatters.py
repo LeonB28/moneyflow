@@ -6,12 +6,12 @@ completely decoupled from UI framework (Textual). All functions are
 fully typed and testable.
 """
 
-from typing import Literal, TypedDict
 from dataclasses import dataclass
+from typing import Literal, TypedDict
+
 import polars as pl
 
-from .state import SortMode, SortDirection
-
+from .state import SortDirection, SortMode
 
 # Type definitions for better type safety
 AggregationField = Literal["merchant", "category", "group", "account"]

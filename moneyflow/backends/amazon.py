@@ -234,11 +234,13 @@ class AmazonBackend(FinanceBackend):
 
         categories = []
         for row in rows:
-            categories.append({
-                "id": row["id"],
-                "name": row["name"],
-                "group": None,  # Amazon doesn't use groups (yet)
-            })
+            categories.append(
+                {
+                    "id": row["id"],
+                    "name": row["name"],
+                    "group": None,  # Amazon doesn't use groups (yet)
+                }
+            )
 
         return {"categories": categories}
 
@@ -367,9 +369,9 @@ class AmazonBackend(FinanceBackend):
         stats = {}
 
         # Total transactions
-        stats["total_transactions"] = conn.execute(
-            "SELECT COUNT(*) FROM transactions"
-        ).fetchone()[0]
+        stats["total_transactions"] = conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[
+            0
+        ]
 
         # Date range
         date_range = conn.execute("""

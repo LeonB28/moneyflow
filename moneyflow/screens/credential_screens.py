@@ -1,10 +1,10 @@
 """Credential setup and unlock screens, quit confirmation, and filter modal."""
 
 from textual.app import ComposeResult
+from textual.containers import Container
 from textual.events import Key
 from textual.screen import ModalScreen, Screen
-from textual.containers import Container, Vertical
-from textual.widgets import Button, Input, Label, Static, Checkbox
+from textual.widgets import Button, Checkbox, Input, Label, Static
 
 from ..credentials import CredentialManager
 
@@ -385,7 +385,7 @@ class CredentialUnlockScreen(Screen):
             # Dismiss and return credentials
             self.dismiss(creds)
 
-        except ValueError as e:
+        except ValueError:
             error_label.update("❌ Incorrect password!")
             unlock_input.value = ""
             unlock_input.focus()

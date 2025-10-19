@@ -5,7 +5,6 @@ These tests verify that notification messages are consistent, well-formatted,
 and return the correct severity/timeout values.
 """
 
-import pytest
 from moneyflow.notification_helper import NotificationHelper
 
 
@@ -82,9 +81,7 @@ class TestRetryNotifications:
 
     def test_retry_waiting(self):
         msg, severity, timeout = NotificationHelper.retry_waiting(
-            attempt=1,
-            wait_seconds=120.0,
-            max_retries=5
+            attempt=1, wait_seconds=120.0, max_retries=5
         )
         assert "120s" in msg
         assert "attempt 2/5" in msg  # attempt is 0-indexed
@@ -202,10 +199,9 @@ class TestSearchAndFilterNotifications:
         assert "cleared" in msg
 
     def test_filters_applied(self):
-        msg, severity, timeout = NotificationHelper.filters_applied([
-            "hidden items shown",
-            "transfers excluded"
-        ])
+        msg, severity, timeout = NotificationHelper.filters_applied(
+            ["hidden items shown", "transfers excluded"]
+        )
         assert "hidden items shown" in msg
         assert "transfers excluded" in msg
 
@@ -265,7 +261,7 @@ class TestTupleStructure:
         methods = [
             getattr(NotificationHelper, method)
             for method in dir(NotificationHelper)
-            if not method.startswith('_') and callable(getattr(NotificationHelper, method))
+            if not method.startswith("_") and callable(getattr(NotificationHelper, method))
         ]
 
         # Test a few representative ones
@@ -282,8 +278,9 @@ class TestTupleStructure:
             assert len(result) == 3, f"{method.__name__} didn't return 3-tuple"
             msg, severity, timeout = result
             assert isinstance(msg, str), f"{method.__name__} message not string"
-            assert severity in ("information", "warning", "error"), \
+            assert severity in ("information", "warning", "error"), (
                 f"{method.__name__} invalid severity: {severity}"
+            )
             assert isinstance(timeout, int), f"{method.__name__} timeout not int"
             assert timeout > 0, f"{method.__name__} timeout not positive"
 
@@ -323,5 +320,6 @@ class TestMessageQuality:
         ]
         for msg in action_messages:
             # Should mention a key or keyboard shortcut
-            assert any(key in msg for key in ["Press", "w", "Ctrl"]), \
+            assert any(key in msg for key in ["Press", "w", "Ctrl"]), (
                 f"Action message doesn't mention key: {msg}"
+            )

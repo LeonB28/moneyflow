@@ -5,14 +5,14 @@ This module provides reusable fixtures and test data for the test suite,
 including sample transactions, categories, and mock backends.
 """
 
-import pytest
-from datetime import date, datetime
+from datetime import date
+
 import polars as pl
+import pytest
 
-from tests.mock_backend import MockMonarchMoney
 from moneyflow.data_manager import DataManager
-from moneyflow.state import AppState, TransactionEdit
-
+from moneyflow.state import AppState
+from tests.mock_backend import MockMonarchMoney
 
 # ============================================================================
 # TEST HELPER FUNCTIONS
@@ -25,7 +25,7 @@ def save_test_credentials(
     password: str = "test_password",
     mfa_secret: str = "TEST_SECRET_KEY",
     encryption_password: str = "encryption_pass",
-    backend_type: str = "monarch"
+    backend_type: str = "monarch",
 ):
     """
     Save test credentials with default values.
@@ -50,7 +50,7 @@ def save_test_credentials(
         password=password,
         mfa_secret=mfa_secret,
         encryption_password=encryption_password,
-        backend_type=backend_type
+        backend_type=backend_type,
     )
 
 

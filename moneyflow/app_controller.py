@@ -17,17 +17,19 @@ The controller does NOT:
 - Manage keyboard bindings (that's UI layer)
 """
 
-from typing import Optional, List
-from datetime import datetime, date as date_type
+from datetime import date as date_type
+from datetime import datetime
+from typing import List, Optional
+
 import polars as pl
 
-from .view_interface import IViewPresenter
-from .state import AppState, ViewMode, SortMode, SortDirection, TransactionEdit, TimeFrame
+from .commit_orchestrator import CommitOrchestrator
 from .data_manager import DataManager
 from .formatters import ViewPresenter
-from .commit_orchestrator import CommitOrchestrator
-from .time_navigator import TimeNavigator
 from .logging_config import get_logger
+from .state import AppState, SortDirection, SortMode, TimeFrame, TransactionEdit, ViewMode
+from .time_navigator import TimeNavigator
+from .view_interface import IViewPresenter
 
 logger = get_logger(__name__)
 
@@ -138,7 +140,9 @@ class AppController:
                 elif sort_col in ["merchant", "category", "group", "account"]:
                     sort_col = field_name
 
-                descending = ViewPresenter.should_sort_descending(sort_col, self.state.sort_direction)
+                descending = ViewPresenter.should_sort_descending(
+                    sort_col, self.state.sort_direction
+                )
                 if not agg.is_empty():
                     agg = agg.sort(sort_col, descending=descending)
 
@@ -193,7 +197,7 @@ class AppController:
         filtered_df = self.state.get_filtered_df()
         if filtered_df is not None and not filtered_df.is_empty():
             # Exclude hidden from totals
-            non_hidden_df = filtered_df.filter(filtered_df["hideFromReports"] == False)
+            non_hidden_df = filtered_df.filter(~filtered_df["hideFromReports"])
 
             income_df = non_hidden_df.filter(pl.col("group") == "Income")
             total_income = float(income_df["amount"].sum()) if not income_df.is_empty() else 0.0
@@ -549,30 +553,32 @@ class AppController:
         """Clear all selections."""
         self.state.clear_selection()
 
-    def drill_down(self, item_name: str, cursor_position: int):
+    def drill_down(self, item_name: str, cursor_position: int, scroll_y: float = 0.0):
         """
         Drill down into an item (merchant/category/group/account).
 
         Args:
             item_name: Name of item to drill into
             cursor_position: Current cursor position to save for go_back
+            scroll_y: Current scroll position to save for go_back
         """
-        self.state.drill_down(item_name, cursor_position)
+        self.state.drill_down(item_name, cursor_position, scroll_y)
         self.refresh_view()
 
-    def go_back(self) -> tuple[bool, int]:
+    def go_back(self) -> tuple[bool, int, float]:
         """
         Go back to previous view.
 
         Returns:
-            Tuple of (success, cursor_position)
+            Tuple of (success, cursor_position, scroll_y)
             - success: True if went back, False if already at top
             - cursor_position: Where to restore cursor
+            - scroll_y: Where to restore scroll position
         """
-        success, cursor_position = self.state.go_back()
+        success, cursor_position, scroll_y = self.state.go_back()
         if success:
             self.refresh_view()
-        return (success, cursor_position)
+        return (success, cursor_position, scroll_y)
 
     def get_next_sort_field(
         self, view_mode: ViewMode, current_sort: SortMode
@@ -641,10 +647,15 @@ class AppController:
             return f"Enter=Drill | m=✏️ Merchant (bulk) | c=✏️ Category (bulk) | s=Sort({sort_name}) | g=Group"
         else:  # DETAIL
             # Check if we're in a drilled-down view or ungrouped view
-            if self.state.selected_merchant or self.state.selected_category or self.state.selected_group or self.state.selected_account:
-                return f"Esc/g=Back | m=✏️ Merchant | c=✏️ Category | h=Hide | Space=Select"
+            if (
+                self.state.selected_merchant
+                or self.state.selected_category
+                or self.state.selected_group
+                or self.state.selected_account
+            ):
+                return "Esc/g=Back | m=✏️ Merchant | c=✏️ Category | h=Hide | Space=Select"
             else:
-                return f"g=Group | m=✏️ Merchant | c=✏️ Category | h=Hide | Space=Select"
+                return "g=Group | m=✏️ Merchant | c=✏️ Category | h=Hide | Space=Select"
 
     def queue_category_edits(self, transactions_df, new_category_id: str) -> int:
         """
@@ -773,7 +784,7 @@ class AppController:
             # This prevents data corruption where UI shows changes that didn't save
             # Note: View already restored in app.py before commit started
             # Just refresh to ensure UI shows current (unchanged) state
-            logger.debug(f"Failure path - refreshing view (state already restored in app.py)")
+            logger.debug("Failure path - refreshing view (state already restored in app.py)")
             self.refresh_view(force_rebuild=False)
         else:
             logger.info("All commits succeeded - applying edits locally")

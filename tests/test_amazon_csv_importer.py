@@ -1,15 +1,16 @@
 """Tests for Amazon CSV importer."""
 
-import pytest
+import asyncio
 import tempfile
 from pathlib import Path
-import asyncio
-import polars as pl
+
+import pytest
+
 from moneyflow.backends.amazon import AmazonBackend
 from moneyflow.importers.amazon_csv import (
+    get_category_statistics,
     import_amazon_csv,
     normalize_category,
-    get_category_statistics,
 )
 
 
@@ -47,7 +48,7 @@ def sample_csv():
 03/01/2024,Coffee Maker,Kitchen,1,89.99,,,,,
 """
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
         f.write(csv_content)
         csv_path = f.name
 
@@ -69,7 +70,7 @@ def csv_with_variations():
 01/20/2024,More Office Stuff,Office Products,1,14.99
 """
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
         f.write(csv_content)
         csv_path = f.name
 
@@ -108,39 +109,39 @@ class TestImportBasic:
         """Test importing a sample CSV file."""
         stats = import_amazon_csv(sample_csv, backend=backend)
 
-        assert stats['total_rows'] == 5
-        assert stats['imported'] == 5
-        assert stats['duplicates'] == 0
-        assert stats['categories_created'] == 3  # Books, Electronics, Kitchen
+        assert stats["total_rows"] == 5
+        assert stats["imported"] == 5
+        assert stats["duplicates"] == 0
+        assert stats["categories_created"] == 3  # Books, Electronics, Kitchen
 
     def test_import_creates_categories(self, sample_csv, backend):
         """Test that import creates category records."""
         import_amazon_csv(sample_csv, backend=backend)
 
         result = run_async(backend.get_transaction_categories())
-        categories = {cat['name'] for cat in result['categories']}
+        categories = {cat["name"] for cat in result["categories"]}
 
-        assert 'Books' in categories
-        assert 'Electronics' in categories
-        assert 'Kitchen' in categories
+        assert "Books" in categories
+        assert "Electronics" in categories
+        assert "Kitchen" in categories
 
     def test_import_creates_transactions(self, sample_csv, backend):
         """Test that import creates transaction records."""
         import_amazon_csv(sample_csv, backend=backend)
 
         result = run_async(backend.get_transactions(limit=100))
-        transactions = result['allTransactions']
+        transactions = result["allTransactions"]
 
         assert len(transactions) == 5
 
         # Check first transaction
         txn = transactions[-1]  # Last in list (oldest date)
-        assert txn['date'] == '2024-01-15'
-        assert txn['merchant']['name'] == 'Python Crash Course'
-        assert txn['category']['name'] == 'Books'
-        assert txn['amount'] == -39.99  # Should be negative
-        assert txn['quantity'] == 1
-        assert txn['price_per_item'] == -39.99
+        assert txn["date"] == "2024-01-15"
+        assert txn["merchant"]["name"] == "Python Crash Course"
+        assert txn["category"]["name"] == "Books"
+        assert txn["amount"] == -39.99  # Should be negative
+        assert txn["quantity"] == 1
+        assert txn["price_per_item"] == -39.99
 
     def test_import_flips_sign(self, sample_csv, backend):
         """Test that positive amounts in CSV become negative."""
@@ -149,8 +150,8 @@ class TestImportBasic:
         result = run_async(backend.get_transactions(limit=100))
 
         # All amounts should be negative (expenses)
-        for txn in result['allTransactions']:
-            assert txn['amount'] < 0
+        for txn in result["allTransactions"]:
+            assert txn["amount"] < 0
 
     def test_import_calculates_price_per_item(self, sample_csv, backend):
         """Test that price per item is calculated correctly."""
@@ -160,13 +161,12 @@ class TestImportBasic:
 
         # Find the USB-C Cable transaction (qty 2)
         usb_cable = next(
-            txn for txn in result['allTransactions']
-            if txn['merchant']['name'] == 'USB-C Cable'
+            txn for txn in result["allTransactions"] if txn["merchant"]["name"] == "USB-C Cable"
         )
 
-        assert usb_cable['quantity'] == 2
-        assert usb_cable['amount'] == -15.99
-        assert usb_cable['price_per_item'] == pytest.approx(-7.995)
+        assert usb_cable["quantity"] == 2
+        assert usb_cable["amount"] == -15.99
+        assert usb_cable["price_per_item"] == pytest.approx(-7.995)
 
 
 class TestImportDuplicateHandling:
@@ -176,17 +176,17 @@ class TestImportDuplicateHandling:
         """Test that importing same file twice skips duplicates."""
         # First import
         stats1 = import_amazon_csv(sample_csv, backend=backend)
-        assert stats1['imported'] == 5
-        assert stats1['duplicates'] == 0
+        assert stats1["imported"] == 5
+        assert stats1["duplicates"] == 0
 
         # Second import
         stats2 = import_amazon_csv(sample_csv, backend=backend)
-        assert stats2['imported'] == 0
-        assert stats2['duplicates'] == 5
+        assert stats2["imported"] == 0
+        assert stats2["duplicates"] == 5
 
         # Verify only 5 transactions in database
         result = run_async(backend.get_transactions(limit=100))
-        assert len(result['allTransactions']) == 5
+        assert len(result["allTransactions"]) == 5
 
     def test_import_force_overwrites_duplicates(self, sample_csv, backend):
         """Test that force=True overwrites existing transactions."""
@@ -196,12 +196,12 @@ class TestImportDuplicateHandling:
         # Second import with force
         stats = import_amazon_csv(sample_csv, backend=backend, force=True)
 
-        assert stats['imported'] == 0
-        assert stats['duplicates'] == 5
+        assert stats["imported"] == 0
+        assert stats["duplicates"] == 5
 
         # Verify still only 5 transactions
         result = run_async(backend.get_transactions(limit=100))
-        assert len(result['allTransactions']) == 5
+        assert len(result["allTransactions"]) == 5
 
 
 class TestImportCategoryNormalization:
@@ -212,16 +212,16 @@ class TestImportCategoryNormalization:
         import_amazon_csv(csv_with_variations, backend=backend)
 
         result = run_async(backend.get_transaction_categories())
-        category_names = {cat['name'] for cat in result['categories']}
+        category_names = {cat["name"] for cat in result["categories"]}
 
         # Should have normalized names only
-        assert 'Books' in category_names
-        assert 'BOoks' not in category_names
+        assert "Books" in category_names
+        assert "BOoks" not in category_names
 
-        assert 'Video Game' in category_names
-        assert 'VIdeo Game' not in category_names
+        assert "Video Game" in category_names
+        assert "VIdeo Game" not in category_names
 
-        assert 'Office Product' in category_names
+        assert "Office Product" in category_names
         # Note: Both "Office Product" and "Office Products" might be present
         # since we only normalize "Office Products" -> "Office Product"
 
@@ -232,13 +232,10 @@ class TestImportCategoryNormalization:
         result = run_async(backend.get_transactions(limit=100))
 
         # All book transactions should have "Books" category
-        book_txns = [
-            txn for txn in result['allTransactions']
-            if 'Book' in txn['merchant']['name']
-        ]
+        book_txns = [txn for txn in result["allTransactions"] if "Book" in txn["merchant"]["name"]]
         assert len(book_txns) == 2
         for txn in book_txns:
-            assert txn['category']['name'] == 'Books'
+            assert txn["category"]["name"] == "Books"
 
 
 class TestImportHistory:
@@ -251,9 +248,11 @@ class TestImportHistory:
         history = backend.get_import_history()
 
         assert len(history) == 1
-        assert 'purchases' in history[0]['filename'].lower() or 'tmp' in history[0]['filename'].lower()
-        assert history[0]['record_count'] == 5
-        assert history[0]['duplicate_count'] == 0
+        assert (
+            "purchases" in history[0]["filename"].lower() or "tmp" in history[0]["filename"].lower()
+        )
+        assert history[0]["record_count"] == 5
+        assert history[0]["duplicate_count"] == 0
 
     def test_import_history_tracks_duplicates(self, sample_csv, backend):
         """Test that duplicate count is tracked in history."""
@@ -268,7 +267,7 @@ class TestImportHistory:
         assert len(history) == 2
 
         # Find the record with duplicates (should be the second import)
-        duplicate_counts = [h['duplicate_count'] for h in history]
+        duplicate_counts = [h["duplicate_count"] for h in history]
         assert 5 in duplicate_counts  # Second import should have 5 duplicates
         assert 0 in duplicate_counts  # First import should have 0 duplicates
 
@@ -282,7 +281,7 @@ class TestImportValidation:
 01/15/2024,Book,19.99
 """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             f.write(csv_content)
             csv_path = f.name
 
@@ -300,7 +299,7 @@ class TestImportValidation:
 01/17/2024,Another Invalid,Books,-1,39.99
 """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             f.write(csv_content)
             csv_path = f.name
 
@@ -308,12 +307,12 @@ class TestImportValidation:
             stats = import_amazon_csv(csv_path, backend=backend)
 
             # Only 1 valid row should be imported
-            assert stats['total_rows'] == 1  # After filtering
-            assert stats['imported'] == 1
+            assert stats["total_rows"] == 1  # After filtering
+            assert stats["imported"] == 1
 
             result = run_async(backend.get_transactions())
-            assert len(result['allTransactions']) == 1
-            assert result['allTransactions'][0]['merchant']['name'] == 'Valid Item'
+            assert len(result["allTransactions"]) == 1
+            assert result["allTransactions"][0]["merchant"]["name"] == "Valid Item"
         finally:
             Path(csv_path).unlink()
 
@@ -328,22 +327,22 @@ class TestCategoryStatistics:
         stats = get_category_statistics(backend=backend)
 
         # Should have stats for all categories
-        assert 'Books' in stats
-        assert 'Electronics' in stats
-        assert 'Kitchen' in stats
+        assert "Books" in stats
+        assert "Electronics" in stats
+        assert "Kitchen" in stats
 
         # Check Books category (2 items: $39.99 + $29.99 = $69.98)
-        books_count, books_total = stats['Books']
+        books_count, books_total = stats["Books"]
         assert books_count == 2
         assert books_total == pytest.approx(-69.98)
 
         # Check Electronics category (2 items: $15.99 + $12.99 = $28.98)
-        electronics_count, electronics_total = stats['Electronics']
+        electronics_count, electronics_total = stats["Electronics"]
         assert electronics_count == 2
         assert electronics_total == pytest.approx(-28.98)
 
         # Check Kitchen category (1 item: $89.99)
-        kitchen_count, kitchen_total = stats['Kitchen']
+        kitchen_count, kitchen_total = stats["Kitchen"]
         assert kitchen_count == 1
         assert kitchen_total == pytest.approx(-89.99)
 
@@ -357,7 +356,7 @@ class TestImportEdgeCases:
 01/15/2024,Mystery Item,,1,19.99
 """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             f.write(csv_content)
             csv_path = f.name
 
@@ -365,9 +364,9 @@ class TestImportEdgeCases:
             import_amazon_csv(csv_path, backend=backend)
 
             result = run_async(backend.get_transactions())
-            txn = result['allTransactions'][0]
+            txn = result["allTransactions"][0]
 
-            assert txn['category']['name'] == 'Misc.'
+            assert txn["category"]["name"] == "Misc."
         finally:
             Path(csv_path).unlink()
 
@@ -378,20 +377,22 @@ class TestImportEdgeCases:
 01/16/2024,Se�or Rio Salsa,Grocery,1,4.99
 """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False, encoding='utf-8') as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", delete=False, encoding="utf-8"
+        ) as f:
             f.write(csv_content)
             csv_path = f.name
 
         try:
             stats = import_amazon_csv(csv_path, backend=backend)
 
-            assert stats['imported'] == 2
+            assert stats["imported"] == 2
 
             result = run_async(backend.get_transactions())
-            merchants = {txn['merchant']['name'] for txn in result['allTransactions']}
+            merchants = {txn["merchant"]["name"] for txn in result["allTransactions"]}
 
-            assert 'Caf� Bustelo Coffee' in merchants
-            assert 'Se�or Rio Salsa' in merchants
+            assert "Caf� Bustelo Coffee" in merchants
+            assert "Se�or Rio Salsa" in merchants
         finally:
             Path(csv_path).unlink()
 
@@ -405,13 +406,13 @@ class TestImportEdgeCases:
         ]
         csv_content = "\n".join(lines) + "\n"
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             f.write(csv_content)
             csv_path = f.name
 
         try:
             stats = import_amazon_csv(csv_path, backend=backend)
 
-            assert stats['imported'] == 2
+            assert stats["imported"] == 2
         finally:
             Path(csv_path).unlink()

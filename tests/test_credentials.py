@@ -8,9 +8,9 @@ secure file permissions, and multi-backend support.
 
 import json
 import os
-import pytest
 from pathlib import Path
-from cryptography.fernet import InvalidToken
+
+import pytest
 
 from moneyflow.credentials import CredentialManager
 
@@ -265,7 +265,6 @@ class TestCredentialLoading:
     def test_load_legacy_credentials_without_backend_type(self, credential_manager):
         """Test backward compatibility: loading old credentials without backend_type."""
         # Manually create credentials without backend_type (simulate old format)
-        import json
         from cryptography.fernet import Fernet
 
         email = "test@example.com"

@@ -8,11 +8,9 @@ These tests verify that the full chain of operations works correctly:
 4. Backend state is updated correctly
 """
 
-import pytest
 from datetime import datetime
+
 import polars as pl
-from moneyflow.state import AppState
-from moneyflow.data_manager import DataManager
 
 
 class TestMerchantEditWorkflow:

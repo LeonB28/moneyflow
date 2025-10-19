@@ -15,10 +15,12 @@ providing a clean interface for data operations without exposing API details.
 
 import asyncio
 import json
-from datetime import datetime, date, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple, Callable
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
 import polars as pl
+
 from .backends.base import FinanceBackend
 from .logging_config import get_logger
 

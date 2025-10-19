@@ -6,10 +6,12 @@ including view mode, filters, selections, and pending edits. State should be dat
 not operations - complex operations belong in separate service classes.
 """
 
-from dataclasses import dataclass, field as dataclass_field
-from datetime import datetime, date
+from dataclasses import dataclass
+from dataclasses import field as dataclass_field
+from datetime import date, datetime
 from enum import Enum
-from typing import Any, Optional, List, Dict
+from typing import Any, Dict, List, Optional
+
 import polars as pl
 
 from .time_navigator import TimeNavigator
@@ -118,7 +120,9 @@ class AppState:
 
     # Multi-select for bulk operations
     selected_ids: set[str] = dataclass_field(default_factory=set)  # Transaction IDs in detail view
-    selected_group_keys: set[str] = dataclass_field(default_factory=set)  # Group names in aggregate views
+    selected_group_keys: set[str] = dataclass_field(
+        default_factory=set
+    )  # Group names in aggregate views
 
     # Search/filter
     search_query: str = ""
@@ -144,8 +148,8 @@ class AppState:
     current_data: Optional[pl.DataFrame] = None
 
     # Navigation history for breadcrumb and back navigation
-    # Stores (view_mode, cursor_position) for restoring state on go_back
-    navigation_history: List[tuple[ViewMode, int]] = dataclass_field(default_factory=list)
+    # Stores (view_mode, cursor_position, scroll_y) for restoring state on go_back
+    navigation_history: List[tuple[ViewMode, int, float]] = dataclass_field(default_factory=list)
 
     def add_edit(self, transaction_id: str, field: str, old_value: Any, new_value: Any):
         """Add a pending edit to the change tracker."""
@@ -269,12 +273,14 @@ class AppState:
 
     def is_drilled_down(self) -> bool:
         """Check if we're currently drilled down into a specific item."""
-        return any([
-            self.selected_merchant,
-            self.selected_category,
-            self.selected_group,
-            self.selected_account,
-        ])
+        return any(
+            [
+                self.selected_merchant,
+                self.selected_category,
+                self.selected_group,
+                self.selected_account,
+            ]
+        )
 
     def get_navigation_depth(self) -> int:
         """
@@ -466,7 +472,7 @@ class AppState:
 
         # Apply hidden filter (hide transactions marked hideFromReports unless enabled)
         if not self.show_hidden:
-            df = df.filter(pl.col("hideFromReports") == False)
+            df = df.filter(~pl.col("hideFromReports"))
 
         # Apply view-specific filters
         if self.view_mode == ViewMode.DETAIL:
@@ -481,7 +487,7 @@ class AppState:
 
         return df
 
-    def drill_down(self, item_name: str, cursor_position: int = 0) -> None:
+    def drill_down(self, item_name: str, cursor_position: int = 0, scroll_y: float = 0) -> None:
         """
         Drill down from aggregate view into transaction detail view.
 
@@ -492,20 +498,21 @@ class AppState:
         Args:
             item_name: The merchant/category/group/account name to drill into
             cursor_position: Current cursor row position to save for go_back()
+            scroll_y: Current scroll position to save for go_back()
 
         Examples:
             >>> state = AppState()
             >>> state.view_mode = ViewMode.MERCHANT
-            >>> state.drill_down("Amazon", cursor_position=5)
+            >>> state.drill_down("Amazon", cursor_position=5, scroll_y=100.0)
             >>> state.view_mode
             <ViewMode.DETAIL: 'detail'>
             >>> state.selected_merchant
             'Amazon'
             >>> state.navigation_history[-1]
-            (<ViewMode.MERCHANT: 'merchant'>, 5)
+            (<ViewMode.MERCHANT: 'merchant'>, 5, 100.0)
         """
-        # Save current state to history (view mode + cursor position)
-        self.navigation_history.append((self.view_mode, cursor_position))
+        # Save current state to history (view mode + cursor position + scroll position)
+        self.navigation_history.append((self.view_mode, cursor_position, scroll_y))
 
         # Set the selected item based on current view
         if self.view_mode == ViewMode.MERCHANT:
@@ -521,7 +528,7 @@ class AppState:
             self.selected_account = item_name
             self.view_mode = ViewMode.DETAIL
 
-    def go_back(self) -> tuple[bool, int]:
+    def go_back(self) -> tuple[bool, int, float]:
         """
         Go back to previous view.
 
@@ -532,9 +539,10 @@ class AppState:
         4. If at top-level: Do nothing
 
         Returns:
-            Tuple of (success: bool, cursor_position: int)
+            Tuple of (success: bool, cursor_position: int, scroll_y: float)
             success=True if went back, False if already at root
             cursor_position=Row to restore cursor to (0 if none saved)
+            scroll_y=Scroll position to restore (0.0 if none saved)
         """
         # Check if search should be cleared (highest priority)
         if self.search_query and self.search_navigation_state:
@@ -544,17 +552,22 @@ class AppState:
                 # Clear search instead of navigating
                 self.search_query = ""
                 self.search_navigation_state = None
-                return True, 0
+                return True, 0, 0.0
 
         # If in sub-grouped view, clear sub-grouping first (stay drilled down)
         if self.is_drilled_down() and self.sub_grouping_mode:
             self.sub_grouping_mode = None
-            return True, 0
+            return True, 0, 0.0
 
         if self.view_mode == ViewMode.DETAIL:
             # Check if we have multiple levels of drill-down
             # Clear the deepest level first (in reverse order: Account → Group → Category → Merchant)
-            if self.selected_account and not self.selected_category and not self.selected_group and not self.selected_merchant:
+            if (
+                self.selected_account
+                and not self.selected_category
+                and not self.selected_group
+                and not self.selected_merchant
+            ):
                 # At Account level only - go back to parent
                 self.selected_account = None
             elif self.selected_group and not self.selected_category and not self.selected_merchant:
@@ -566,15 +579,15 @@ class AppState:
             elif self.selected_account:
                 # Multi-level: clear deepest (Account)
                 self.selected_account = None
-                return True, 0
+                return True, 0, 0.0
             elif self.selected_group:
                 # Multi-level: clear deepest (Group)
                 self.selected_group = None
-                return True, 0
+                return True, 0, 0.0
             elif self.selected_category:
                 # Multi-level: clear deepest (Category)
                 self.selected_category = None
-                return True, 0
+                return True, 0, 0.0
             elif self.selected_merchant:
                 # Only Merchant selected - clear it
                 self.selected_merchant = None
@@ -586,8 +599,9 @@ class AppState:
 
             # Pop from history if available
             cursor_position = 0
+            scroll_y = 0.0
             if self.navigation_history:
-                previous_view, cursor_position = self.navigation_history.pop()
+                previous_view, cursor_position, scroll_y = self.navigation_history.pop()
                 self.view_mode = previous_view
             else:
                 # Default back to MERCHANT view
@@ -607,10 +621,10 @@ class AppState:
                 self.sort_by = SortMode.AMOUNT
                 self.sort_direction = SortDirection.DESC
 
-            return True, cursor_position
+            return True, cursor_position, scroll_y
 
         # Already at a top-level view
-        return False, 0
+        return False, 0, 0.0
 
     def save_view_state(self) -> dict:
         """

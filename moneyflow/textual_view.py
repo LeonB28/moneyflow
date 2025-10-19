@@ -6,8 +6,10 @@ interface, allowing the AppController to work with Textual without direct
 dependencies.
 """
 
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 from textual.widgets import DataTable, Static
+
 from .view_interface import IViewPresenter, NotificationSeverity
 
 

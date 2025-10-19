@@ -2,9 +2,9 @@
 Tests for DataManager operations including aggregation, filtering, and API integration.
 """
 
-import pytest
-import polars as pl
 from datetime import datetime
+
+import polars as pl
 
 from moneyflow.data_manager import DataManager
 from moneyflow.state import TransactionEdit
@@ -198,7 +198,9 @@ class TestCommitEdits:
 
     async def test_commit_category_change(self, data_manager, mock_mm):
         """Test committing a category change."""
-        edits = [TransactionEdit("txn_1", "category", "cat_groceries", "cat_shopping", datetime.now())]
+        edits = [
+            TransactionEdit("txn_1", "category", "cat_groceries", "cat_shopping", datetime.now())
+        ]
 
         await data_manager.commit_pending_edits(edits)
 

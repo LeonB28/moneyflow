@@ -1,11 +1,12 @@
 """Tests for cache_manager.py"""
 
-import pytest
-import polars as pl
-from pathlib import Path
 import json
 import time
-from datetime import datetime, timedelta
+from pathlib import Path
+
+import polars as pl
+import pytest
+
 from moneyflow.cache_manager import CacheManager
 
 
@@ -20,14 +21,16 @@ def temp_cache_dir(tmp_path):
 @pytest.fixture
 def sample_df():
     """Create sample transaction DataFrame."""
-    return pl.DataFrame({
-        "id": ["tx1", "tx2", "tx3"],
-        "date": ["2025-01-01", "2025-01-02", "2025-01-03"],
-        "merchant": ["Amazon", "Walmart", "Target"],
-        "amount": [-50.0, -100.0, -75.0],
-        "category": ["Shopping", "Groceries", "Shopping"],
-        "category_id": ["cat1", "cat2", "cat1"],
-    })
+    return pl.DataFrame(
+        {
+            "id": ["tx1", "tx2", "tx3"],
+            "date": ["2025-01-01", "2025-01-02", "2025-01-03"],
+            "merchant": ["Amazon", "Walmart", "Target"],
+            "amount": [-50.0, -100.0, -75.0],
+            "category": ["Shopping", "Groceries", "Shopping"],
+            "category_id": ["cat1", "cat2", "cat1"],
+        }
+    )
 
 
 @pytest.fixture
@@ -85,9 +88,7 @@ class TestCacheExists:
         cache_mgr.save_cache(sample_df, sample_categories, sample_category_groups)
         assert cache_mgr.cache_exists()
 
-    def test_cache_exists_returns_false_when_missing_metadata(
-        self, temp_cache_dir, sample_df
-    ):
+    def test_cache_exists_returns_false_when_missing_metadata(self, temp_cache_dir, sample_df):
         """Test that cache_exists returns False when metadata is missing."""
         cache_mgr = CacheManager(cache_dir=temp_cache_dir)
         # Only save transactions file
@@ -114,9 +115,7 @@ class TestSaveCache:
     ):
         """Test that metadata is stored correctly."""
         cache_mgr = CacheManager(cache_dir=temp_cache_dir)
-        cache_mgr.save_cache(
-            sample_df, sample_categories, sample_category_groups, year=2025
-        )
+        cache_mgr.save_cache(sample_df, sample_categories, sample_category_groups, year=2025)
 
         with open(cache_mgr.metadata_file, "r") as f:
             metadata = json.load(f)
@@ -147,16 +146,12 @@ class TestSaveCache:
         cache_mgr = CacheManager(cache_dir=temp_cache_dir)
 
         # Save first cache
-        cache_mgr.save_cache(
-            sample_df, sample_categories, sample_category_groups, year=2024
-        )
+        cache_mgr.save_cache(sample_df, sample_categories, sample_category_groups, year=2024)
         first_metadata = cache_mgr.load_metadata()
 
         # Save second cache
         time.sleep(0.1)  # Ensure different timestamp
-        cache_mgr.save_cache(
-            sample_df, sample_categories, sample_category_groups, year=2025
-        )
+        cache_mgr.save_cache(sample_df, sample_categories, sample_category_groups, year=2025)
         second_metadata = cache_mgr.load_metadata()
 
         assert second_metadata["year_filter"] == 2025
@@ -202,9 +197,7 @@ class TestCacheValidation:
     ):
         """Test that is_cache_valid returns True for matching year filter."""
         cache_mgr = CacheManager(cache_dir=temp_cache_dir)
-        cache_mgr.save_cache(
-            sample_df, sample_categories, sample_category_groups, year=2025
-        )
+        cache_mgr.save_cache(sample_df, sample_categories, sample_category_groups, year=2025)
 
         assert cache_mgr.is_cache_valid(year=2025)
 
@@ -213,9 +206,7 @@ class TestCacheValidation:
     ):
         """Test that is_cache_valid returns False for different year filter."""
         cache_mgr = CacheManager(cache_dir=temp_cache_dir)
-        cache_mgr.save_cache(
-            sample_df, sample_categories, sample_category_groups, year=2025
-        )
+        cache_mgr.save_cache(sample_df, sample_categories, sample_category_groups, year=2025)
 
         assert not cache_mgr.is_cache_valid(year=2024)
 
@@ -284,9 +275,7 @@ class TestCacheInfo:
     ):
         """Test that get_cache_info returns formatted information."""
         cache_mgr = CacheManager(cache_dir=temp_cache_dir)
-        cache_mgr.save_cache(
-            sample_df, sample_categories, sample_category_groups, year=2025
-        )
+        cache_mgr.save_cache(sample_df, sample_categories, sample_category_groups, year=2025)
 
         info = cache_mgr.get_cache_info()
         assert info is not None
@@ -353,12 +342,14 @@ class TestCacheEdgeCases:
     ):
         """Test saving and loading an empty DataFrame."""
         cache_mgr = CacheManager(cache_dir=temp_cache_dir)
-        empty_df = pl.DataFrame({
-            "id": [],
-            "date": [],
-            "merchant": [],
-            "amount": [],
-        })
+        empty_df = pl.DataFrame(
+            {
+                "id": [],
+                "date": [],
+                "merchant": [],
+                "amount": [],
+            }
+        )
 
         cache_mgr.save_cache(empty_df, sample_categories, sample_category_groups)
         result = cache_mgr.load_cache()
@@ -375,14 +366,16 @@ class TestCacheEdgeCases:
 
         # Create large DataFrame (10k rows)
         n = 10000
-        large_df = pl.DataFrame({
-            "id": [f"tx{i}" for i in range(n)],
-            "date": ["2025-01-01"] * n,
-            "merchant": ["Amazon"] * n,
-            "amount": [-50.0] * n,
-            "category": ["Shopping"] * n,
-            "category_id": ["cat1"] * n,
-        })
+        large_df = pl.DataFrame(
+            {
+                "id": [f"tx{i}" for i in range(n)],
+                "date": ["2025-01-01"] * n,
+                "merchant": ["Amazon"] * n,
+                "amount": [-50.0] * n,
+                "category": ["Shopping"] * n,
+                "category_id": ["cat1"] * n,
+            }
+        )
 
         cache_mgr.save_cache(large_df, sample_categories, sample_category_groups)
         result = cache_mgr.load_cache()

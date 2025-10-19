@@ -5,9 +5,10 @@ Simulates MonarchMoney API using synthetic data, allowing safe exploration
 of the TUI without a Monarch account or exposing personal finances.
 """
 
-from typing import Dict, List, Any, Optional
-from .base import FinanceBackend
+from typing import Any, Dict, List, Optional
+
 from ..demo_data_generator import generate_demo_data
+from .base import FinanceBackend
 
 
 class DemoBackend(FinanceBackend):

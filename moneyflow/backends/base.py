@@ -6,7 +6,7 @@ to be compatible with moneyflow.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class FinanceBackend(ABC):

@@ -1,10 +1,10 @@
 """Review pending changes before committing."""
 
 from textual.app import ComposeResult
+from textual.containers import Container
 from textual.events import Key
 from textual.screen import Screen
-from textual.containers import Container
-from textual.widgets import Button, Label, Static, DataTable
+from textual.widgets import Button, DataTable, Label, Static
 
 
 class ReviewChangesScreen(Screen):

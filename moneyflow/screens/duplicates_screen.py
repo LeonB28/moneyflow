@@ -1,17 +1,16 @@
 """Duplicates detection and review screen."""
 
-from datetime import datetime
 from typing import Optional, Set
-from textual.app import ComposeResult
-from textual.events import Key
-from textual.screen import Screen
-from textual.containers import Container
-from textual.widgets import Label, Static, DataTable
-from textual.binding import Binding
-import polars as pl
 
-from .transaction_detail_screen import TransactionDetailScreen
+import polars as pl
+from textual.app import ComposeResult
+from textual.binding import Binding
+from textual.containers import Container
+from textual.screen import Screen
+from textual.widgets import DataTable, Label, Static
+
 from .edit_screens import DeleteConfirmationScreen
+from .transaction_detail_screen import TransactionDetailScreen
 
 
 class DuplicatesScreen(Screen):
@@ -158,7 +157,9 @@ class DuplicatesScreen(Screen):
         if status_parts:
             status_line.update(" | ".join(status_parts))
         else:
-            status_line.update("↑/↓=Navigate | Space=Select | Enter=Details | d=Delete | h=Hide | Esc=Close")
+            status_line.update(
+                "↑/↓=Navigate | Space=Select | Enter=Details | d=Delete | h=Hide | Esc=Close"
+            )
 
     def get_current_transaction_id(self) -> Optional[str]:
         """Get the transaction ID of the currently selected row."""

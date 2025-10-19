@@ -6,8 +6,8 @@ integration with Textual widgets.
 """
 
 import pytest
-from textual.widgets import DataTable, Static
 from textual.app import App
+from textual.widgets import DataTable, Static
 
 from moneyflow.textual_view import TextualViewPresenter
 
@@ -91,9 +91,7 @@ class TestUpdateTable:
             assert len(table.columns) == 2
             assert table.row_count == 2
 
-    async def test_update_table_without_force_rebuild_no_columns(
-        self, view_presenter, mock_app
-    ):
+    async def test_update_table_without_force_rebuild_no_columns(self, view_presenter, mock_app):
         """Test that smooth update adds columns if none exist (edge case)."""
         async with mock_app.run_test() as pilot:
             table = mock_app.query_one("#data-table", DataTable)

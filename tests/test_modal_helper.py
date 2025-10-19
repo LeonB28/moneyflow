@@ -5,9 +5,10 @@ These tests verify that modal parameter preparation logic is correct
 and can be tested without requiring the UI to be running.
 """
 
-import pytest
-import polars as pl
 from datetime import datetime
+
+import polars as pl
+
 from moneyflow.modal_helper import ModalHelper
 from moneyflow.state import TransactionEdit
 
@@ -19,7 +20,7 @@ class TestEditMerchantParams:
         params = ModalHelper.edit_merchant_params(
             merchant_name="Amazon",
             transaction_count=5,
-            all_merchants=["Amazon", "Walmart", "Target"]
+            all_merchants=["Amazon", "Walmart", "Target"],
         )
 
         assert params["current_merchant"] == "Amazon"
@@ -33,7 +34,7 @@ class TestEditMerchantParams:
             merchant_name="Amazon",
             transaction_count=15,
             all_merchants=["Amazon"],
-            bulk_summary={"total_amount": -250.50}
+            bulk_summary={"total_amount": -250.50},
         )
 
         assert params["bulk_summary"]["total_amount"] == -250.50
@@ -43,11 +44,7 @@ class TestEditMerchantParams:
             merchant_name="Amazon",
             transaction_count=1,
             all_merchants=["Amazon"],
-            txn_details={
-                "date": "2025-10-14",
-                "amount": -42.99,
-                "category": "Shopping"
-            }
+            txn_details={"date": "2025-10-14", "amount": -42.99, "category": "Shopping"},
         )
 
         assert params["txn_details"]["date"] == "2025-10-14"
@@ -61,7 +58,7 @@ class TestEditMerchantParams:
             transaction_count=1,
             all_merchants=["Test"],
             bulk_summary={"total_amount": -100.0},
-            txn_details={"date": "2025-10-14", "amount": -100.0}
+            txn_details={"date": "2025-10-14", "amount": -100.0},
         )
 
         assert "bulk_summary" in params
@@ -74,7 +71,7 @@ class TestSelectCategoryParams:
     def test_basic_params(self):
         categories = {
             "cat_1": {"name": "Groceries", "group": "Food"},
-            "cat_2": {"name": "Gas", "group": "Automotive"}
+            "cat_2": {"name": "Gas", "group": "Automotive"},
         }
 
         params = ModalHelper.select_category_params(categories)
@@ -86,10 +83,7 @@ class TestSelectCategoryParams:
     def test_with_current_category(self):
         categories = {"cat_1": {"name": "Groceries"}}
 
-        params = ModalHelper.select_category_params(
-            categories,
-            current_category_id="cat_1"
-        )
+        params = ModalHelper.select_category_params(categories, current_category_id="cat_1")
 
         assert params["current_category_id"] == "cat_1"
 
@@ -97,11 +91,7 @@ class TestSelectCategoryParams:
         params = ModalHelper.select_category_params(
             categories={},
             current_category_id="cat_1",
-            txn_details={
-                "date": "2025-10-14",
-                "amount": -25.0,
-                "merchant": "Safeway"
-            }
+            txn_details={"date": "2025-10-14", "amount": -25.0, "merchant": "Safeway"},
         )
 
         assert params["txn_details"]["merchant"] == "Safeway"
@@ -113,7 +103,7 @@ class TestReviewChangesParams:
     def test_basic_params(self):
         edits = [
             TransactionEdit("txn_1", "merchant", "Old", "New", datetime.now()),
-            TransactionEdit("txn_2", "category", "cat_1", "cat_2", datetime.now())
+            TransactionEdit("txn_2", "category", "cat_1", "cat_2", datetime.now()),
         ]
         categories = {"cat_1": {"name": "Food"}, "cat_2": {"name": "Gas"}}
 
@@ -151,10 +141,7 @@ class TestFilterParams:
     """Test parameters for Filter Settings modal."""
 
     def test_basic_params(self):
-        params = ModalHelper.filter_params(
-            show_transfers=True,
-            show_hidden=False
-        )
+        params = ModalHelper.filter_params(show_transfers=True, show_hidden=False)
 
         assert params["show_transfers"] is True
         assert params["show_hidden"] is False
@@ -177,9 +164,7 @@ class TestCachePromptParams:
 
     def test_basic_params(self):
         params = ModalHelper.cache_prompt_params(
-            age="2 hours ago",
-            transaction_count=1500,
-            filter_desc="All transactions"
+            age="2 hours ago", transaction_count=1500, filter_desc="All transactions"
         )
 
         assert params["age"] == "2 hours ago"
@@ -196,7 +181,7 @@ class TestTransactionDetailParams:
             "date": "2025-10-14",
             "merchant": "Starbucks",
             "amount": -5.75,
-            "category": "Coffee Shops"
+            "category": "Coffee Shops",
         }
 
         params = ModalHelper.transaction_detail_params(txn)
@@ -208,15 +193,19 @@ class TestDuplicatesParams:
     """Test parameters for Duplicates modal."""
 
     def test_basic_params(self):
-        duplicates_df = pl.DataFrame({
-            "id": ["txn_1", "txn_2"],
-            "amount": [-100.0, -100.0],
-        })
+        duplicates_df = pl.DataFrame(
+            {
+                "id": ["txn_1", "txn_2"],
+                "amount": [-100.0, -100.0],
+            }
+        )
 
-        all_txns_df = pl.DataFrame({
-            "id": ["txn_1", "txn_2", "txn_3"],
-            "amount": [-100.0, -100.0, -50.0],
-        })
+        all_txns_df = pl.DataFrame(
+            {
+                "id": ["txn_1", "txn_2", "txn_3"],
+                "amount": [-100.0, -100.0, -50.0],
+            }
+        )
 
         groups = [["txn_1", "txn_2"]]
 
@@ -258,7 +247,7 @@ class TestRealWorldScenarios:
             merchant_name="AMZN*123",
             transaction_count=25,
             all_merchants=all_merchants,
-            bulk_summary={"total_amount": -1250.75}
+            bulk_summary={"total_amount": -1250.75},
         )
 
         # Should have all required fields for bulk edit
@@ -273,11 +262,7 @@ class TestRealWorldScenarios:
             merchant_name="Starbucks",
             transaction_count=1,
             all_merchants=["Starbucks", "Starbucks Coffee"],
-            txn_details={
-                "date": "2025-10-14",
-                "amount": -6.50,
-                "category": "Coffee Shops"
-            }
+            txn_details={"date": "2025-10-14", "amount": -6.50, "category": "Coffee Shops"},
         )
 
         # Should provide context for single edit
@@ -287,12 +272,9 @@ class TestRealWorldScenarios:
     def test_review_before_commit(self):
         """Scenario: User presses 'w' to review 10 pending edits."""
         edits = [
-            TransactionEdit(f"txn_{i}", "merchant", "Old", "New", datetime.now())
-            for i in range(10)
+            TransactionEdit(f"txn_{i}", "merchant", "Old", "New", datetime.now()) for i in range(10)
         ]
-        categories = {
-            "cat_1": {"name": "Groceries", "group": "Food"}
-        }
+        categories = {"cat_1": {"name": "Groceries", "group": "Food"}}
 
         params = ModalHelper.review_changes_params(edits, categories)
 

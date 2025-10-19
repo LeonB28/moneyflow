@@ -5,7 +5,8 @@ This mock records all view operations so tests can verify that the
 controller calls the right view methods with the right arguments.
 """
 
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 from moneyflow.view_interface import IViewPresenter, NotificationSeverity
 
 
@@ -27,32 +28,24 @@ class MockViewPresenter(IViewPresenter):
         self.pending_changes = []  # List of pending change counts
 
     def update_table(
-        self,
-        columns: List[Dict[str, Any]],
-        rows: List[tuple],
-        force_rebuild: bool = True
+        self, columns: List[Dict[str, Any]], rows: List[tuple], force_rebuild: bool = True
     ) -> None:
         """Record table update."""
-        self.table_updates.append({
-            "columns": columns,
-            "rows": rows,
-            "force_rebuild": force_rebuild,
-            "column_count": len(columns),
-            "row_count": len(rows)
-        })
+        self.table_updates.append(
+            {
+                "columns": columns,
+                "rows": rows,
+                "force_rebuild": force_rebuild,
+                "column_count": len(columns),
+                "row_count": len(rows),
+            }
+        )
 
     def show_notification(
-        self,
-        message: str,
-        severity: NotificationSeverity = "information",
-        timeout: int = 3
+        self, message: str, severity: NotificationSeverity = "information", timeout: int = 3
     ) -> None:
         """Record notification."""
-        self.notifications.append({
-            "message": message,
-            "severity": severity,
-            "timeout": timeout
-        })
+        self.notifications.append({"message": message, "severity": severity, "timeout": timeout})
 
     def update_breadcrumb(self, text: str) -> None:
         """Record breadcrumb update."""
@@ -85,18 +78,21 @@ class MockViewPresenter(IViewPresenter):
         assert len(self.table_updates) > 0, "Table was never updated"
         last = self.get_last_table_update()
         if expected_columns is not None:
-            assert last["column_count"] == expected_columns, \
+            assert last["column_count"] == expected_columns, (
                 f"Expected {expected_columns} columns, got {last['column_count']}"
+            )
         if expected_rows is not None:
-            assert last["row_count"] == expected_rows, \
+            assert last["row_count"] == expected_rows, (
                 f"Expected {expected_rows} rows, got {last['row_count']}"
+            )
 
     def assert_force_rebuild(self, expected: bool):
         """Assert force_rebuild was set correctly."""
         last = self.get_last_table_update()
         assert last is not None, "No table updates"
-        assert last["force_rebuild"] == expected, \
+        assert last["force_rebuild"] == expected, (
             f"Expected force_rebuild={expected}, got {last['force_rebuild']}"
+        )
 
     def reset(self):
         """Clear all recorded calls."""

@@ -5,10 +5,9 @@ Creates a year of transactions for a millennial couple in a major US city
 with ~$250k gross income, realistic spending patterns, and edge cases for testing features.
 """
 
-import random
-from datetime import date, timedelta
-from typing import List, Dict, Any
 import hashlib
+import random
+from typing import Any, Dict, List
 
 from moneyflow.data_manager import CATEGORY_GROUPS
 

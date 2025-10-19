@@ -8,7 +8,8 @@ Identifies potential duplicate transactions based on:
 - Same account (optional)
 """
 
-from typing import List, Tuple
+from typing import List
+
 import polars as pl
 
 

@@ -5,11 +5,12 @@ Comprehensive tests for date range calculations, period navigation,
 and edge cases like leap years and year boundaries.
 """
 
-from datetime import date
 import calendar
+from datetime import date
+
 import pytest
 
-from moneyflow.time_navigator import TimeNavigator, DateRange
+from moneyflow.time_navigator import TimeNavigator
 
 
 class TestGetMonthRange:
@@ -66,8 +67,18 @@ class TestGetMonthRange:
     def test_all_months_valid(self):
         """Should return valid ranges for all 12 months."""
         month_names = [
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
         ]
         for month, expected_name in enumerate(month_names, 1):
             range_obj = TimeNavigator.get_month_range(2025, month)
@@ -134,39 +145,27 @@ class TestIsFullYearRange:
 
     def test_full_year_2025(self):
         """Should return True for Jan 1 - Dec 31."""
-        assert TimeNavigator.is_full_year_range(
-            date(2025, 1, 1), date(2025, 12, 31)
-        ) is True
+        assert TimeNavigator.is_full_year_range(date(2025, 1, 1), date(2025, 12, 31)) is True
 
     def test_leap_year_2024(self):
         """Should return True for full leap year."""
-        assert TimeNavigator.is_full_year_range(
-            date(2024, 1, 1), date(2024, 12, 31)
-        ) is True
+        assert TimeNavigator.is_full_year_range(date(2024, 1, 1), date(2024, 12, 31)) is True
 
     def test_partial_year_jan_to_june(self):
         """Should return False for partial year."""
-        assert TimeNavigator.is_full_year_range(
-            date(2025, 1, 1), date(2025, 6, 30)
-        ) is False
+        assert TimeNavigator.is_full_year_range(date(2025, 1, 1), date(2025, 6, 30)) is False
 
     def test_full_year_wrong_start_month(self):
         """Should return False if not starting in January."""
-        assert TimeNavigator.is_full_year_range(
-            date(2025, 2, 1), date(2025, 12, 31)
-        ) is False
+        assert TimeNavigator.is_full_year_range(date(2025, 2, 1), date(2025, 12, 31)) is False
 
     def test_full_year_wrong_end_month(self):
         """Should return False if not ending in December."""
-        assert TimeNavigator.is_full_year_range(
-            date(2025, 1, 1), date(2025, 11, 30)
-        ) is False
+        assert TimeNavigator.is_full_year_range(date(2025, 1, 1), date(2025, 11, 30)) is False
 
     def test_crosses_year_boundary(self):
         """Should return False for range crossing year boundary."""
-        assert TimeNavigator.is_full_year_range(
-            date(2024, 1, 1), date(2025, 12, 31)
-        ) is False
+        assert TimeNavigator.is_full_year_range(date(2024, 1, 1), date(2025, 12, 31)) is False
 
 
 class TestIsFullMonthRange:
@@ -174,39 +173,27 @@ class TestIsFullMonthRange:
 
     def test_full_month_january(self):
         """Should return True for full January."""
-        assert TimeNavigator.is_full_month_range(
-            date(2025, 1, 1), date(2025, 1, 31)
-        ) is True
+        assert TimeNavigator.is_full_month_range(date(2025, 1, 1), date(2025, 1, 31)) is True
 
     def test_full_month_february_non_leap(self):
         """Should return True for full February (28 days)."""
-        assert TimeNavigator.is_full_month_range(
-            date(2025, 2, 1), date(2025, 2, 28)
-        ) is True
+        assert TimeNavigator.is_full_month_range(date(2025, 2, 1), date(2025, 2, 28)) is True
 
     def test_full_month_february_leap_year(self):
         """Should return True for full February in leap year (29 days)."""
-        assert TimeNavigator.is_full_month_range(
-            date(2024, 2, 1), date(2024, 2, 29)
-        ) is True
+        assert TimeNavigator.is_full_month_range(date(2024, 2, 1), date(2024, 2, 29)) is True
 
     def test_partial_month_mid_to_end(self):
         """Should return False for partial month."""
-        assert TimeNavigator.is_full_month_range(
-            date(2025, 1, 15), date(2025, 1, 31)
-        ) is False
+        assert TimeNavigator.is_full_month_range(date(2025, 1, 15), date(2025, 1, 31)) is False
 
     def test_partial_month_start_to_mid(self):
         """Should return False when not ending on last day."""
-        assert TimeNavigator.is_full_month_range(
-            date(2025, 1, 1), date(2025, 1, 15)
-        ) is False
+        assert TimeNavigator.is_full_month_range(date(2025, 1, 1), date(2025, 1, 15)) is False
 
     def test_crosses_month_boundary(self):
         """Should return False for range crossing months."""
-        assert TimeNavigator.is_full_month_range(
-            date(2025, 1, 1), date(2025, 2, 28)
-        ) is False
+        assert TimeNavigator.is_full_month_range(date(2025, 1, 1), date(2025, 2, 28)) is False
 
 
 class TestPreviousPeriod:
@@ -214,9 +201,7 @@ class TestPreviousPeriod:
 
     def test_previous_year_from_full_year(self):
         """Should navigate to previous year when viewing full year."""
-        range_obj = TimeNavigator.previous_period(
-            date(2025, 1, 1), date(2025, 12, 31)
-        )
+        range_obj = TimeNavigator.previous_period(date(2025, 1, 1), date(2025, 12, 31))
 
         assert range_obj.start_date == date(2024, 1, 1)
         assert range_obj.end_date == date(2024, 12, 31)
@@ -224,9 +209,7 @@ class TestPreviousPeriod:
 
     def test_previous_month_from_full_month(self):
         """Should navigate to previous month when viewing full month."""
-        range_obj = TimeNavigator.previous_period(
-            date(2025, 3, 1), date(2025, 3, 31)
-        )
+        range_obj = TimeNavigator.previous_period(date(2025, 3, 1), date(2025, 3, 31))
 
         assert range_obj.start_date == date(2025, 2, 1)
         assert range_obj.end_date == date(2025, 2, 28)
@@ -234,9 +217,7 @@ class TestPreviousPeriod:
 
     def test_previous_month_across_year_boundary(self):
         """Should navigate from January to December of previous year."""
-        range_obj = TimeNavigator.previous_period(
-            date(2025, 1, 1), date(2025, 1, 31)
-        )
+        range_obj = TimeNavigator.previous_period(date(2025, 1, 1), date(2025, 1, 31))
 
         assert range_obj.start_date == date(2024, 12, 1)
         assert range_obj.end_date == date(2024, 12, 31)
@@ -244,17 +225,13 @@ class TestPreviousPeriod:
 
     def test_previous_month_from_march_to_february_leap_year(self):
         """Should handle leap year February correctly."""
-        range_obj = TimeNavigator.previous_period(
-            date(2024, 3, 1), date(2024, 3, 31)
-        )
+        range_obj = TimeNavigator.previous_period(date(2024, 3, 1), date(2024, 3, 31))
 
         assert range_obj.end_date == date(2024, 2, 29)  # Leap year
 
     def test_previous_month_from_march_to_february_non_leap(self):
         """Should handle non-leap year February correctly."""
-        range_obj = TimeNavigator.previous_period(
-            date(2025, 3, 1), date(2025, 3, 31)
-        )
+        range_obj = TimeNavigator.previous_period(date(2025, 3, 1), date(2025, 3, 31))
 
         assert range_obj.end_date == date(2025, 2, 28)  # Non-leap year
 
@@ -264,9 +241,7 @@ class TestNextPeriod:
 
     def test_next_year_from_full_year(self):
         """Should navigate to next year when viewing full year."""
-        range_obj = TimeNavigator.next_period(
-            date(2025, 1, 1), date(2025, 12, 31)
-        )
+        range_obj = TimeNavigator.next_period(date(2025, 1, 1), date(2025, 12, 31))
 
         assert range_obj.start_date == date(2026, 1, 1)
         assert range_obj.end_date == date(2026, 12, 31)
@@ -274,9 +249,7 @@ class TestNextPeriod:
 
     def test_next_month_from_full_month(self):
         """Should navigate to next month when viewing full month."""
-        range_obj = TimeNavigator.next_period(
-            date(2025, 1, 1), date(2025, 1, 31)
-        )
+        range_obj = TimeNavigator.next_period(date(2025, 1, 1), date(2025, 1, 31))
 
         assert range_obj.start_date == date(2025, 2, 1)
         assert range_obj.end_date == date(2025, 2, 28)
@@ -284,9 +257,7 @@ class TestNextPeriod:
 
     def test_next_month_across_year_boundary(self):
         """Should navigate from December to January of next year."""
-        range_obj = TimeNavigator.next_period(
-            date(2025, 12, 1), date(2025, 12, 31)
-        )
+        range_obj = TimeNavigator.next_period(date(2025, 12, 1), date(2025, 12, 31))
 
         assert range_obj.start_date == date(2026, 1, 1)
         assert range_obj.end_date == date(2026, 1, 31)
@@ -294,24 +265,21 @@ class TestNextPeriod:
 
     def test_next_month_from_january_to_february_leap_year(self):
         """Should handle leap year February correctly."""
-        range_obj = TimeNavigator.next_period(
-            date(2024, 1, 1), date(2024, 1, 31)
-        )
+        range_obj = TimeNavigator.next_period(date(2024, 1, 1), date(2024, 1, 31))
 
         assert range_obj.end_date == date(2024, 2, 29)  # Leap year
 
     def test_next_month_from_january_to_february_non_leap(self):
         """Should handle non-leap year February correctly."""
-        range_obj = TimeNavigator.next_period(
-            date(2025, 1, 1), date(2025, 1, 31)
-        )
+        range_obj = TimeNavigator.next_period(date(2025, 1, 1), date(2025, 1, 31))
 
         assert range_obj.end_date == date(2025, 2, 28)  # Non-leap year
 
     def test_next_month_from_30_day_to_31_day(self):
         """Should handle transition from 30-day to 31-day month."""
         range_obj = TimeNavigator.next_period(
-            date(2025, 4, 1), date(2025, 4, 30)  # April has 30 days
+            date(2025, 4, 1),
+            date(2025, 4, 30),  # April has 30 days
         )
 
         assert range_obj.end_date == date(2025, 5, 31)  # May has 31 days
@@ -319,7 +287,8 @@ class TestNextPeriod:
     def test_next_month_from_31_day_to_30_day(self):
         """Should handle transition from 31-day to 30-day month."""
         range_obj = TimeNavigator.next_period(
-            date(2025, 5, 1), date(2025, 5, 31)  # May has 31 days
+            date(2025, 5, 1),
+            date(2025, 5, 31),  # May has 31 days
         )
 
         assert range_obj.end_date == date(2025, 6, 30)  # June has 30 days
@@ -339,8 +308,18 @@ class TestGetMonthName:
     def test_all_months(self):
         """Should return correct names for all months."""
         expected = [
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
         ]
         for month, name in enumerate(expected, 1):
             assert TimeNavigator.get_month_name(month) == name
@@ -361,42 +340,30 @@ class TestNavigationEdgeCases:
 
     def test_previous_from_year_2000(self):
         """Should navigate from 2000 to 1999."""
-        range_obj = TimeNavigator.previous_period(
-            date(2000, 1, 1), date(2000, 12, 31)
-        )
+        range_obj = TimeNavigator.previous_period(date(2000, 1, 1), date(2000, 12, 31))
 
         assert range_obj.start_date == date(1999, 1, 1)
         assert range_obj.end_date == date(1999, 12, 31)
 
     def test_next_to_year_3000(self):
         """Should navigate to year 3000."""
-        range_obj = TimeNavigator.next_period(
-            date(2999, 1, 1), date(2999, 12, 31)
-        )
+        range_obj = TimeNavigator.next_period(date(2999, 1, 1), date(2999, 12, 31))
 
         assert range_obj.start_date == date(3000, 1, 1)
         assert range_obj.end_date == date(3000, 12, 31)
 
     def test_previous_previous_year(self):
         """Should handle double previous navigation."""
-        range1 = TimeNavigator.previous_period(
-            date(2025, 1, 1), date(2025, 12, 31)
-        )
-        range2 = TimeNavigator.previous_period(
-            range1.start_date, range1.end_date
-        )
+        range1 = TimeNavigator.previous_period(date(2025, 1, 1), date(2025, 12, 31))
+        range2 = TimeNavigator.previous_period(range1.start_date, range1.end_date)
 
         assert range2.start_date == date(2023, 1, 1)
         assert range2.end_date == date(2023, 12, 31)
 
     def test_next_next_month(self):
         """Should handle double next navigation."""
-        range1 = TimeNavigator.next_period(
-            date(2025, 1, 1), date(2025, 1, 31)
-        )
-        range2 = TimeNavigator.next_period(
-            range1.start_date, range1.end_date
-        )
+        range1 = TimeNavigator.next_period(date(2025, 1, 1), date(2025, 1, 31))
+        range2 = TimeNavigator.next_period(range1.start_date, range1.end_date)
 
         assert range2.start_date == date(2025, 3, 1)
         assert range2.end_date.month == 3
@@ -434,13 +401,9 @@ class TestPeriodRoundTrip:
 
         # Next of a month should also be a full month
         month_range = TimeNavigator.get_month_range(2025, 3)
-        next_period = TimeNavigator.next_period(
-            month_range.start_date, month_range.end_date
-        )
+        next_period = TimeNavigator.next_period(month_range.start_date, month_range.end_date)
 
-        assert TimeNavigator.is_full_month_range(
-            next_period.start_date, next_period.end_date
-        )
+        assert TimeNavigator.is_full_month_range(next_period.start_date, next_period.end_date)
 
 
 class TestDescriptions:

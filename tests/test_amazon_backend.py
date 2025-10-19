@@ -1,9 +1,11 @@
 """Tests for Amazon backend."""
 
-import pytest
 import sqlite3
 import tempfile
 from pathlib import Path
+
+import pytest
+
 from moneyflow.backends.amazon import AmazonBackend
 
 
@@ -71,28 +73,24 @@ class TestAmazonBackendInit:
     def test_init_creates_tables(self, backend):
         """Test that initialization creates required tables."""
         conn = backend._get_connection()
-        cursor = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-        )
+        cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
         tables = {row[0] for row in cursor.fetchall()}
         conn.close()
 
-        assert 'transactions' in tables
-        assert 'categories' in tables
-        assert 'import_history' in tables
+        assert "transactions" in tables
+        assert "categories" in tables
+        assert "import_history" in tables
 
     def test_init_creates_indexes(self, backend):
         """Test that initialization creates indexes."""
         conn = backend._get_connection()
-        cursor = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='index'"
-        )
+        cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='index'")
         indexes = {row[0] for row in cursor.fetchall()}
         conn.close()
 
-        assert 'idx_date' in indexes
-        assert 'idx_merchant' in indexes
-        assert 'idx_category' in indexes
+        assert "idx_date" in indexes
+        assert "idx_merchant" in indexes
+        assert "idx_category" in indexes
 
     def test_default_db_path(self):
         """Test that default database path is ~/.moneyflow/amazon.db."""
@@ -106,59 +104,37 @@ class TestTransactionIDGeneration:
 
     def test_generate_id_deterministic(self):
         """Test that same inputs generate same ID."""
-        id1 = AmazonBackend.generate_transaction_id(
-            "2024-01-15", "USB Cable", -15.99, 2
-        )
-        id2 = AmazonBackend.generate_transaction_id(
-            "2024-01-15", "USB Cable", -15.99, 2
-        )
+        id1 = AmazonBackend.generate_transaction_id("2024-01-15", "USB Cable", -15.99, 2)
+        id2 = AmazonBackend.generate_transaction_id("2024-01-15", "USB Cable", -15.99, 2)
         assert id1 == id2
 
     def test_generate_id_different_date(self):
         """Test that different dates generate different IDs."""
-        id1 = AmazonBackend.generate_transaction_id(
-            "2024-01-15", "USB Cable", -15.99, 2
-        )
-        id2 = AmazonBackend.generate_transaction_id(
-            "2024-01-16", "USB Cable", -15.99, 2
-        )
+        id1 = AmazonBackend.generate_transaction_id("2024-01-15", "USB Cable", -15.99, 2)
+        id2 = AmazonBackend.generate_transaction_id("2024-01-16", "USB Cable", -15.99, 2)
         assert id1 != id2
 
     def test_generate_id_different_merchant(self):
         """Test that different merchants generate different IDs."""
-        id1 = AmazonBackend.generate_transaction_id(
-            "2024-01-15", "USB Cable", -15.99, 2
-        )
-        id2 = AmazonBackend.generate_transaction_id(
-            "2024-01-15", "HDMI Cable", -15.99, 2
-        )
+        id1 = AmazonBackend.generate_transaction_id("2024-01-15", "USB Cable", -15.99, 2)
+        id2 = AmazonBackend.generate_transaction_id("2024-01-15", "HDMI Cable", -15.99, 2)
         assert id1 != id2
 
     def test_generate_id_different_amount(self):
         """Test that different amounts generate different IDs."""
-        id1 = AmazonBackend.generate_transaction_id(
-            "2024-01-15", "USB Cable", -15.99, 2
-        )
-        id2 = AmazonBackend.generate_transaction_id(
-            "2024-01-15", "USB Cable", -19.99, 2
-        )
+        id1 = AmazonBackend.generate_transaction_id("2024-01-15", "USB Cable", -15.99, 2)
+        id2 = AmazonBackend.generate_transaction_id("2024-01-15", "USB Cable", -19.99, 2)
         assert id1 != id2
 
     def test_generate_id_different_quantity(self):
         """Test that different quantities generate different IDs."""
-        id1 = AmazonBackend.generate_transaction_id(
-            "2024-01-15", "USB Cable", -15.99, 2
-        )
-        id2 = AmazonBackend.generate_transaction_id(
-            "2024-01-15", "USB Cable", -15.99, 3
-        )
+        id1 = AmazonBackend.generate_transaction_id("2024-01-15", "USB Cable", -15.99, 2)
+        id2 = AmazonBackend.generate_transaction_id("2024-01-15", "USB Cable", -15.99, 3)
         assert id1 != id2
 
     def test_generate_id_length(self):
         """Test that generated ID is 16 characters."""
-        txn_id = AmazonBackend.generate_transaction_id(
-            "2024-01-15", "USB Cable", -15.99, 2
-        )
+        txn_id = AmazonBackend.generate_transaction_id("2024-01-15", "USB Cable", -15.99, 2)
         assert len(txn_id) == 16
 
 
@@ -169,84 +145,83 @@ class TestGetTransactions:
     async def test_get_transactions_empty(self, backend):
         """Test getting transactions from empty database."""
         result = await backend.get_transactions()
-        assert result['allTransactions'] == []
-        assert result['totalCount'] == 0
+        assert result["allTransactions"] == []
+        assert result["totalCount"] == 0
 
     @pytest.mark.asyncio
     async def test_get_transactions_basic(self, populated_backend):
         """Test getting all transactions."""
         result = await populated_backend.get_transactions(limit=100)
 
-        assert len(result['allTransactions']) == 3
-        assert result['totalCount'] == 3
+        assert len(result["allTransactions"]) == 3
+        assert result["totalCount"] == 3
 
     @pytest.mark.asyncio
     async def test_get_transactions_limit(self, populated_backend):
         """Test limit parameter."""
         result = await populated_backend.get_transactions(limit=2)
 
-        assert len(result['allTransactions']) == 2
-        assert result['totalCount'] == 3  # Total count unchanged
+        assert len(result["allTransactions"]) == 2
+        assert result["totalCount"] == 3  # Total count unchanged
 
     @pytest.mark.asyncio
     async def test_get_transactions_offset(self, populated_backend):
         """Test offset parameter."""
         result = await populated_backend.get_transactions(limit=100, offset=1)
 
-        assert len(result['allTransactions']) == 2
-        assert result['totalCount'] == 3
+        assert len(result["allTransactions"]) == 2
+        assert result["totalCount"] == 3
 
     @pytest.mark.asyncio
     async def test_get_transactions_date_filter(self, populated_backend):
         """Test filtering by date range."""
         result = await populated_backend.get_transactions(
-            start_date="2024-01-20",
-            end_date="2024-01-31"
+            start_date="2024-01-20", end_date="2024-01-31"
         )
 
-        assert len(result['allTransactions']) == 1
-        assert result['allTransactions'][0]['merchant']['name'] == 'USB-C Cable'
+        assert len(result["allTransactions"]) == 1
+        assert result["allTransactions"][0]["merchant"]["name"] == "USB-C Cable"
 
     @pytest.mark.asyncio
     async def test_get_transactions_format(self, populated_backend):
         """Test transaction format is Monarch-compatible."""
         result = await populated_backend.get_transactions(limit=1)
-        txn = result['allTransactions'][0]
+        txn = result["allTransactions"][0]
 
         # Check required fields
-        assert 'id' in txn
-        assert 'date' in txn
-        assert 'amount' in txn
-        assert 'merchant' in txn
-        assert 'category' in txn
-        assert 'account' in txn
-        assert 'notes' in txn
-        assert 'hideFromReports' in txn
-        assert 'pending' in txn
-        assert 'isRecurring' in txn
+        assert "id" in txn
+        assert "date" in txn
+        assert "amount" in txn
+        assert "merchant" in txn
+        assert "category" in txn
+        assert "account" in txn
+        assert "notes" in txn
+        assert "hideFromReports" in txn
+        assert "pending" in txn
+        assert "isRecurring" in txn
 
         # Check merchant format
-        assert 'id' in txn['merchant']
-        assert 'name' in txn['merchant']
+        assert "id" in txn["merchant"]
+        assert "name" in txn["merchant"]
 
         # Check category format
-        assert 'id' in txn['category']
-        assert 'name' in txn['category']
+        assert "id" in txn["category"]
+        assert "name" in txn["category"]
 
         # Check Amazon-specific fields
-        assert 'quantity' in txn
-        assert 'price_per_item' in txn
+        assert "quantity" in txn
+        assert "price_per_item" in txn
 
     @pytest.mark.asyncio
     async def test_get_transactions_order(self, populated_backend):
         """Test transactions are ordered by date descending."""
         result = await populated_backend.get_transactions()
-        transactions = result['allTransactions']
+        transactions = result["allTransactions"]
 
         # Should be ordered newest first
-        assert transactions[0]['date'] == '2024-02-10'
-        assert transactions[1]['date'] == '2024-01-20'
-        assert transactions[2]['date'] == '2024-01-15'
+        assert transactions[0]["date"] == "2024-02-10"
+        assert transactions[1]["date"] == "2024-01-20"
+        assert transactions[2]["date"] == "2024-01-15"
 
 
 class TestGetCategories:
@@ -256,26 +231,26 @@ class TestGetCategories:
     async def test_get_categories_empty(self, backend):
         """Test getting categories from empty database."""
         result = await backend.get_transaction_categories()
-        assert result['categories'] == []
+        assert result["categories"] == []
 
     @pytest.mark.asyncio
     async def test_get_categories(self, populated_backend):
         """Test getting categories."""
         result = await populated_backend.get_transaction_categories()
 
-        assert len(result['categories']) == 2
+        assert len(result["categories"]) == 2
 
         # Check format
-        category = result['categories'][0]
-        assert 'id' in category
-        assert 'name' in category
-        assert 'group' in category
+        category = result["categories"][0]
+        assert "id" in category
+        assert "name" in category
+        assert "group" in category
 
     @pytest.mark.asyncio
     async def test_get_category_groups(self, backend):
         """Test getting category groups (should be empty for Amazon)."""
         result = await backend.get_transaction_category_groups()
-        assert result['categoryGroups'] == []
+        assert result["categoryGroups"] == []
 
 
 class TestUpdateTransaction:
@@ -285,30 +260,26 @@ class TestUpdateTransaction:
     async def test_update_merchant(self, populated_backend):
         """Test updating merchant name."""
         result = await populated_backend.update_transaction(
-            transaction_id='txn1',
-            merchant_name='Python Programming Book'
+            transaction_id="txn1", merchant_name="Python Programming Book"
         )
 
-        assert result['updateTransaction']['transaction']['id'] == 'txn1'
+        assert result["updateTransaction"]["transaction"]["id"] == "txn1"
 
         # Verify update
         conn = sqlite3.connect(populated_backend.db_path)
-        row = conn.execute(
-            "SELECT merchant FROM transactions WHERE id = 'txn1'"
-        ).fetchone()
+        row = conn.execute("SELECT merchant FROM transactions WHERE id = 'txn1'").fetchone()
         conn.close()
 
-        assert row[0] == 'Python Programming Book'
+        assert row[0] == "Python Programming Book"
 
     @pytest.mark.asyncio
     async def test_update_category(self, populated_backend):
         """Test updating category."""
         result = await populated_backend.update_transaction(
-            transaction_id='txn2',
-            category_id='books'
+            transaction_id="txn2", category_id="books"
         )
 
-        assert result['updateTransaction']['transaction']['id'] == 'txn2'
+        assert result["updateTransaction"]["transaction"]["id"] == "txn2"
 
         # Verify update
         conn = sqlite3.connect(populated_backend.db_path)
@@ -317,24 +288,21 @@ class TestUpdateTransaction:
         ).fetchone()
         conn.close()
 
-        assert row[0] == 'Books'  # Category name updated from categories table
-        assert row[1] == 'books'
+        assert row[0] == "Books"  # Category name updated from categories table
+        assert row[1] == "books"
 
     @pytest.mark.asyncio
     async def test_update_hide_from_reports(self, populated_backend):
         """Test updating hideFromReports flag."""
         result = await populated_backend.update_transaction(
-            transaction_id='txn1',
-            hide_from_reports=True
+            transaction_id="txn1", hide_from_reports=True
         )
 
-        assert result['updateTransaction']['transaction']['id'] == 'txn1'
+        assert result["updateTransaction"]["transaction"]["id"] == "txn1"
 
         # Verify update
         conn = sqlite3.connect(populated_backend.db_path)
-        row = conn.execute(
-            "SELECT hideFromReports FROM transactions WHERE id = 'txn1'"
-        ).fetchone()
+        row = conn.execute("SELECT hideFromReports FROM transactions WHERE id = 'txn1'").fetchone()
         conn.close()
 
         assert row[0] == 1  # True stored as 1
@@ -343,13 +311,13 @@ class TestUpdateTransaction:
     async def test_update_multiple_fields(self, populated_backend):
         """Test updating multiple fields at once."""
         result = await populated_backend.update_transaction(
-            transaction_id='txn1',
-            merchant_name='New Book Title',
-            category_id='electronics',
-            hide_from_reports=True
+            transaction_id="txn1",
+            merchant_name="New Book Title",
+            category_id="electronics",
+            hide_from_reports=True,
         )
 
-        assert result['updateTransaction']['transaction']['id'] == 'txn1'
+        assert result["updateTransaction"]["transaction"]["id"] == "txn1"
 
         # Verify all updates
         conn = sqlite3.connect(populated_backend.db_path)
@@ -358,8 +326,8 @@ class TestUpdateTransaction:
         ).fetchone()
         conn.close()
 
-        assert row[0] == 'New Book Title'
-        assert row[1] == 'electronics'
+        assert row[0] == "New Book Title"
+        assert row[1] == "electronics"
         assert row[2] == 1
 
 
@@ -369,15 +337,13 @@ class TestDeleteTransaction:
     @pytest.mark.asyncio
     async def test_delete_existing(self, populated_backend):
         """Test deleting an existing transaction."""
-        result = await populated_backend.delete_transaction('txn1')
+        result = await populated_backend.delete_transaction("txn1")
 
         assert result is True
 
         # Verify deletion
         conn = sqlite3.connect(populated_backend.db_path)
-        count = conn.execute(
-            "SELECT COUNT(*) FROM transactions WHERE id = 'txn1'"
-        ).fetchone()[0]
+        count = conn.execute("SELECT COUNT(*) FROM transactions WHERE id = 'txn1'").fetchone()[0]
         conn.close()
 
         assert count == 0
@@ -385,7 +351,7 @@ class TestDeleteTransaction:
     @pytest.mark.asyncio
     async def test_delete_nonexistent(self, populated_backend):
         """Test deleting a non-existent transaction."""
-        result = await populated_backend.delete_transaction('nonexistent')
+        result = await populated_backend.delete_transaction("nonexistent")
 
         assert result is False
 
@@ -405,9 +371,9 @@ class TestGetAllMerchants:
         result = await populated_backend.get_all_merchants()
 
         assert len(result) == 3
-        assert 'Python Crash Course' in result
-        assert 'USB-C Cable' in result
-        assert 'Cooking for Engineers' in result
+        assert "Python Crash Course" in result
+        assert "USB-C Cable" in result
+        assert "Cooking for Engineers" in result
 
     @pytest.mark.asyncio
     async def test_get_all_merchants_sorted(self, populated_backend):
@@ -424,23 +390,23 @@ class TestDatabaseStats:
         """Test stats for empty database."""
         stats = backend.get_database_stats()
 
-        assert stats['total_transactions'] == 0
-        assert stats['earliest_date'] is None
-        assert stats['latest_date'] is None
-        assert stats['total_amount'] == 0.0
-        assert stats['category_count'] == 0
-        assert stats['item_count'] == 0
+        assert stats["total_transactions"] == 0
+        assert stats["earliest_date"] is None
+        assert stats["latest_date"] is None
+        assert stats["total_amount"] == 0.0
+        assert stats["category_count"] == 0
+        assert stats["item_count"] == 0
 
     def test_get_stats_populated(self, populated_backend):
         """Test stats for populated database."""
         stats = populated_backend.get_database_stats()
 
-        assert stats['total_transactions'] == 3
-        assert stats['earliest_date'] == '2024-01-15'
-        assert stats['latest_date'] == '2024-02-10'
-        assert stats['total_amount'] == pytest.approx(-85.97)
-        assert stats['category_count'] == 2
-        assert stats['item_count'] == 3
+        assert stats["total_transactions"] == 3
+        assert stats["earliest_date"] == "2024-01-15"
+        assert stats["latest_date"] == "2024-02-10"
+        assert stats["total_amount"] == pytest.approx(-85.97)
+        assert stats["category_count"] == 2
+        assert stats["item_count"] == 3
 
 
 class TestImportHistory:
@@ -471,14 +437,14 @@ class TestImportHistory:
         assert len(history) == 2
 
         # Find each record (order may vary)
-        filenames = {h['filename'] for h in history}
-        assert 'purchases1.csv' in filenames
-        assert 'purchases2.csv' in filenames
+        filenames = {h["filename"] for h in history}
+        assert "purchases1.csv" in filenames
+        assert "purchases2.csv" in filenames
 
         # Check that records have correct data
-        p2_record = next(h for h in history if h['filename'] == 'purchases2.csv')
-        assert p2_record['record_count'] == 50
-        assert p2_record['duplicate_count'] == 10
+        p2_record = next(h for h in history if h["filename"] == "purchases2.csv")
+        assert p2_record["record_count"] == 50
+        assert p2_record["duplicate_count"] == 10
 
 
 class TestLogin:

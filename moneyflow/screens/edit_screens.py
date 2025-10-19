@@ -13,10 +13,10 @@ All screens follow a consistent pattern:
 """
 
 from textual.app import ComposeResult
+from textual.containers import Container
 from textual.events import Key
 from textual.screen import ModalScreen
-from textual.containers import Container, Vertical, VerticalScroll
-from textual.widgets import Button, Input, Label, Static, OptionList
+from textual.widgets import Button, Input, Label, OptionList, Static
 from textual.widgets.option_list import Option
 
 

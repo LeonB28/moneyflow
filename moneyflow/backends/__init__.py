@@ -17,11 +17,11 @@ Usage:
 """
 
 from typing import Dict, Type
-from .base import FinanceBackend
-from .monarch import MonarchBackend
-from .demo import DemoBackend
-from .amazon import AmazonBackend
 
+from .amazon import AmazonBackend
+from .base import FinanceBackend
+from .demo import DemoBackend
+from .monarch import MonarchBackend
 
 # Backend registry: maps backend names to their classes
 _BACKEND_REGISTRY: Dict[str, Type[FinanceBackend]] = {

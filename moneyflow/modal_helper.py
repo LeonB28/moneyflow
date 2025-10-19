@@ -8,8 +8,8 @@ Each function returns a dictionary of parameters that can be unpacked
 when creating modal screens.
 """
 
-from typing import Optional, Dict, Any
-from datetime import datetime
+from typing import Any, Dict, Optional
+
 import polars as pl
 
 

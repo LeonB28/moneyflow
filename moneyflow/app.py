@@ -982,7 +982,12 @@ class MoneyflowApp(App):
         row_data = self.state.current_data.row(table.cursor_row, named=True)
 
         # Check if we're in aggregate view or detail view
-        if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
+        if self.state.view_mode in [
+            ViewMode.MERCHANT,
+            ViewMode.CATEGORY,
+            ViewMode.GROUP,
+            ViewMode.ACCOUNT,
+        ]:
             # Aggregate view - toggle group selection
             # Get the group name from first column
             group_name = str(row_data.get(self.state.current_data.columns[0]))
@@ -995,7 +1000,11 @@ class MoneyflowApp(App):
                 table.move_cursor(row=saved_cursor_row)
             self.notify(f"Selected: {count} group(s)", timeout=1)
 
-        elif self.state.view_mode == ViewMode.DETAIL and self.state.is_drilled_down() and self.state.sub_grouping_mode:
+        elif (
+            self.state.view_mode == ViewMode.DETAIL
+            and self.state.is_drilled_down()
+            and self.state.sub_grouping_mode
+        ):
             # Sub-grouped view - toggle group selection
             group_name = str(row_data.get(self.state.current_data.columns[0]))
             self.state.toggle_group_selection(group_name)
@@ -1334,8 +1343,6 @@ class MoneyflowApp(App):
             self.notify("No transactions in selected groups", timeout=2)
             return
 
-        total_count = len(all_txns)
-
         # Show category selection modal
         new_category_id = await self.push_screen(
             SelectCategoryScreen(
@@ -1565,17 +1572,16 @@ class MoneyflowApp(App):
 
     def action_go_back(self) -> None:
         """
-        Go back to previous view and restore cursor position.
+        Go back to previous view and restore cursor and scroll position.
 
         To clear search: Press / then Enter with empty search box.
         """
-        success, cursor_position = self.state.go_back()
+        success, cursor_position, scroll_y = self.state.go_back()
         if success:
             self.refresh_view()
-            # Restore cursor position
-            table = self.query_one("#data-table", DataTable)
-            if cursor_position >= 0 and cursor_position < table.row_count:
-                table.move_cursor(row=cursor_position)
+            # Restore cursor and scroll position
+            saved_position = {"cursor_row": cursor_position, "scroll_y": scroll_y}
+            self._restore_table_position(saved_position)
 
     async def _do_fresh_login(self, creds):
         """
@@ -1829,9 +1835,10 @@ class MoneyflowApp(App):
             ViewMode.GROUP,
             ViewMode.ACCOUNT,
         ]:
-            # Drill down from top-level view - save cursor position for restoration on go_back
+            # Drill down from top-level view - save cursor and scroll position for restoration on go_back
             cursor_position = table.cursor_row
-            self.state.drill_down(item_name, cursor_position)
+            scroll_y = table.scroll_y
+            self.state.drill_down(item_name, cursor_position, scroll_y)
             self.refresh_view()
 
 
