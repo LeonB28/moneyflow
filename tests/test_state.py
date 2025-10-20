@@ -329,8 +329,8 @@ class TestDataFiltering:
         filtered = app_state.get_filtered_df()
         assert len(filtered) == 2
 
-    def test_get_filtered_df_show_hidden_filter(self, app_state):
-        """Test filtering out hidden transactions."""
+    def test_get_filtered_df_show_hidden_filter_in_aggregate_view(self, app_state):
+        """Test filtering out hidden transactions in aggregate views."""
         data = [
             {
                 "id": "txn_1",
@@ -366,8 +366,9 @@ class TestDataFiltering:
             },
         ]
         app_state.transactions_df = pl.DataFrame(data)
+        app_state.view_mode = ViewMode.MERCHANT  # Aggregate view
 
-        # When show_hidden is False, should filter out hidden transactions
+        # When show_hidden is False in aggregate view, should filter out hidden transactions
         app_state.show_hidden = False
         filtered = app_state.get_filtered_df()
         assert len(filtered) == 1
@@ -377,6 +378,123 @@ class TestDataFiltering:
         app_state.show_hidden = True
         filtered = app_state.get_filtered_df()
         assert len(filtered) == 2
+
+    def test_get_filtered_df_show_hidden_in_detail_view(self, app_state):
+        """Test that hidden transactions are ALWAYS shown in detail views."""
+        data = [
+            {
+                "id": "txn_1",
+                "date": date(2024, 10, 1),
+                "amount": -100.00,
+                "merchant": "Amazon",
+                "merchant_id": "merch_1",
+                "category": "Shopping",
+                "category_id": "cat_1",
+                "group": "Shopping",
+                "account": "Checking",
+                "account_id": "acc_1",
+                "notes": "",
+                "hideFromReports": True,
+                "pending": False,
+                "is_recurring": False,
+            },
+            {
+                "id": "txn_2",
+                "date": date(2024, 10, 2),
+                "amount": -50.00,
+                "merchant": "Amazon",
+                "merchant_id": "merch_1",
+                "category": "Shopping",
+                "category_id": "cat_2",
+                "group": "Shopping",
+                "account": "Checking",
+                "account_id": "acc_1",
+                "notes": "",
+                "hideFromReports": False,
+                "pending": False,
+                "is_recurring": False,
+            },
+        ]
+        app_state.transactions_df = pl.DataFrame(data)
+        app_state.view_mode = ViewMode.DETAIL
+        app_state.selected_merchant = "Amazon"
+
+        # In detail view, hidden transactions should ALWAYS be shown
+        # even when show_hidden is False
+        app_state.show_hidden = False
+        filtered = app_state.get_filtered_df()
+        assert len(filtered) == 2  # Both transactions shown
+        assert filtered["hideFromReports"].to_list() == [True, False]
+
+        # When enabled, should still show all
+        app_state.show_hidden = True
+        filtered = app_state.get_filtered_df()
+        assert len(filtered) == 2
+
+    def test_get_filtered_df_hidden_in_drilled_down_category(self, app_state):
+        """Test that hidden transactions are shown when drilling down into a category."""
+        data = [
+            {
+                "id": "txn_1",
+                "date": date(2024, 10, 1),
+                "amount": -100.00,
+                "merchant": "Store A",
+                "merchant_id": "merch_1",
+                "category": "Groceries",
+                "category_id": "cat_1",
+                "group": "Food & Dining",
+                "account": "Checking",
+                "account_id": "acc_1",
+                "notes": "",
+                "hideFromReports": True,
+                "pending": False,
+                "is_recurring": False,
+            },
+            {
+                "id": "txn_2",
+                "date": date(2024, 10, 2),
+                "amount": -50.00,
+                "merchant": "Store B",
+                "merchant_id": "merch_2",
+                "category": "Groceries",
+                "category_id": "cat_1",
+                "group": "Food & Dining",
+                "account": "Checking",
+                "account_id": "acc_1",
+                "notes": "",
+                "hideFromReports": False,
+                "pending": False,
+                "is_recurring": False,
+            },
+            {
+                "id": "txn_3",
+                "date": date(2024, 10, 3),
+                "amount": -25.00,
+                "merchant": "Store C",
+                "merchant_id": "merch_3",
+                "category": "Gas",
+                "category_id": "cat_2",
+                "group": "Transportation",
+                "account": "Checking",
+                "account_id": "acc_1",
+                "notes": "",
+                "hideFromReports": True,
+                "pending": False,
+                "is_recurring": False,
+            },
+        ]
+        app_state.transactions_df = pl.DataFrame(data)
+        app_state.view_mode = ViewMode.DETAIL
+        app_state.selected_category = "Groceries"
+        app_state.show_hidden = False
+
+        # Should show both Groceries transactions (including hidden one)
+        filtered = app_state.get_filtered_df()
+        assert len(filtered) == 2
+        assert set(filtered["merchant"].to_list()) == {"Store A", "Store B"}
+        # One is hidden, one is not
+        hidden_count = sum(filtered["hideFromReports"].to_list())
+        assert hidden_count == 1
 
     def test_get_filtered_df_detail_view_by_merchant(self, app_state, sample_transactions_df):
         """Test filtering in detail view by selected merchant."""

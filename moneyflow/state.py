@@ -466,7 +466,8 @@ class AppState:
         1. Time range filter (start_date/end_date)
         2. Search query filter (merchant/category text search)
         3. Group filter (hide Transfers unless enabled)
-        4. Hidden transactions filter (hide if show_hidden=False)
+        4. Hidden transactions filter (hide if show_hidden=False, but ONLY in aggregate views)
+           - Detail views always show hidden transactions for review
         5. Drill-down filter (if viewing specific merchant/category/etc)
 
         Returns:
@@ -497,8 +498,9 @@ class AppState:
         if not self.show_transfers:
             df = df.filter(pl.col("group") != "Transfers")
 
-        # Apply hidden filter (hide transactions marked hideFromReports unless enabled)
-        if not self.show_hidden:
+        # Apply hidden filter ONLY for aggregate views
+        # Detail views should always show hidden transactions so users can review them
+        if not self.show_hidden and self.view_mode != ViewMode.DETAIL:
             df = df.filter(~pl.col("hideFromReports"))
 
         # Apply view-specific filters
