@@ -199,6 +199,174 @@ class TestBulkEditWorkflow:
         assert failure == 0
 
 
+class TestSubGroupedEditWorkflow:
+    """Test editing from sub-grouped views (drill-down + grouping)."""
+
+    def test_sub_grouped_view_has_aggregate_columns(self, loaded_data_manager, app_state):
+        """Verify sub-grouped views show aggregate data, not transaction details."""
+        from moneyflow.data_manager import DataManager
+        from moneyflow.state import ViewMode
+
+        dm, df, _, _ = loaded_data_manager
+        app_state.transactions_df = df
+
+        # Drill into a merchant
+        app_state.view_mode = ViewMode.MERCHANT
+        app_state.drill_down("Whole Foods")
+
+        # Now group by category (sub-grouping)
+        app_state.sub_grouping_mode = ViewMode.CATEGORY
+
+        # Get aggregated data for this view
+        filtered = app_state.get_filtered_df()
+        agg = dm.aggregate_by_category(filtered)
+
+        # Should have aggregate columns (count, total) not transaction columns (id)
+        assert "count" in agg.columns
+        assert "total" in agg.columns
+        assert "category" in agg.columns
+        assert "id" not in agg.columns  # No individual transaction IDs in aggregate
+
+    def test_edit_category_from_sub_grouped_by_category(self, loaded_data_manager, app_state):
+        """Test editing category from a sub-grouped-by-category view."""
+        from moneyflow.data_manager import DataManager
+        from moneyflow.state import ViewMode
+
+        dm, df, categories, _ = loaded_data_manager
+        app_state.transactions_df = df
+
+        # Setup: Drill into merchant, then group by category
+        app_state.view_mode = ViewMode.MERCHANT
+        merchant_name = "Whole Foods"
+        app_state.drill_down(merchant_name)
+        app_state.sub_grouping_mode = ViewMode.CATEGORY
+
+        # Get the aggregated view
+        filtered = app_state.get_filtered_df()
+        agg = dm.aggregate_by_category(filtered)
+
+        # Simulate selecting first category row
+        first_category = agg.row(0, named=True)
+        category_name = first_category["category"]
+        category_id = first_category["category_id"]
+
+        # Find transactions in this category within the merchant
+        txns_to_edit = filtered.filter(pl.col("category") == category_name)
+
+        # This is what the UI would do: bulk edit all transactions in this category
+        assert len(txns_to_edit) > 0
+        assert "id" in txns_to_edit.columns  # These are real transactions
+
+    def test_edit_merchant_from_sub_grouped_by_category(self, loaded_data_manager, app_state):
+        """Test editing merchant from a sub-grouped-by-category view."""
+        from moneyflow.data_manager import DataManager
+        from moneyflow.state import ViewMode
+
+        dm, df, _, _ = loaded_data_manager
+        app_state.transactions_df = df
+
+        # Setup: Drill into merchant "Whole Foods", then group by category
+        app_state.view_mode = ViewMode.MERCHANT
+        merchant_name = "Whole Foods"
+        app_state.drill_down(merchant_name)
+        app_state.sub_grouping_mode = ViewMode.CATEGORY
+
+        # Get the aggregated view
+        filtered = app_state.get_filtered_df()
+        agg = dm.aggregate_by_category(filtered)
+
+        # Get first category
+        first_category = agg.row(0, named=True)
+        category_name = first_category["category"]
+
+        # When editing merchant from this row, should edit all transactions
+        # in "Whole Foods" + this category
+        txns_to_edit = filtered.filter(pl.col("category") == category_name)
+
+        assert len(txns_to_edit) > 0
+        # All should be from the drilled-down merchant
+        assert all(txn["merchant"] == merchant_name for txn in txns_to_edit.iter_rows(named=True))
+
+    def test_edit_from_sub_grouped_by_group(self, loaded_data_manager, app_state):
+        """Test editing from sub-grouped-by-group view."""
+        from moneyflow.data_manager import DataManager
+        from moneyflow.state import ViewMode
+
+        dm, df, _, _ = loaded_data_manager
+        app_state.transactions_df = df
+
+        # Drill into a category, then group by group
+        app_state.view_mode = ViewMode.CATEGORY
+        category_name = "Groceries"
+        app_state.drill_down(category_name)
+        app_state.sub_grouping_mode = ViewMode.GROUP
+
+        # Get aggregated view
+        filtered = app_state.get_filtered_df()
+        agg = dm.aggregate_by_group(filtered)
+
+        # Should have aggregate structure
+        assert "group" in agg.columns
+        assert "count" in agg.columns
+        assert "total" in agg.columns
+
+    def test_edit_from_sub_grouped_by_account(self, loaded_data_manager, app_state):
+        """Test editing from sub-grouped-by-account view."""
+        from moneyflow.data_manager import DataManager
+        from moneyflow.state import ViewMode
+
+        dm, df, _, _ = loaded_data_manager
+        app_state.transactions_df = df
+
+        # Drill into a merchant, then group by account
+        app_state.view_mode = ViewMode.MERCHANT
+        merchant_name = "Whole Foods"
+        app_state.drill_down(merchant_name)
+        app_state.sub_grouping_mode = ViewMode.ACCOUNT
+
+        # Get aggregated view
+        filtered = app_state.get_filtered_df()
+        agg = dm.aggregate_by_account(filtered)
+
+        # Should have aggregate structure
+        assert "account" in agg.columns
+        assert "count" in agg.columns
+        assert "total" in agg.columns
+
+    def test_edit_from_sub_grouped_by_merchant(self, loaded_data_manager, app_state):
+        """Test editing from sub-grouped-by-merchant view (drilled into category)."""
+        from moneyflow.data_manager import DataManager
+        from moneyflow.state import ViewMode
+
+        dm, df, _, _ = loaded_data_manager
+        app_state.transactions_df = df
+
+        # Drill into a category, then group by merchant
+        app_state.view_mode = ViewMode.CATEGORY
+        category_name = "Groceries"
+        app_state.drill_down(category_name)
+        app_state.sub_grouping_mode = ViewMode.MERCHANT
+
+        # Get aggregated view
+        filtered = app_state.get_filtered_df()
+        agg = dm.aggregate_by_merchant(filtered)
+
+        # Should have aggregate structure
+        assert "merchant" in agg.columns
+        assert "count" in agg.columns
+        assert "total" in agg.columns
+
+        # Get first merchant in this category
+        first_merchant = agg.row(0, named=True)
+        merchant_name = first_merchant["merchant"]
+
+        # Transactions to edit = this category + this merchant
+        txns_to_edit = filtered.filter(pl.col("merchant") == merchant_name)
+        assert len(txns_to_edit) > 0
+        # All should be from the drilled-down category
+        assert all(txn["category"] == category_name for txn in txns_to_edit.iter_rows(named=True))
+
+
 class TestErrorHandling:
     """Test error handling in workflows."""
 
