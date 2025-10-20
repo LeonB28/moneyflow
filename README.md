@@ -167,20 +167,30 @@ moneyflow --help
 
 ## First Run Setup (Monarch Money)
 
-On first run, moneyflow will guide you through credential setup:
+On first run, moneyflow will guide you through credential setup.
 
-1. **Get your 2FA secret** (before starting):
-   - Log into Monarch Money → Settings → Security
-   - Disable and re-enable 2FA
-   - Click "Can't scan?" to view the secret key
-   - Copy the BASE32 secret (e.g., `JBSWY3DPEHPK3PXP`)
+### Step 1: Select Backend
 
-2. **Launch moneyflow** and enter when prompted:
-   - Monarch Money email and password
-   - Your 2FA secret key
-   - A new encryption password (for moneyflow only)
+![Backend selection](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/backend-select.png)
 
-3. **Done!** Next time, just enter your encryption password.
+Choose which platform you want to connect to (currently only Monarch Money is fully supported).
+
+### Step 2: Enter Credentials
+
+![Credential setup](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/monarch-credentials.png)
+
+**Before starting, get your 2FA secret:**
+1. Log into Monarch Money → Settings → Security
+2. Disable and re-enable 2FA
+3. Click "Can't scan?" to view the secret key
+4. Copy the BASE32 secret (e.g., `JBSWY3DPEHPK3PXP`)
+
+**Then enter in moneyflow:**
+- Monarch Money email and password
+- Your 2FA secret key
+- A new encryption password (for moneyflow only)
+
+**Done!** Next time, just enter your encryption password.
 
 Your credentials are encrypted with AES-128 and stored in `~/.moneyflow/credentials.enc`.
 
@@ -200,6 +210,8 @@ moneyflow downloads all transactions once, then filters client-side for instant 
 
 ### Clean Up Merchant Names
 
+![Edit merchant from aggregate view](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/drill-down-bulk-edit-merchant.png)
+
 ```
 1. Launch: moneyflow
 2. Press 'g' to cycle to merchants view
@@ -211,12 +223,41 @@ moneyflow downloads all transactions once, then filters client-side for instant 
 
 ### Bulk Edit Categories
 
+![Edit category with multi-select](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/drill-down-edit-category.png)
+
 ```
 1. Press 'u' to view all transactions
 2. Press Space to select multiple transactions (shows ✓)
 3. Press 'c' to edit category
 4. Type to filter, press Enter to select
 5. Press 'w' to review, then Enter to commit
+```
+
+### Drill Down and Sub-Grouping
+
+![Drill into merchant and group by category](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/drill-down-group-by-category.png)
+
+Drill into any merchant or category, then press 'g' to cycle through sub-groupings:
+
+```
+1. From merchants view, press Enter on "Amazon"
+2. Press 'g' to group by category (shows Amazon transactions by category)
+3. Press 'g' again to group by account
+4. Press 'g' again to show detail view
+5. Press Esc to go back to merchants view
+```
+
+![Transaction detail view](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/drill-down-detail.png)
+
+### Multi-Select for Bulk Operations
+
+![Multi-select transactions](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/drill-down-detail-multi-select.png)
+
+```
+1. Navigate to any detail view
+2. Press Space to select transactions (shows ✓)
+3. Press 'm' or 'c' to bulk edit selected transactions
+4. Press 'w' to review and commit
 ```
 
 ### Monthly Spending Review
