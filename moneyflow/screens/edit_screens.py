@@ -120,17 +120,20 @@ class EditMerchantScreen(ModalScreen):
             if self.transaction_details:
                 if self.transaction_count == 1:
                     # Single transaction details
+                    amount = self.transaction_details.get('amount')
+                    amount_str = f"${amount:,.2f}" if amount is not None else "N/A"
                     details_text = (
                         f"Transaction: {self.transaction_details.get('date', 'N/A')} | "
-                        f"${self.transaction_details.get('amount', 0):,.2f} | "
+                        f"{amount_str} | "
                         f"{self.transaction_details.get('category', 'N/A')}"
                     )
                     yield Static(details_text, classes="edit-label")
                 else:
                     # Bulk edit summary
                     total = self.transaction_details.get("total_amount", 0)
+                    total_str = f"${total:,.2f}" if total is not None else "N/A"
                     details_text = (
-                        f"Editing {self.transaction_count} transactions | Total: ${total:,.2f}"
+                        f"Editing {self.transaction_count} transactions | Total: {total_str}"
                     )
                     yield Static(details_text, classes="edit-label")
 
@@ -335,9 +338,11 @@ class SelectCategoryScreen(ModalScreen):
 
             # Show transaction details if available
             if self.transaction_details:
+                amount = self.transaction_details.get('amount')
+                amount_str = f"${amount:,.2f}" if amount is not None else "N/A"
                 details_text = (
                     f"Transaction: {self.transaction_details.get('date', 'N/A')} | "
-                    f"${self.transaction_details.get('amount', 0):,.2f} | "
+                    f"{amount_str} | "
                     f"Merchant: {self.transaction_details.get('merchant', 'N/A')}"
                 )
                 yield Static(details_text, classes="edit-label")
