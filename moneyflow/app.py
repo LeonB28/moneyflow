@@ -1119,6 +1119,20 @@ class MoneyflowApp(App):
             transaction_count = row_data["count"]
             total_amount = row_data["total"]
 
+            # Determine current merchant name for display
+            # If drilled into a specific merchant, show that
+            # Otherwise show "Multiple merchants" since we're editing across merchants
+            if self.state.selected_merchant:
+                display_merchant = self.state.selected_merchant
+            elif self.state.selected_category:
+                display_merchant = f"Multiple merchants in {self.state.selected_category}"
+            elif self.state.selected_group:
+                display_merchant = f"Multiple merchants in {self.state.selected_group}"
+            elif self.state.selected_account:
+                display_merchant = f"Multiple merchants in {self.state.selected_account}"
+            else:
+                display_merchant = "Multiple merchants"
+
             # Get merchant suggestions
             all_merchants = self.controller.get_merchant_suggestions()
 
@@ -1127,7 +1141,7 @@ class MoneyflowApp(App):
 
             # Show edit modal
             new_merchant = await self.push_screen(
-                EditMerchantScreen(field_name, transaction_count, all_merchants, bulk_summary),
+                EditMerchantScreen(display_merchant, transaction_count, all_merchants, bulk_summary),
                 wait_for_dismiss=True,
             )
 
