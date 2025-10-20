@@ -46,8 +46,13 @@ if [ "$NEW_VERSION_CHECK" != "$NEW_VERSION" ]; then
     exit 1
 fi
 
+# Update lock file
+echo "Updating uv.lock..."
+uv lock
+echo "✓ Updated uv.lock"
+
 # Stage and commit
-git add pyproject.toml
+git add pyproject.toml uv.lock
 git commit -m "chore: Bump version to $NEW_VERSION"
 echo "✓ Committed version bump"
 
