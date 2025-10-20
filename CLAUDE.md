@@ -8,7 +8,14 @@ moneyflow is a terminal-based UI for power users to manage personal finance tran
 
 ### Using uv (REQUIRED)
 
-**IMPORTANT**: This project uses **uv** exclusively for all development workflows. Always use `uv run` for executing scripts and `uv pip` for package management. Never use pip, pipenv, poetry, or other package managers.
+**IMPORTANT**: This project uses **uv** exclusively for all development workflows. Always use `uv run` for executing scripts. Never use pip, pipenv, poetry, or other package managers.
+
+**CRITICAL FOR AI ASSISTANTS (Claude Code, etc.)**:
+- ❌ **NEVER run `pip install` or `uv pip install` to modify the user's environment**
+- ❌ **NEVER run `uv tool install` for project dependencies**
+- ✅ All dependencies MUST be declared in `pyproject.toml` and installed via `uv sync`
+- ✅ Use `uv run <command>` to run tools in the project's virtual environment
+- 💡 This ensures **reproducibility** - anyone can clone the repo and run `uv sync` to get the exact same environment
 
 ```bash
 # Install uv if not already installed

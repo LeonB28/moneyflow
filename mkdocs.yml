@@ -54,6 +54,9 @@ extra_css:
   - stylesheets/extra.css
   - stylesheets/terminal.css
 
+extra_javascript:
+  - javascripts/lightbox.js
+
 extra:
   social:
     - icon: fontawesome/brands/github
