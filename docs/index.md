@@ -1,10 +1,8 @@
-# moneyflow
+# moneyflow [![GitHub stars](https://img.shields.io/github/stars/wesm/moneyflow?style=social)](https://github.com/wesm/moneyflow/stargazers)
 
 **Terminal UI for personal finance power users**
 
-Track spending, bulk edit transactions, and navigate your financial data at lightning speed. Supports personal finance platforms like Monarch Money or even analyzing your Amazon purchase history.
-
-[![GitHub stars](https://img.shields.io/github/stars/wesm/moneyflow?style=social)](https://github.com/wesm/moneyflow/stargazers)
+![moneyflow terminal UI](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/home-screen.png)
 
 ```bash
 # Install and run
@@ -16,7 +14,7 @@ uvx moneyflow
 uvx moneyflow --demo  # Try with demo data
 ```
 
-![moneyflow terminal UI](images/home-screen.png)
+Track spending, bulk edit transactions, and navigate your financial data at lightning speed. Supports personal finance platforms like Monarch Money or even analyzing your Amazon purchase history.
 
 <div class="quick-links" markdown>
 [Get Started](getting-started/installation.md){ .md-button .md-button--primary }
