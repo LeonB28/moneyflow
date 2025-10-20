@@ -4,6 +4,8 @@
 
 A keyboard-driven terminal UI for managing personal finance transactions. Built for users who prefer efficiency and direct control over their financial data.
 
+![moneyflow main screen](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/home-screen.png)
+
 **Supported Platforms:**
 - ✅ **Monarch Money** (full support)
 - ✅ **Amazon Purchases** (import and analyze purchase history)
