@@ -51,7 +51,7 @@ Download transactions once. All filtering, searching, and aggregation happens lo
 </div>
 
 <div class="feature-card" markdown>
-### Bulk Editing
+### Rapid Data Refinement
 Select multiple transactions. Rename merchants or recategorize hundreds of transactions with a few keystrokes.
 </div>
 
