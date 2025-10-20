@@ -1032,9 +1032,12 @@ class MoneyflowApp(App):
         if self.data_manager is None:
             return
 
-        # Check if in aggregate view or detail view
+        # Check if in aggregate view, sub-grouped view, or detail view
         if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP]:
             # Aggregate view - edit all transactions for this merchant
+            self.run_worker(self._bulk_edit_merchant_from_aggregate(), exclusive=False)
+        elif self.state.view_mode == ViewMode.DETAIL and self.state.sub_grouping_mode:
+            # Sub-grouped view - treat like aggregate edit
             self.run_worker(self._bulk_edit_merchant_from_aggregate(), exclusive=False)
         else:
             # Detail view - edit selected transaction(s)
@@ -1058,7 +1061,11 @@ class MoneyflowApp(App):
         # Get the merchant/category/group from current row
         row_data = self.state.current_data.row(table.cursor_row, named=True)
 
-        if self.state.view_mode == ViewMode.MERCHANT:
+        # Determine what field we're grouping by
+        # If in sub-grouping mode, use that instead of view_mode
+        grouping_mode = self.state.sub_grouping_mode if self.state.sub_grouping_mode else self.state.view_mode
+
+        if grouping_mode == ViewMode.MERCHANT:
             merchant_name = row_data["merchant"]
             transaction_count = row_data["count"]
             total_amount = row_data["total"]
@@ -1089,6 +1096,51 @@ class MoneyflowApp(App):
                 count = self.controller.queue_merchant_edits(
                     merchant_txns, merchant_name, new_merchant
                 )
+
+                self._notify(NotificationHelper.edit_queued(count))
+                self.refresh_view()
+
+                # Restore cursor and scroll position
+                self._restore_table_position(saved_position)
+        elif grouping_mode in [ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
+            # Grouped by category/group/account - edit merchant for all in this group
+            if grouping_mode == ViewMode.CATEGORY:
+                field_name = row_data["category"]
+                filter_func = self.data_manager.filter_by_category
+            elif grouping_mode == ViewMode.GROUP:
+                field_name = row_data["group"]
+                filter_func = self.data_manager.filter_by_group
+            elif grouping_mode == ViewMode.ACCOUNT:
+                field_name = row_data["account"]
+                filter_func = self.data_manager.filter_by_account
+            else:
+                return
+
+            transaction_count = row_data["count"]
+            total_amount = row_data["total"]
+
+            # Get merchant suggestions
+            all_merchants = self.controller.get_merchant_suggestions()
+
+            # Pass aggregate summary
+            bulk_summary = {"total_amount": total_amount}
+
+            # Show edit modal
+            new_merchant = await self.push_screen(
+                EditMerchantScreen(field_name, transaction_count, all_merchants, bulk_summary),
+                wait_for_dismiss=True,
+            )
+
+            if new_merchant:
+                # Save cursor and scroll position before refresh
+                saved_position = self._save_table_position()
+
+                # Get all transactions in this group
+                filtered_df = self.state.get_filtered_df()
+                matching_txns = filter_func(filtered_df, field_name)
+
+                # Use controller helper to queue edits
+                count = self.controller.queue_merchant_edits(matching_txns, field_name, new_merchant)
 
                 self._notify(NotificationHelper.edit_queued(count))
                 self.refresh_view()
@@ -1248,7 +1300,7 @@ class MoneyflowApp(App):
         """Edit Category all transactions in selected merchant/category/group."""
         logger = get_logger(__name__)
 
-        logger.debug(f"_bulk_edit_category_from_aggregate called, view_mode={self.state.view_mode}")
+        logger.debug(f"_bulk_edit_category_from_aggregate called, view_mode={self.state.view_mode}, sub_grouping_mode={self.state.sub_grouping_mode}")
 
         # Check if multi-select is active
         if len(self.state.selected_group_keys) > 0:
@@ -1269,19 +1321,27 @@ class MoneyflowApp(App):
         row_data = self.state.current_data.row(table.cursor_row, named=True)
         logger.debug(f"row_data keys: {list(row_data.keys())}")
 
+        # Determine what field we're grouping by
+        # If in sub-grouping mode, use that instead of view_mode
+        grouping_mode = self.state.sub_grouping_mode if self.state.sub_grouping_mode else self.state.view_mode
+
         # Determine what field we're grouping by and get transactions
-        if self.state.view_mode == ViewMode.MERCHANT:
+        if grouping_mode == ViewMode.MERCHANT:
             field_name = row_data["merchant"]
             current_category_id = None  # Merchants can have mixed categories
             filter_func = self.data_manager.filter_by_merchant
-        elif self.state.view_mode == ViewMode.CATEGORY:
+        elif grouping_mode == ViewMode.CATEGORY:
             field_name = row_data["category"]
             current_category_id = row_data["category_id"]
             filter_func = self.data_manager.filter_by_category
-        elif self.state.view_mode == ViewMode.GROUP:
+        elif grouping_mode == ViewMode.GROUP:
             field_name = row_data["group"]
             current_category_id = None  # Groups can have mixed categories
             filter_func = self.data_manager.filter_by_group
+        elif grouping_mode == ViewMode.ACCOUNT:
+            field_name = row_data["account"]
+            current_category_id = None  # Accounts can have mixed categories
+            filter_func = self.data_manager.filter_by_account
         else:
             return
 
@@ -1380,6 +1440,12 @@ class MoneyflowApp(App):
 
         table = self.query_one("#data-table", DataTable)
         if table.cursor_row < 0:
+            return
+
+        # Check if we're in a sub-grouped view (aggregate view while drilled down)
+        if self.state.view_mode == ViewMode.DETAIL and self.state.sub_grouping_mode:
+            # Sub-grouped view - treat like aggregate edit
+            await self._bulk_edit_category_from_aggregate()
             return
 
         # In detail view, categorize current transaction or selected transactions
