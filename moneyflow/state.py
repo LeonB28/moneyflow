@@ -56,6 +56,23 @@ class TimeFrame(Enum):
 
 
 @dataclass
+class NavigationState:
+    """
+    Represents saved navigation state for back navigation.
+
+    When drilling down into a view, we save the current state so we can restore
+    it when the user presses Escape. This includes view mode, cursor/scroll position,
+    and sort preferences.
+    """
+
+    view_mode: ViewMode
+    cursor_position: int = 0
+    scroll_y: float = 0.0
+    sort_by: SortMode = SortMode.AMOUNT
+    sort_direction: SortDirection = SortDirection.DESC
+
+
+@dataclass
 class TransactionEdit:
     """
     Represents a pending transaction edit.
@@ -148,8 +165,8 @@ class AppState:
     current_data: Optional[pl.DataFrame] = None
 
     # Navigation history for breadcrumb and back navigation
-    # Stores (view_mode, cursor_position, scroll_y) for restoring state on go_back
-    navigation_history: List[tuple[ViewMode, int, float]] = dataclass_field(default_factory=list)
+    # Stores NavigationState objects for restoring state on go_back
+    navigation_history: List[NavigationState] = dataclass_field(default_factory=list)
 
     def add_edit(self, transaction_id: str, field: str, old_value: Any, new_value: Any):
         """Add a pending edit to the change tracker."""
@@ -362,7 +379,17 @@ class AppState:
 
         # Cycle to next
         next_idx = (current_idx + 1) % len(available_modes)
-        self.sub_grouping_mode = available_modes[next_idx]
+        new_mode = available_modes[next_idx]
+
+        # Reset sort to valid field for aggregate views if switching from detail to aggregated
+        # Detail views can have DATE sort, but aggregated views cannot
+        if self.sub_grouping_mode is None and new_mode is not None:
+            # Switching from detail view to aggregated sub-grouping
+            if self.sort_by == SortMode.DATE:
+                # DATE is not valid for aggregated views, default to AMOUNT
+                self.sort_by = SortMode.AMOUNT
+
+        self.sub_grouping_mode = new_mode
 
         # Return display name
         if self.sub_grouping_mode is None:
@@ -508,11 +535,20 @@ class AppState:
             <ViewMode.DETAIL: 'detail'>
             >>> state.selected_merchant
             'Amazon'
-            >>> state.navigation_history[-1]
-            (<ViewMode.MERCHANT: 'merchant'>, 5, 100.0)
+            >>> nav = state.navigation_history[-1]  # doctest: +SKIP
+            >>> nav.view_mode  # doctest: +SKIP
+            <ViewMode.MERCHANT: 'merchant'>
         """
-        # Save current state to history (view mode + cursor position + scroll position)
-        self.navigation_history.append((self.view_mode, cursor_position, scroll_y))
+        # Save current state to history (view mode + cursor + scroll + sort preferences)
+        self.navigation_history.append(
+            NavigationState(
+                view_mode=self.view_mode,
+                cursor_position=cursor_position,
+                scroll_y=scroll_y,
+                sort_by=self.sort_by,
+                sort_direction=self.sort_direction,
+            )
+        )
 
         # Set the selected item based on current view
         if self.view_mode == ViewMode.MERCHANT:
@@ -603,29 +639,31 @@ class AppState:
 
             self.sub_grouping_mode = None  # Clear sub-grouping too
 
-            # Pop from history if available
+            # Pop from history if available and restore state
             cursor_position = 0
             scroll_y = 0.0
             if self.navigation_history:
-                previous_view, cursor_position, scroll_y = self.navigation_history.pop()
-                self.view_mode = previous_view
+                nav_state = self.navigation_history.pop()
+                self.view_mode = nav_state.view_mode
+                # Restore the sort preferences from when we drilled down
+                self.sort_by = nav_state.sort_by
+                self.sort_direction = nav_state.sort_direction
+                cursor_position = nav_state.cursor_position
+                scroll_y = nav_state.scroll_y
             else:
-                # Default back to MERCHANT view
+                # Default back to MERCHANT view with default sort
                 self.view_mode = ViewMode.MERCHANT
-
-            # Reset sort to valid field for aggregate views
-            # (Detail views can have DATE, MERCHANT, CATEGORY, ACCOUNT, AMOUNT)
-            # (Aggregate views have COUNT, AMOUNT, and field-based sorting)
-            if self.sort_by not in [
-                SortMode.COUNT,
-                SortMode.AMOUNT,
-                SortMode.MERCHANT,
-                SortMode.CATEGORY,
-                SortMode.GROUP,
-                SortMode.ACCOUNT,
-            ]:
-                self.sort_by = SortMode.AMOUNT
-                self.sort_direction = SortDirection.DESC
+                # Only reset sort if it's invalid for aggregate views
+                if self.sort_by not in [
+                    SortMode.COUNT,
+                    SortMode.AMOUNT,
+                    SortMode.MERCHANT,
+                    SortMode.CATEGORY,
+                    SortMode.GROUP,
+                    SortMode.ACCOUNT,
+                ]:
+                    self.sort_by = SortMode.AMOUNT
+                    self.sort_direction = SortDirection.DESC
 
             return True, cursor_position, scroll_y
 

@@ -8,6 +8,7 @@ import polars as pl
 
 from moneyflow.state import (
     AppState,
+    NavigationState,
     SortDirection,
     SortMode,
     TimeFrame,
@@ -508,7 +509,13 @@ class TestNavigation:
         assert app_state.selected_category is None
         assert app_state.selected_group is None
         assert len(app_state.navigation_history) == 1
-        assert app_state.navigation_history[0] == (ViewMode.MERCHANT, 5, 150.5)
+        # Navigation history saves NavigationState object
+        nav = app_state.navigation_history[0]
+        assert nav.view_mode == ViewMode.MERCHANT
+        assert nav.cursor_position == 5
+        assert nav.scroll_y == 150.5
+        assert nav.sort_by == SortMode.AMOUNT
+        assert nav.sort_direction == SortDirection.DESC
 
     def test_drill_down_from_category_view(self, app_state):
         """Test drilling down from category view to detail view."""
@@ -521,7 +528,13 @@ class TestNavigation:
         assert app_state.selected_merchant is None
         assert app_state.selected_group is None
         assert len(app_state.navigation_history) == 1
-        assert app_state.navigation_history[0] == (ViewMode.CATEGORY, 3, 200.0)
+        # Navigation history saves NavigationState object
+        nav = app_state.navigation_history[0]
+        assert nav.view_mode == ViewMode.CATEGORY
+        assert nav.cursor_position == 3
+        assert nav.scroll_y == 200.0
+        assert nav.sort_by == SortMode.AMOUNT
+        assert nav.sort_direction == SortDirection.DESC
 
     def test_drill_down_from_group_view(self, app_state):
         """Test drilling down from group view to detail view."""
@@ -534,7 +547,13 @@ class TestNavigation:
         assert app_state.selected_merchant is None
         assert app_state.selected_category is None
         assert len(app_state.navigation_history) == 1
-        assert app_state.navigation_history[0] == (ViewMode.GROUP, 10, 75.25)
+        # Navigation history saves NavigationState object
+        nav = app_state.navigation_history[0]
+        assert nav.view_mode == ViewMode.GROUP
+        assert nav.cursor_position == 10
+        assert nav.scroll_y == 75.25
+        assert nav.sort_by == SortMode.AMOUNT
+        assert nav.sort_direction == SortDirection.DESC
 
     def test_go_back_from_detail_to_previous_view(self, app_state):
         """Test going back from detail view to previous view."""
@@ -630,6 +649,88 @@ class TestNavigation:
         # AMOUNT is valid in detail views, should be preserved
         assert app_state.sort_by == SortMode.AMOUNT
         assert app_state.sort_direction == SortDirection.ASC
+
+    def test_go_back_restores_count_sort_ascending(self, app_state):
+        """Test that go_back restores COUNT sort ASC after drilling down."""
+        # Start in Merchant view with COUNT sort ascending
+        app_state.view_mode = ViewMode.MERCHANT
+        app_state.sort_by = SortMode.COUNT
+        app_state.sort_direction = SortDirection.ASC
+
+        # Drill down - should switch to DATE sort for detail view
+        app_state.drill_down("Starbucks", cursor_position=5, scroll_y=100.0)
+        assert app_state.sort_by == SortMode.DATE  # Changed for detail view
+
+        # Go back - should restore COUNT ASC
+        success, cursor, scroll = app_state.go_back()
+        assert success is True
+        assert app_state.sort_by == SortMode.COUNT
+        assert app_state.sort_direction == SortDirection.ASC
+        assert app_state.view_mode == ViewMode.MERCHANT
+
+    def test_go_back_restores_amount_sort_descending(self, app_state):
+        """Test that go_back restores AMOUNT sort DESC after drilling down."""
+        # Start in Category view with AMOUNT sort descending
+        app_state.view_mode = ViewMode.CATEGORY
+        app_state.sort_by = SortMode.AMOUNT
+        app_state.sort_direction = SortDirection.DESC
+
+        # Drill down
+        app_state.drill_down("Groceries", cursor_position=10, scroll_y=250.0)
+        assert app_state.sort_by == SortMode.AMOUNT  # Preserved for detail view
+
+        # Go back - should restore AMOUNT DESC
+        success, cursor, scroll = app_state.go_back()
+        assert success is True
+        assert app_state.sort_by == SortMode.AMOUNT
+        assert app_state.sort_direction == SortDirection.DESC
+        assert app_state.view_mode == ViewMode.CATEGORY
+
+    def test_go_back_restores_merchant_sort(self, app_state):
+        """Test that go_back restores MERCHANT field sort after drilling down."""
+        # Start in Merchant view sorted by merchant name
+        app_state.view_mode = ViewMode.MERCHANT
+        app_state.sort_by = SortMode.MERCHANT
+        app_state.sort_direction = SortDirection.ASC
+
+        # Drill down
+        app_state.drill_down("Amazon", cursor_position=3, scroll_y=50.0)
+
+        # Go back - should restore MERCHANT sort
+        success, cursor, scroll = app_state.go_back()
+        assert success is True
+        assert app_state.sort_by == SortMode.MERCHANT
+        assert app_state.sort_direction == SortDirection.ASC
+
+    def test_multiple_drill_downs_preserve_each_sort(self, app_state):
+        """Test that multiple drill-downs preserve sort state at each level."""
+        # Start in Merchant view with COUNT sort
+        app_state.view_mode = ViewMode.MERCHANT
+        app_state.sort_by = SortMode.COUNT
+        app_state.sort_direction = SortDirection.ASC
+
+        # First drill down
+        app_state.drill_down("Starbucks", cursor_position=5, scroll_y=100.0)
+        assert app_state.sort_by == SortMode.DATE
+
+        # Go back once
+        app_state.go_back()
+        assert app_state.sort_by == SortMode.COUNT
+        assert app_state.sort_direction == SortDirection.ASC
+
+        # Now switch to Category view with AMOUNT DESC
+        app_state.view_mode = ViewMode.CATEGORY
+        app_state.sort_by = SortMode.AMOUNT
+        app_state.sort_direction = SortDirection.DESC
+
+        # Drill down from Category
+        app_state.drill_down("Groceries", cursor_position=2, scroll_y=50.0)
+
+        # Go back - should restore Category view's AMOUNT DESC
+        app_state.go_back()
+        assert app_state.view_mode == ViewMode.CATEGORY
+        assert app_state.sort_by == SortMode.AMOUNT
+        assert app_state.sort_direction == SortDirection.DESC
 
 
 class TestBreadcrumbs:
@@ -912,6 +1013,53 @@ class TestSubGrouping:
         assert state.view_mode == ViewMode.CATEGORY
         assert result == "Categories"
 
+    def test_cycle_sub_grouping_resets_date_sort_to_amount(self):
+        """When cycling from detail to aggregated sub-grouping, should reset DATE sort to AMOUNT."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_category = "Coffee Shops"
+        state.sub_grouping_mode = None  # Currently in detail view
+        state.sort_by = SortMode.DATE  # Sorted by date (valid for detail)
+
+        # Cycle to aggregated sub-grouping
+        result = state.cycle_sub_grouping()
+
+        # Should switch to aggregated view and reset sort from DATE to AMOUNT
+        assert state.sub_grouping_mode == ViewMode.MERCHANT
+        assert state.sort_by == SortMode.AMOUNT
+        assert result == "by Merchant"
+
+    def test_cycle_sub_grouping_preserves_count_sort(self):
+        """When cycling from detail to aggregated sub-grouping, COUNT sort should be preserved."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+        state.sub_grouping_mode = None  # Currently in detail view
+        state.sort_by = SortMode.COUNT  # Already valid for aggregated views
+
+        # Cycle to aggregated sub-grouping
+        result = state.cycle_sub_grouping()
+
+        # Should preserve COUNT sort
+        assert state.sub_grouping_mode == ViewMode.CATEGORY
+        assert state.sort_by == SortMode.COUNT
+        assert result == "by Category"
+
+    def test_cycle_sub_grouping_preserves_amount_sort(self):
+        """When cycling from detail to aggregated sub-grouping, AMOUNT sort should be preserved."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_group = "Food & Dining"
+        state.sub_grouping_mode = None  # Currently in detail view
+        state.sort_by = SortMode.AMOUNT
+
+        # Cycle to aggregated sub-grouping
+        result = state.cycle_sub_grouping()
+
+        # Should preserve AMOUNT sort
+        assert state.sub_grouping_mode == ViewMode.MERCHANT
+        assert state.sort_by == SortMode.AMOUNT
+
     def test_go_back_clears_sub_grouping_first(self):
         """Escape should clear sub-grouping before going back."""
         state = AppState()
@@ -933,7 +1081,16 @@ class TestSubGrouping:
         state.view_mode = ViewMode.DETAIL
         state.selected_merchant = "Amazon"
         state.sub_grouping_mode = ViewMode.CATEGORY
-        state.navigation_history.append((ViewMode.MERCHANT, 5, 125.0))
+        # Navigation history uses NavigationState object
+        state.navigation_history.append(
+            NavigationState(
+                view_mode=ViewMode.MERCHANT,
+                cursor_position=5,
+                scroll_y=125.0,
+                sort_by=SortMode.AMOUNT,
+                sort_direction=SortDirection.DESC,
+            )
+        )
 
         # First escape: clear sub-grouping
         success1, _, _ = state.go_back()
