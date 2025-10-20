@@ -166,6 +166,7 @@ class MockMonarchMoney(FinanceBackend):
         offset: int = 0,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        hidden_from_reports: Optional[bool] = None,
         **kwargs,
     ) -> Dict[str, Any]:
         """Return mock transactions with pagination."""
@@ -176,6 +177,10 @@ class MockMonarchMoney(FinanceBackend):
             filtered = [t for t in filtered if t["date"] >= start_date]
         if end_date:
             filtered = [t for t in filtered if t["date"] <= end_date]
+
+        # Filter by hideFromReports if specified
+        if hidden_from_reports is not None:
+            filtered = [t for t in filtered if t.get("hideFromReports", False) == hidden_from_reports]
 
         # Apply pagination
         start = offset

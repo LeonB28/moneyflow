@@ -389,57 +389,71 @@ class DataManager:
         end_date: Optional[str] = None,
         progress_callback: Optional[Callable[[str], None]] = None,
     ) -> List[Dict]:
-        """Fetch all transactions from API in batches."""
+        """
+        Fetch all transactions from API in batches, including hidden transactions.
+
+        Monarch Money's API behavior: When hideFromReports filter is not specified,
+        the API excludes hidden transactions by default. To ensure we get ALL
+        transactions including hidden ones, we make two separate API calls:
+        1. hideFromReports=False → Get all non-hidden transactions
+        2. hideFromReports=True → Get all hidden transactions
+
+        These filters are mutually exclusive, so there's no overlap. The results
+        are combined into a single list containing all transactions.
+        """
         all_transactions = []
-        batch_size = 1000
-        offset = 0
-        batch_num = 1
-        total_count = None
 
-        while True:
-            batch = await self.mm.get_transactions(
-                start_date=start_date, end_date=end_date, limit=batch_size, offset=offset
-            )
+        # Fetch both hidden and non-hidden transactions
+        for hide_value in [False, True]:
+            if progress_callback and hide_value:
+                progress_callback("Fetching hidden transactions...")
 
-            # Get total count on first batch
-            if total_count is None and "allTransactions" in batch:
-                total_count = batch["allTransactions"].get("totalCount", 0)
-                if progress_callback and total_count:
-                    progress_callback(
-                        f"Found {total_count:,} total transactions. Starting download..."
-                    )
+            batch_size = 1000
+            offset = 0
+            batch_num = 1
+            total_count = None
 
-            # Get results from batch
-            batch_results = []
-            if "allTransactions" in batch:
-                batch_results = batch["allTransactions"].get("results", [])
-            elif "results" in batch:
-                batch_results = batch["results"]
+            while True:
+                batch = await self.mm.get_transactions(
+                    start_date=start_date,
+                    end_date=end_date,
+                    limit=batch_size,
+                    offset=offset,
+                    hidden_from_reports=hide_value,
+                )
 
-            if not batch_results:
-                break
+                # Get total count on first batch
+                if total_count is None and "allTransactions" in batch:
+                    total_count = batch["allTransactions"].get("totalCount", 0)
+                    if progress_callback and total_count:
+                        hide_label = "hidden" if hide_value else "non-hidden"
+                        progress_callback(
+                            f"Found {total_count:,} {hide_label} transactions. Starting download..."
+                        )
 
-            all_transactions.extend(batch_results)
+                # Get results from batch
+                batch_results = []
+                if "allTransactions" in batch:
+                    batch_results = batch["allTransactions"].get("results", [])
+                elif "results" in batch:
+                    batch_results = batch["results"]
 
-            # Show progress
-            if progress_callback:
-                if total_count:
-                    pct = int((len(all_transactions) / total_count) * 100)
-                    progress_callback(
-                        f"Downloaded {len(all_transactions):,} / {total_count:,} transactions ({pct}%)"
-                    )
-                else:
-                    progress_callback(f"Downloaded {len(all_transactions):,} transactions...")
+                if not batch_results:
+                    break
 
-            offset += batch_size
-            batch_num += 1
+                all_transactions.extend(batch_results)
 
-            # Break if we got fewer results than batch size
-            if len(batch_results) < batch_size:
-                break
+                # Show progress
+                if progress_callback:
+                    progress_callback(f"Downloaded {len(all_transactions):,} total transactions...")
 
+                offset += batch_size
+                batch_num += 1
+
+        # No deduplication needed - hideFromReports=False and hideFromReports=True
+        # are mutually exclusive, so there will be no overlap
         if progress_callback:
-            progress_callback(f"✓ Downloaded {len(all_transactions):,} transactions")
+            progress_callback(f"✓ Downloaded {len(all_transactions):,} total transactions")
 
         return all_transactions
 
