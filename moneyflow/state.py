@@ -528,6 +528,12 @@ class AppState:
             self.selected_account = item_name
             self.view_mode = ViewMode.DETAIL
 
+        # Reset sort to valid field for detail view if needed
+        # Detail views don't have 'count' column, so switch to date-based sorting
+        if self.sort_by == SortMode.COUNT:
+            self.sort_by = SortMode.DATE
+            self.sort_direction = SortDirection.DESC
+
     def go_back(self) -> tuple[bool, int, float]:
         """
         Go back to previous view.

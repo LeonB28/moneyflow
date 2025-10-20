@@ -606,6 +606,31 @@ class TestNavigation:
         assert app_state.view_mode == ViewMode.CATEGORY
         assert app_state.selected_category is None
 
+    def test_drill_down_resets_count_sort_to_date(self, app_state):
+        """Test that drilling down from aggregate view resets COUNT sort to DATE."""
+        app_state.view_mode = ViewMode.MERCHANT
+        app_state.sort_by = SortMode.COUNT
+        app_state.sort_direction = SortDirection.DESC
+
+        app_state.drill_down("Starbucks", cursor_position=5, scroll_y=100.0)
+
+        # Should reset to DATE sort since detail views don't have 'count' column
+        assert app_state.sort_by == SortMode.DATE
+        assert app_state.sort_direction == SortDirection.DESC
+        assert app_state.view_mode == ViewMode.DETAIL
+
+    def test_drill_down_preserves_amount_sort(self, app_state):
+        """Test that drilling down preserves AMOUNT sort (valid in both views)."""
+        app_state.view_mode = ViewMode.MERCHANT
+        app_state.sort_by = SortMode.AMOUNT
+        app_state.sort_direction = SortDirection.ASC
+
+        app_state.drill_down("Amazon", cursor_position=3, scroll_y=50.0)
+
+        # AMOUNT is valid in detail views, should be preserved
+        assert app_state.sort_by == SortMode.AMOUNT
+        assert app_state.sort_direction == SortDirection.ASC
+
 
 class TestBreadcrumbs:
     """Test breadcrumb generation for navigation."""
