@@ -255,42 +255,7 @@ moneyflow downloads all transactions once, then filters client-side for instant 
 - `q`: Quit
 - `?`: Help
 
-## Architecture
-
-### Backend System
-- Abstract base class defines required methods
-- Monarch Backend: GraphQL API implementation
-- Demo Backend: Synthetic data generator
-- Extensible for YNAB, Lunch Money, or custom platforms
-
-### Technology
-- **Polars**: Fast data aggregation
-- **Textual**: Terminal UI framework
-- **Python 3.11+**: Required
-- **Parquet**: Caching format (when --cache used)
-
-### Performance
-- Fetches all transactions on startup (1000 per batch)
-- Local aggregations using Polars (instant filtering/grouping)
-- Parallel API updates for speed
-
 ## Troubleshooting
-
-### ModuleNotFoundError
-
-**Solution**: Reinstall dependencies
-```bash
-pip install --upgrade moneyflow
-# Or from source: uv sync
-```
-
-### "uv: command not found"
-
-**Solution**: Restart terminal or add to PATH:
-```bash
-export PATH="$HOME/.cargo/bin:$PATH"
-source ~/.bashrc  # or ~/.zshrc
-```
 
 ### Login fails with "Incorrect password"
 
@@ -318,7 +283,6 @@ source ~/.bashrc  # or ~/.zshrc
 ```bash
 # Delete all data
 rm -rf ~/.moneyflow/
-rm -rf .mm/
 
 # Reinstall
 pip install --upgrade --force-reinstall moneyflow
@@ -346,27 +310,6 @@ Contributions welcome! This project uses:
 - **pytest** for testing: `uv run pytest`
 - **pyright** for type checking: `uv run pyright moneyflow/`
 - **ruff** for linting/formatting: `uv run ruff check moneyflow/`
-
-Development workflow:
-```bash
-# Clone and setup
-git clone https://github.com/wesm/moneyflow.git
-cd moneyflow
-uv sync
-
-# Run tests (must pass before committing)
-uv run pytest
-
-# Type check
-uv run pyright moneyflow/
-
-# Format and lint
-uv run ruff format moneyflow/ tests/
-uv run ruff check moneyflow/ tests/
-
-# Run from source
-uv run moneyflow --demo
-```
 
 ## Acknowledgments
 
