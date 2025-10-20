@@ -66,18 +66,6 @@ Create a **NEW password** to encrypt your stored credentials:
 
     Only you can decrypt them with your encryption password.
 
-### Session Management
-
-moneyflow saves your login session to avoid repeated 2FA:
-
-```
-.mm/mm_session.pickle
-```
-
-- Sessions typically last 24-48 hours
-- Automatically refreshes when expired
-- Delete `.mm/` to force fresh login
-
 ---
 
 ## Subsequent Runs
@@ -100,7 +88,6 @@ If you forget your encryption password or want to reconfigure:
 2. **Manually**: Delete credentials and start fresh:
    ```bash
    rm -rf ~/.moneyflow/
-   rm -rf .mm/
    moneyflow
    ```
 
@@ -113,25 +100,6 @@ If you forget your encryption password or want to reconfigure:
 - You're entering the **encryption password** (the one YOU created for moneyflow)
 - Not your Monarch Money password
 - If you forgot it, click "Reset Credentials"
-
-### "Login failed: 401 unauthorized"
-
-- Your 2FA secret might be incorrect
-- Get a fresh secret by disabling/re-enabling 2FA
-- Remove spaces from the secret key
-- Delete `.mm/` and try again
-
-### "Too many login attempts"
-
-moneyflow automatically manages sessions to avoid this, but if it happens:
-
-```bash
-# Delete the bad session
-rm -rf .mm/
-
-# moneyflow will auto-retry with fresh login
-moneyflow
-```
 
 ---
 

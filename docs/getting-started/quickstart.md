@@ -85,9 +85,6 @@ moneyflow --year 2025
 
 # Enable caching for even faster startup next time
 moneyflow --cache
-
-# Debug mode (shows detailed errors)
-moneyflow --dev
 ```
 
 ---
