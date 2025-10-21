@@ -4,7 +4,7 @@
 
 A keyboard-driven terminal UI for managing personal finance transactions. Built for users who prefer efficiency and direct control over their financial data.
 
-![moneyflow main screen](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/home-screen.png)
+![moneyflow main screen](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/home-screen.png)
 
 **Supported Platforms:**
 - ✅ **Monarch Money** (full support)
@@ -171,13 +171,13 @@ On first run, moneyflow will guide you through credential setup.
 
 ### Step 1: Select Backend
 
-![Backend selection](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/backend-select.png)
+![Backend selection](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/backend-select.png)
 
 Choose which platform you want to connect to (currently only Monarch Money is fully supported).
 
 ### Step 2: Enter Credentials
 
-![Credential setup](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/monarch-credentials.png)
+![Credential setup](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/monarch-credentials.png)
 
 **Before starting, get your 2FA secret:**
 1. Log into Monarch Money → Settings → Security
@@ -210,7 +210,7 @@ moneyflow downloads all transactions once, then filters client-side for instant 
 
 ### Clean Up Merchant Names
 
-![Edit merchant from aggregate view](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/drill-down-bulk-edit-merchant.png)
+![Edit merchant from aggregate view](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-bulk-edit-merchant.png)
 
 ```
 1. Launch: moneyflow
@@ -223,7 +223,7 @@ moneyflow downloads all transactions once, then filters client-side for instant 
 
 ### Bulk Edit Categories
 
-![Edit category with multi-select](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/drill-down-edit-category.png)
+![Edit category with multi-select](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-edit-category.png)
 
 ```
 1. Press 'u' to view all transactions
@@ -235,7 +235,7 @@ moneyflow downloads all transactions once, then filters client-side for instant 
 
 ### Drill Down and Sub-Grouping
 
-![Drill into merchant and group by category](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/drill-down-group-by-category.png)
+![Drill into merchant and group by category](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-group-by-category.png)
 
 Drill into any merchant or category, then press 'g' to cycle through sub-groupings:
 
@@ -247,11 +247,11 @@ Drill into any merchant or category, then press 'g' to cycle through sub-groupin
 5. Press Esc to go back to merchants view
 ```
 
-![Transaction detail view](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/drill-down-detail.png)
+![Transaction detail view](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-detail.png)
 
 ### Multi-Select for Bulk Operations
 
-![Multi-select transactions](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/drill-down-detail-multi-select.png)
+![Multi-select transactions](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-detail-multi-select.png)
 
 ```
 1. Navigate to any detail view

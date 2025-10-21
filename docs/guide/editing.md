@@ -21,7 +21,7 @@ The cursor stays in place after editing, so you can quickly edit multiple transa
 
 Select multiple transactions to edit them all at once:
 
-![Multi-select transactions with checkmarks](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/drill-down-detail-multi-select.png)
+![Multi-select transactions with checkmarks](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-detail-multi-select.png)
 
 1. Press ++space++ on each transaction you want to edit
    - A `✓` checkmark appears
@@ -44,7 +44,7 @@ Select multiple transactions to edit them all at once:
 
 From any aggregate view (Merchants, Categories, Groups, Accounts), press ++m++ or ++c++ to edit ALL transactions in that group:
 
-![Bulk edit merchant modal](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/drill-down-bulk-edit-merchant.png)
+![Bulk edit merchant modal](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-bulk-edit-merchant.png)
 
 **Example: Rename a merchant (all transactions)**
 
@@ -54,7 +54,7 @@ From any aggregate view (Merchants, Categories, Groups, Accounts), press ++m++ o
 4. Type "Amazon" and press ++enter++
 5. ALL transactions for that merchant are renamed
 
-![Edit category selection](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/drill-down-edit-category.png)
+![Edit category selection](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-edit-category.png)
 
 ### Multi-Select Groups (NEW!)
 

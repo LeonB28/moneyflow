@@ -4,7 +4,7 @@
 
 On your first run, moneyflow will ask you to select a backend:
 
-![Backend selection](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/backend-select.png)
+![Backend selection](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/backend-select.png)
 
 Currently, only **Monarch Money** is supported, but the architecture is designed for easy addition of other platforms.
 
@@ -41,7 +41,7 @@ moneyflow
 
 You'll be prompted for your credentials:
 
-![Credential setup screen](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/monarch-credentials.png)
+![Credential setup screen](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/monarch-credentials.png)
 
 #### 1. Monarch Money Credentials
 

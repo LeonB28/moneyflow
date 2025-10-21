@@ -6,7 +6,7 @@ One of moneyflow's most powerful features is the ability to drill into any aggre
 
 From any aggregated view (Merchants, Categories, Groups, Accounts), press ++enter++ to drill into that item and see individual transactions.
 
-![Drilled down into Amazon - transaction detail view](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/drill-down-detail.png)
+![Drilled down into Amazon - transaction detail view](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-detail.png)
 
 **Example:**
 
@@ -21,7 +21,7 @@ The breadcrumb shows your current path: `Merchants > Amazon`
 
 Once drilled down, press ++g++ to **sub-group** the filtered data instead of going back.
 
-![Drilled into Amazon, grouped by Category](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/drill-down-group-by-category.png)
+![Drilled into Amazon, grouped by Category](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-group-by-category.png)
 
 **Example: Analyzing Amazon Purchases**
 
@@ -34,7 +34,7 @@ Once drilled down, press ++g++ to **sub-group** the filtered data instead of goi
    - See which accounts you used for Amazon
 5. Press ++g++ then back to detail view
 
-![Drilled into Amazon, grouped by Account](https://raw.githubusercontent.com/wesm-ursalabs/moneyflow-assets/main/drill-down-group-by-account.png)
+![Drilled into Amazon, grouped by Account](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-group-by-account.png)
 
 This answers questions like:
 
