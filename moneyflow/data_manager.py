@@ -402,16 +402,16 @@ class DataManager:
         are combined into a single list containing all transactions.
         """
         all_transactions = []
+        non_hidden_count = 0
+        hidden_count = 0
 
         # Fetch both hidden and non-hidden transactions
         for hide_value in [False, True]:
-            if progress_callback and hide_value:
-                progress_callback("Fetching hidden transactions...")
-
             batch_size = 1000
             offset = 0
             batch_num = 1
             total_count = None
+            batch_transactions = []
 
             while True:
                 batch = await self.mm.get_transactions(
@@ -426,10 +426,8 @@ class DataManager:
                 if total_count is None and "allTransactions" in batch:
                     total_count = batch["allTransactions"].get("totalCount", 0)
                     if progress_callback and total_count:
-                        hide_label = "hidden" if hide_value else "non-hidden"
-                        progress_callback(
-                            f"Found {total_count:,} {hide_label} transactions. Starting download..."
-                        )
+                        hide_label = "hidden" if hide_value else "visible"
+                        progress_callback(f"Fetching {total_count:,} {hide_label} transactions...")
 
                 # Get results from batch
                 batch_results = []
@@ -441,19 +439,24 @@ class DataManager:
                 if not batch_results:
                     break
 
-                all_transactions.extend(batch_results)
-
-                # Show progress
-                if progress_callback:
-                    progress_callback(f"Downloaded {len(all_transactions):,} total transactions...")
-
+                batch_transactions.extend(batch_results)
                 offset += batch_size
                 batch_num += 1
 
-        # No deduplication needed - hideFromReports=False and hideFromReports=True
-        # are mutually exclusive, so there will be no overlap
+            # Track counts for final summary
+            if hide_value:
+                hidden_count = len(batch_transactions)
+            else:
+                non_hidden_count = len(batch_transactions)
+
+            all_transactions.extend(batch_transactions)
+
+        # Show clear final summary
         if progress_callback:
-            progress_callback(f"✓ Downloaded {len(all_transactions):,} total transactions")
+            progress_callback(
+                f"✓ Downloaded {len(all_transactions):,} total transactions "
+                f"({non_hidden_count:,} visible, {hidden_count:,} hidden)"
+            )
 
         return all_transactions
 
