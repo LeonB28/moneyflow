@@ -133,7 +133,7 @@ class AppController:
                 aggregate_func, field_name = sub_group_map[self.state.sub_grouping_mode]
                 agg = aggregate_func(txns)
 
-                # Apply sorting
+                # Apply sorting with secondary sort key for deterministic ordering
                 sort_col = self.state.sort_by.value
                 if sort_col == "amount":
                     sort_col = "total"
@@ -144,7 +144,9 @@ class AppController:
                     sort_col, self.state.sort_direction
                 )
                 if not agg.is_empty():
-                    agg = agg.sort(sort_col, descending=descending)
+                    # Use secondary sort by field_name for deterministic ordering
+                    # when primary sort values are equal (e.g., same amount)
+                    agg = agg.sort([sort_col, field_name], descending=[descending, False])
 
                 self.state.current_data = agg
 
@@ -257,7 +259,7 @@ class AppController:
         aggregate_func, field_name = aggregation_map[view_mode]
         agg = aggregate_func(filtered_df)
 
-        # Apply sorting
+        # Apply sorting with secondary sort key for deterministic ordering
         sort_col = self.state.sort_by.value
 
         # Map sort field to actual column name in aggregation DataFrame
@@ -270,7 +272,9 @@ class AppController:
 
         descending = ViewPresenter.should_sort_descending(sort_col, self.state.sort_direction)
         if not agg.is_empty():
-            agg = agg.sort(sort_col, descending=descending)
+            # Use secondary sort by field_name for deterministic ordering
+            # when primary sort values are equal (e.g., same amount/count)
+            agg = agg.sort([sort_col, field_name], descending=[descending, False])
 
         self.state.current_data = agg
 

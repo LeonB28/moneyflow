@@ -1029,12 +1029,13 @@ class MoneyflowApp(App):
                 self.notify(f"Selected: {count} transaction(s)", timeout=1)
 
     def action_select_all(self) -> None:
-        """Select all rows in the current view."""
+        """Toggle select all / deselect all rows in the current view."""
         if self.data_manager is None or self.state.current_data is None:
             return
 
         table = self.query_one("#data-table", DataTable)
         saved_cursor_row = table.cursor_row if table.cursor_row >= 0 else 0
+        total_rows = len(self.state.current_data)
 
         # Check if we're in aggregate view or detail view
         if self.state.view_mode in [
@@ -1043,48 +1044,82 @@ class MoneyflowApp(App):
             ViewMode.GROUP,
             ViewMode.ACCOUNT,
         ]:
-            # Aggregate view - select all groups
-            self.state.selected_group_keys.clear()
-            for row_idx in range(len(self.state.current_data)):
-                row_data = self.state.current_data.row(row_idx, named=True)
-                group_name = str(row_data.get(self.state.current_data.columns[0]))
-                self.state.selected_group_keys.add(group_name)
-            count = len(self.state.selected_group_keys)
-            self.refresh_view()
-            if saved_cursor_row < table.row_count:
-                table.move_cursor(row=saved_cursor_row)
-            self.notify(f"Selected all {count} group(s)", timeout=2)
+            # Aggregate view - toggle all groups
+            # Check if all groups are already selected
+            all_selected = len(self.state.selected_group_keys) == total_rows
+
+            if all_selected:
+                # Deselect all
+                self.state.selected_group_keys.clear()
+                self.refresh_view()
+                if saved_cursor_row < table.row_count:
+                    table.move_cursor(row=saved_cursor_row)
+                self.notify("Deselected all groups", timeout=2)
+            else:
+                # Select all
+                self.state.selected_group_keys.clear()
+                for row_idx in range(total_rows):
+                    row_data = self.state.current_data.row(row_idx, named=True)
+                    group_name = str(row_data.get(self.state.current_data.columns[0]))
+                    self.state.selected_group_keys.add(group_name)
+                count = len(self.state.selected_group_keys)
+                self.refresh_view()
+                if saved_cursor_row < table.row_count:
+                    table.move_cursor(row=saved_cursor_row)
+                self.notify(f"Selected all {count} group(s)", timeout=2)
 
         elif (
             self.state.view_mode == ViewMode.DETAIL
             and self.state.is_drilled_down()
             and self.state.sub_grouping_mode
         ):
-            # Sub-grouped view - select all groups
-            self.state.selected_group_keys.clear()
-            for row_idx in range(len(self.state.current_data)):
-                row_data = self.state.current_data.row(row_idx, named=True)
-                group_name = str(row_data.get(self.state.current_data.columns[0]))
-                self.state.selected_group_keys.add(group_name)
-            count = len(self.state.selected_group_keys)
-            self.refresh_view()
-            if saved_cursor_row < table.row_count:
-                table.move_cursor(row=saved_cursor_row)
-            self.notify(f"Selected all {count} group(s)", timeout=2)
+            # Sub-grouped view - toggle all groups
+            all_selected = len(self.state.selected_group_keys) == total_rows
+
+            if all_selected:
+                # Deselect all
+                self.state.selected_group_keys.clear()
+                self.refresh_view()
+                if saved_cursor_row < table.row_count:
+                    table.move_cursor(row=saved_cursor_row)
+                self.notify("Deselected all groups", timeout=2)
+            else:
+                # Select all
+                self.state.selected_group_keys.clear()
+                for row_idx in range(total_rows):
+                    row_data = self.state.current_data.row(row_idx, named=True)
+                    group_name = str(row_data.get(self.state.current_data.columns[0]))
+                    self.state.selected_group_keys.add(group_name)
+                count = len(self.state.selected_group_keys)
+                self.refresh_view()
+                if saved_cursor_row < table.row_count:
+                    table.move_cursor(row=saved_cursor_row)
+                self.notify(f"Selected all {count} group(s)", timeout=2)
 
         else:
-            # Detail view - select all transactions
-            self.state.selected_ids.clear()
-            for row_idx in range(len(self.state.current_data)):
-                row_data = self.state.current_data.row(row_idx, named=True)
-                txn_id = row_data.get("id")
-                if txn_id:
-                    self.state.selected_ids.add(txn_id)
-            count = len(self.state.selected_ids)
-            self.refresh_view()
-            if saved_cursor_row < table.row_count:
-                table.move_cursor(row=saved_cursor_row)
-            self.notify(f"Selected all {count} transaction(s)", timeout=2)
+            # Detail view - toggle all transactions
+            all_selected = len(self.state.selected_ids) == total_rows
+
+            if all_selected:
+                # Deselect all
+                self.state.selected_ids.clear()
+                self.refresh_view()
+                if saved_cursor_row < table.row_count:
+                    table.move_cursor(row=saved_cursor_row)
+                self.notify("Deselected all transactions", timeout=2)
+            else:
+                # Select all
+                self.state.selected_ids.clear()
+                for row_idx in range(total_rows):
+                    row_data = self.state.current_data.row(row_idx, named=True)
+                    txn_id = row_data.get("id")
+                    if txn_id:
+                        self.state.selected_ids.add(txn_id)
+                count = len(self.state.selected_ids)
+                self.refresh_view()
+                if saved_cursor_row < table.row_count:
+                    table.move_cursor(row=saved_cursor_row)
+                self.notify(f"Selected all {count} transaction(s)", timeout=2)
 
     def action_edit_merchant(self) -> None:
         """Edit merchant name for current selection."""
