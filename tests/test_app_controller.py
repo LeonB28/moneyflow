@@ -295,6 +295,7 @@ class TestActionHints:
         hints = mock_view.hints[-1]
         assert "Merchant" in hints
         assert "bulk" in hints.lower()
+        assert "Space=Select" in hints
 
     async def test_category_view_hints(self, controller, mock_view):
         """Category view should show edit_category hint."""
@@ -305,6 +306,7 @@ class TestActionHints:
         hints = mock_view.hints[-1]
         assert "Category" in hints
         assert "bulk" in hints.lower()
+        assert "Space=Select" in hints
 
     async def test_detail_view_hints(self, controller, mock_view):
         """Detail view should show transaction-level hints."""
@@ -316,6 +318,7 @@ class TestActionHints:
         assert "Merchant" in hints
         assert "Category" in hints
         assert "Space=Select" in hints
+        assert "Ctrl-A=SelectAll" in hints
 
 
 class TestBreadcrumbGeneration:

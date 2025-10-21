@@ -50,6 +50,7 @@ KEYBINDINGS: List[KeyBinding] = [
     KeyBinding("h", "toggle_hide", "Toggle hide from reports", "Actions"),
     KeyBinding("d", "delete", "Delete transaction (with confirmation)", "Actions"),
     KeyBinding("space", "toggle_select", "Multi-select for bulk operations", "Actions"),
+    KeyBinding("ctrl+a", "select_all", "Select all items in current view", "Actions"),
     # Filters & Search
     KeyBinding("f", "show_filters", "Show filter options", "Filters"),
     KeyBinding("/", "search", "Search transactions", "Filters"),

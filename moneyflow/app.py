@@ -135,6 +135,7 @@ class MoneyflowApp(App):
         Binding("h", "toggle_hide_from_reports", "Hide/Unhide", show=False),
         Binding("i", "show_transaction_details", "Info", show=False),
         Binding("space", "toggle_select", "Select", show=False),
+        Binding("ctrl+a", "select_all", "Select All", show=False),
         # Other actions
         Binding("f", "show_filters", "Filters", show=True),
         Binding("question_mark", "help", "Help", show=True, key_display="?"),
@@ -1026,6 +1027,64 @@ class MoneyflowApp(App):
                 if saved_cursor_row < table.row_count:
                     table.move_cursor(row=saved_cursor_row)
                 self.notify(f"Selected: {count} transaction(s)", timeout=1)
+
+    def action_select_all(self) -> None:
+        """Select all rows in the current view."""
+        if self.data_manager is None or self.state.current_data is None:
+            return
+
+        table = self.query_one("#data-table", DataTable)
+        saved_cursor_row = table.cursor_row if table.cursor_row >= 0 else 0
+
+        # Check if we're in aggregate view or detail view
+        if self.state.view_mode in [
+            ViewMode.MERCHANT,
+            ViewMode.CATEGORY,
+            ViewMode.GROUP,
+            ViewMode.ACCOUNT,
+        ]:
+            # Aggregate view - select all groups
+            self.state.selected_group_keys.clear()
+            for row_idx in range(len(self.state.current_data)):
+                row_data = self.state.current_data.row(row_idx, named=True)
+                group_name = str(row_data.get(self.state.current_data.columns[0]))
+                self.state.selected_group_keys.add(group_name)
+            count = len(self.state.selected_group_keys)
+            self.refresh_view()
+            if saved_cursor_row < table.row_count:
+                table.move_cursor(row=saved_cursor_row)
+            self.notify(f"Selected all {count} group(s)", timeout=2)
+
+        elif (
+            self.state.view_mode == ViewMode.DETAIL
+            and self.state.is_drilled_down()
+            and self.state.sub_grouping_mode
+        ):
+            # Sub-grouped view - select all groups
+            self.state.selected_group_keys.clear()
+            for row_idx in range(len(self.state.current_data)):
+                row_data = self.state.current_data.row(row_idx, named=True)
+                group_name = str(row_data.get(self.state.current_data.columns[0]))
+                self.state.selected_group_keys.add(group_name)
+            count = len(self.state.selected_group_keys)
+            self.refresh_view()
+            if saved_cursor_row < table.row_count:
+                table.move_cursor(row=saved_cursor_row)
+            self.notify(f"Selected all {count} group(s)", timeout=2)
+
+        else:
+            # Detail view - select all transactions
+            self.state.selected_ids.clear()
+            for row_idx in range(len(self.state.current_data)):
+                row_data = self.state.current_data.row(row_idx, named=True)
+                txn_id = row_data.get("id")
+                if txn_id:
+                    self.state.selected_ids.add(txn_id)
+            count = len(self.state.selected_ids)
+            self.refresh_view()
+            if saved_cursor_row < table.row_count:
+                table.move_cursor(row=saved_cursor_row)
+            self.notify(f"Selected all {count} transaction(s)", timeout=2)
 
     def action_edit_merchant(self) -> None:
         """Edit merchant name for current selection."""
