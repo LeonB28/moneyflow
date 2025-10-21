@@ -26,31 +26,30 @@ class KeyBinding:
 KEYBINDINGS: List[KeyBinding] = [
     # View Navigation
     KeyBinding("g", "cycle_grouping", "Cycle grouping (Merchant→Category→Group→Account)", "Views"),
-    KeyBinding("u", "view_ungrouped", "View all transactions", "Views"),
+    KeyBinding("u", "view_ungrouped", "View all transactions (detail view)", "Views"),
     KeyBinding("D", "find_duplicates", "Find duplicate transactions", "Views"),
     KeyBinding("m", "view_merchants", "View merchant aggregation (direct)", "Views"),
     KeyBinding("c", "view_categories", "View category aggregation (direct)", "Views"),
     KeyBinding("A", "view_accounts", "View account aggregation (direct)", "Views"),
     KeyBinding("enter", "drill_down", "Drill down into selected item", "Views"),
-    KeyBinding("esc", "go_back", "Go back to previous view (restores cursor)", "Views"),
+    KeyBinding("esc", "go_back", "Go back (restores cursor and sort preferences)", "Views"),
     # Time Navigation
     KeyBinding("y", "this_year", "View this year", "Time"),
     KeyBinding("t", "this_month", "View this month", "Time"),
     KeyBinding("a", "all_time", "View all time", "Time"),
-    KeyBinding("1-9", "select_month", "Select month (1=Jan...9=Sep)", "Time"),
-    KeyBinding("←", "prev_period", "Previous period", "Time"),
-    KeyBinding("→", "next_period", "Next period", "Time"),
+    KeyBinding("←", "prev_period", "Previous period (month/year)", "Time"),
+    KeyBinding("→", "next_period", "Next period (month/year)", "Time"),
     # Sorting
     KeyBinding("s", "toggle_sort_field", "Toggle sort field (count/amount/date)", "Sorting"),
     KeyBinding("v", "reverse_sort", "Reverse sort direction", "Sorting"),
     # Transaction Actions
     KeyBinding("i", "show_info", "Show transaction info/details", "Actions"),
-    KeyBinding("m", "edit_merchant", "Edit merchant name", "Actions"),
-    KeyBinding("r", "edit_category", "Change category", "Actions"),
+    KeyBinding("m", "edit_merchant", "Edit merchant name (or bulk rename)", "Actions"),
+    KeyBinding("r", "edit_category", "Change category (or bulk change)", "Actions"),
     KeyBinding("h", "toggle_hide", "Toggle hide from reports", "Actions"),
     KeyBinding("d", "delete", "Delete transaction (with confirmation)", "Actions"),
-    KeyBinding("space", "toggle_select", "Multi-select for bulk operations", "Actions"),
-    KeyBinding("ctrl+a", "select_all", "Select all items in current view", "Actions"),
+    KeyBinding("space", "toggle_select", "Toggle selection (for bulk operations)", "Actions"),
+    KeyBinding("ctrl+a", "select_all", "Select all / Deselect all (toggle)", "Actions"),
     # Filters & Search
     KeyBinding("f", "show_filters", "Show filter options", "Filters"),
     KeyBinding("/", "search", "Search transactions", "Filters"),
@@ -73,7 +72,8 @@ def get_help_text() -> str:
     # Format as text
     lines = ["moneyflow - Keyboard Shortcuts", "=" * 40, ""]
 
-    for category in ["Navigation", "Time", "Actions", "Bulk", "System"]:
+    # Display categories in logical order
+    for category in ["Views", "Time", "Sorting", "Actions", "Filters", "System"]:
         if category in categories:
             lines.append(f"{category}:")
             lines.append("-" * 40)
