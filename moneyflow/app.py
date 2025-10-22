@@ -1641,8 +1641,17 @@ class MoneyflowApp(App):
 
         # Handle aggregate/subgroup views (bulk hide for groups)
         if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
+            # Determine the field to filter by based on view mode
+            field_map = {
+                ViewMode.MERCHANT: "merchant",
+                ViewMode.CATEGORY: "category",
+                ViewMode.GROUP: "group",
+                ViewMode.ACCOUNT: "account",
+            }
+            group_by_field = field_map[self.state.view_mode]
+
             # Get transactions for selected groups
-            transactions_to_toggle = self.controller.get_transactions_from_selected_groups()
+            transactions_to_toggle = self.controller.get_transactions_from_selected_groups(group_by_field)
 
             if transactions_to_toggle.is_empty():
                 self.notify("No groups selected. Use Space to select groups first.", timeout=2)
@@ -1664,8 +1673,17 @@ class MoneyflowApp(App):
             and self.state.is_drilled_down()
             and self.state.sub_grouping_mode
         ):
+            # Determine field based on sub-grouping mode
+            field_map = {
+                ViewMode.MERCHANT: "merchant",
+                ViewMode.CATEGORY: "category",
+                ViewMode.GROUP: "group",
+                ViewMode.ACCOUNT: "account",
+            }
+            group_by_field = field_map[self.state.sub_grouping_mode]
+
             # Get transactions for selected sub-groups
-            transactions_to_toggle = self.controller.get_transactions_from_selected_groups()
+            transactions_to_toggle = self.controller.get_transactions_from_selected_groups(group_by_field)
 
             if transactions_to_toggle.is_empty():
                 self.notify("No groups selected. Use Space to select groups first.", timeout=2)
