@@ -697,6 +697,37 @@ class TestEditQueueing:
         for old, new in zip(old_values, new_values):
             assert new == (not old)
 
+    async def test_queue_hide_toggle_from_aggregate_view(self, controller):
+        """Test hide toggle from aggregate view (merchant grouping)."""
+        controller.state.view_mode = ViewMode.MERCHANT
+        controller.state.selected_group_keys.add("Starbucks")
+
+        # Get transactions for selected merchant
+        transactions = controller.get_transactions_from_selected_groups("merchant")
+
+        assert not transactions.is_empty()
+
+        # Queue hide toggle
+        count = controller.queue_hide_toggle_edits(transactions)
+
+        assert count > 0
+        assert len(controller.data_manager.pending_edits) == count
+        # All edits should be for hide_from_reports field
+        assert all(e.field == "hide_from_reports" for e in controller.data_manager.pending_edits)
+
+    async def test_queue_hide_toggle_from_category_view(self, controller):
+        """Test hide toggle from category aggregate view."""
+        controller.state.view_mode = ViewMode.CATEGORY
+        controller.state.selected_group_keys.add("Coffee Shops")
+
+        # Get transactions for selected category
+        transactions = controller.get_transactions_from_selected_groups("category")
+
+        if not transactions.is_empty():
+            count = controller.queue_hide_toggle_edits(transactions)
+            assert count > 0
+            assert all(e.field == "hide_from_reports" for e in controller.data_manager.pending_edits)
+
 
 class TestSortFieldCycling:
     """
