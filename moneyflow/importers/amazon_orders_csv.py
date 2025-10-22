@@ -171,13 +171,14 @@ def import_amazon_orders(
         shipment_status = row.get("Shipment Status", "")
 
         # Insert transaction (use REPLACE only if force=True)
+        # Note: group is NOT stored - it's derived from category by data_manager
         insert_mode = "INSERT OR REPLACE" if force else "INSERT"
         conn.execute(
             f"""
             {insert_mode} INTO transactions
-            (id, date, merchant, category, category_id, group_name, amount, quantity,
+            (id, date, merchant, category, category_id, amount, quantity,
              asin, order_id, account, order_status, shipment_status, hideFromReports)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 txn_id,
@@ -185,7 +186,6 @@ def import_amazon_orders(
                 product_name,
                 "Uncategorized",
                 "cat_uncategorized",
-                "Uncategorized",  # Default group matches category
                 amount,
                 quantity,
                 asin,

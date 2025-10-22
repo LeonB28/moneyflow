@@ -340,11 +340,11 @@ class TestTransactionUpdates:
         conn = backend._get_connection()
         conn.execute("""
             INSERT INTO transactions
-            (id, date, merchant, category, category_id, group_name, amount, quantity,
+            (id, date, merchant, category, category_id, amount, quantity,
              asin, order_id, account, order_status, shipment_status, hideFromReports)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, ("amz_B001_order1", "2025-01-01", "Old Name", "Uncategorized", "cat_uncategorized",
-              "Uncategorized", -10.0, 1, "B001", "order1", "order1", "Closed", "Shipped", 0))
+              -10.0, 1, "B001", "order1", "order1", "Closed", "Shipped", 0))
         conn.commit()
         conn.close()
 
@@ -359,8 +359,8 @@ class TestTransactionUpdates:
         assert row[0] == "New Name"
 
     @pytest.mark.asyncio
-    async def test_update_category_updates_group(self, temp_db):
-        """Test that updating category also updates group."""
+    async def test_update_category_changes_category(self, temp_db):
+        """Test that updating category works correctly."""
         backend = AmazonBackend(temp_db)
 
         # Create a category with a group
@@ -373,43 +373,42 @@ class TestTransactionUpdates:
         # Insert test transaction
         conn.execute("""
             INSERT INTO transactions
-            (id, date, merchant, category, category_id, group_name, amount, quantity,
+            (id, date, merchant, category, category_id, amount, quantity,
              asin, order_id, account, order_status, shipment_status, hideFromReports)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, ("amz_B001_order1", "2025-01-01", "Apples", "Uncategorized", "cat_uncategorized",
-              "Uncategorized", -5.0, 1, "B001", "order1", "order1", "Closed", "Shipped", 0))
+              -5.0, 1, "B001", "order1", "order1", "Closed", "Shipped", 0))
         conn.commit()
         conn.close()
 
         # Update category
         await backend.update_transaction("amz_B001_order1", category_id="cat_groceries")
 
-        # Verify both category and group were updated
+        # Verify category was updated (group will be added by data_manager later)
         conn = backend._get_connection()
         row = conn.execute(
-            "SELECT category, category_id, group_name FROM transactions WHERE id = ?",
+            "SELECT category, category_id FROM transactions WHERE id = ?",
             ("amz_B001_order1",)
         ).fetchone()
         conn.close()
 
         assert row[0] == "Groceries"  # category name
         assert row[1] == "cat_groceries"  # category_id
-        assert row[2] == "Food & Dining"  # group_name (updated automatically!)
 
     @pytest.mark.asyncio
-    async def test_get_transactions_returns_group(self, temp_db):
-        """Test that get_transactions returns group field."""
+    async def test_get_transactions_has_category(self, temp_db):
+        """Test that get_transactions returns category (group added by data_manager)."""
         backend = AmazonBackend(temp_db)
 
-        # Insert test transaction with group
+        # Insert test transaction
         conn = backend._get_connection()
         conn.execute("""
             INSERT INTO transactions
-            (id, date, merchant, category, category_id, group_name, amount, quantity,
+            (id, date, merchant, category, category_id, amount, quantity,
              asin, order_id, account, order_status, shipment_status, hideFromReports)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, ("amz_B001_order1", "2025-01-01", "Test Item", "Groceries", "cat_groceries",
-              "Food & Dining", -10.0, 1, "B001", "order1", "order1", "Closed", "Shipped", 0))
+              -10.0, 1, "B001", "order1", "order1", "Closed", "Shipped", 0))
         conn.commit()
         conn.close()
 
@@ -418,8 +417,9 @@ class TestTransactionUpdates:
 
         assert len(result["allTransactions"]["results"]) == 1
         txn = result["allTransactions"]["results"][0]
-        assert "group" in txn
-        assert txn["group"] == "Food & Dining"
+        assert txn["category"]["id"] == "cat_groceries"
+        assert txn["category"]["name"] == "Groceries"
+        # Note: group will be added by data_manager.apply_groups() based on category
 
 
 class TestEndToEndDataFetch:
@@ -441,13 +441,13 @@ class TestEndToEndDataFetch:
 
         # Verify data loaded correctly
         assert df is not None
-        # Note: DataManager fetches both hideFromReports=False and =True separately,
-        # so we get duplicates. Amazon backend doesn't filter by this, so all transactions
-        # appear in both fetches (3 * 2 = 6). This is a known limitation.
-        assert len(df) >= 3  # At least 3 transactions
-        assert "group" in df.columns  # Group column present
+        assert len(df) == 3  # 3 transactions (1 cancelled was skipped, no duplicates with filter)
+        assert "group" in df.columns  # Group column added by data_manager.apply_groups()
         assert categories is not None
         assert "cat_uncategorized" in categories
+
+        # Verify group was derived from category
+        assert all(df["group"] == "Uncategorized")  # All initially uncategorized
 
     @pytest.mark.asyncio
     async def test_fetch_respects_date_filters(self, sample_orders_csv, temp_db):

@@ -57,7 +57,6 @@ class AmazonBackend(FinanceBackend):
                 merchant TEXT NOT NULL,
                 category TEXT NOT NULL DEFAULT 'Uncategorized',
                 category_id TEXT NOT NULL DEFAULT 'cat_uncategorized',
-                group_name TEXT NOT NULL DEFAULT 'Uncategorized',
                 amount REAL NOT NULL,
                 quantity INTEGER NOT NULL,
                 asin TEXT NOT NULL,
@@ -208,6 +207,7 @@ class AmazonBackend(FinanceBackend):
         conn = self._get_connection()
         conn.row_factory = sqlite3.Row
 
+        # Simple query - group will be added by data_manager.apply_groups() using Polars
         query = "SELECT * FROM transactions WHERE 1=1"
         params = []
 
@@ -230,30 +230,27 @@ class AmazonBackend(FinanceBackend):
         rows = cursor.fetchall()
 
         # Get total count for pagination
-        count_query = "SELECT COUNT(*) FROM transactions WHERE 1=1"
+        count_query = "SELECT COUNT(*) FROM transactions t WHERE 1=1"
         count_params = []
         if start_date:
-            count_query += " AND date >= ?"
+            count_query += " AND t.date >= ?"
             count_params.append(start_date)
         if end_date:
-            count_query += " AND date <= ?"
+            count_query += " AND t.date <= ?"
             count_params.append(end_date)
         if hidden_from_reports is not None:
-            count_query += " AND hideFromReports = ?"
+            count_query += " AND t.hideFromReports = ?"
             count_params.append(1 if hidden_from_reports else 0)
 
         total_count = conn.execute(count_query, count_params).fetchone()[0]
         conn.close()
 
         # Convert to Monarch-compatible format
+        # Note: group will be added by data_manager.apply_groups() using Polars
         transactions = []
         for row in rows:
-            # sqlite3.Row supports dict-style access but not .get()
-            # Check available columns for backwards compatibility
+            # sqlite3.Row supports dict-style key access
             row_keys = row.keys()
-
-            # Extract fields with backwards compatibility
-            group_name = row["group_name"] if "group_name" in row_keys else "Uncategorized"
             order_status = row["order_status"] if "order_status" in row_keys else None
             shipment_status = row["shipment_status"] if "shipment_status" in row_keys else None
 
@@ -266,7 +263,7 @@ class AmazonBackend(FinanceBackend):
                     "id": row["category_id"] or "cat_uncategorized",
                     "name": row["category"] or "Uncategorized",
                 },
-                "group": group_name or "Uncategorized",
+                # Group will be added by data_manager.apply_groups() based on category
                 "account": {"id": row["order_id"], "displayName": row["order_id"]},
                 "notes": row["notes"] or "",
                 "hideFromReports": bool(row["hideFromReports"]),
@@ -354,15 +351,14 @@ class AmazonBackend(FinanceBackend):
         if category_id is not None:
             updates.append("category_id = ?")
             params.append(category_id)
-            # Also update category name and group from categories table
+            # Also update category name from categories table
+            # (group is derived from category via JOIN at query time, not stored)
             category_row = conn.execute(
-                "SELECT name, group_name FROM categories WHERE id = ?", (category_id,)
+                "SELECT name FROM categories WHERE id = ?", (category_id,)
             ).fetchone()
             if category_row:
                 updates.append("category = ?")
                 params.append(category_row[0])
-                updates.append("group_name = ?")
-                params.append(category_row[1])
 
         if hide_from_reports is not None:
             updates.append("hideFromReports = ?")
