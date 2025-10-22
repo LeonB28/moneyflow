@@ -34,6 +34,9 @@ class BackendConfig:
     # Whether this backend supports groups
     has_groups: bool = True
 
+    # Whether this backend requires credentials/authentication
+    requires_auth: bool = True
+
     @staticmethod
     def for_monarch() -> "BackendConfig":
         """Create configuration for Monarch Money backend."""
@@ -45,6 +48,7 @@ class BackendConfig:
             show_price_per_item=False,
             has_accounts=True,
             has_groups=True,
+            requires_auth=True,  # Monarch requires credentials
         )
 
     @staticmethod
@@ -58,6 +62,7 @@ class BackendConfig:
             show_price_per_item=True,
             has_accounts=False,  # Amazon doesn't have accounts
             has_groups=False,  # Amazon doesn't have groups (for now)
+            requires_auth=False,  # Amazon uses local SQLite, no auth needed
         )
 
     @staticmethod
@@ -71,4 +76,5 @@ class BackendConfig:
             show_price_per_item=False,
             has_accounts=False,  # Demo doesn't use accounts
             has_groups=True,
+            requires_auth=False,  # Demo mode doesn't need auth
         )
