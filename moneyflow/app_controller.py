@@ -75,6 +75,17 @@ class AppController:
                 "accounts": "Accounts",
             }
 
+    def _get_column_config(self) -> dict:
+        """Get column configuration from backend, with safe fallback to defaults."""
+        try:
+            return self.data_manager.mm.get_column_config()
+        except (AttributeError, Exception):
+            # Fallback to default widths if backend doesn't support it
+            return {
+                "merchant_width_pct": 25,
+                "account_width_pct": 15,
+            }
+
     def refresh_view(self, force_rebuild: bool = True) -> None:
         """
         Refresh the current view.
@@ -173,6 +184,8 @@ class AppController:
                     detail_df=txns,
                     pending_edit_ids=pending_edit_ids,
                     selected_group_keys=self.state.selected_group_keys,
+                    column_config=self._get_column_config(),
+                    display_labels=self._get_display_labels(),
                 )
             else:
                 # Show detail view (normal behavior)
@@ -195,6 +208,8 @@ class AppController:
                     self.state.sort_direction,
                     self.state.selected_ids,
                     pending_txn_ids,
+                    column_config=self._get_column_config(),
+                    display_labels=self._get_display_labels(),
                 )
         else:
             return
@@ -301,6 +316,8 @@ class AppController:
             detail_df=filtered_df,
             pending_edit_ids=pending_edit_ids,
             selected_group_keys=self.state.selected_group_keys,
+            column_config=self._get_column_config(),
+            display_labels=self._get_display_labels(),
         )
 
     # View mode switching operations

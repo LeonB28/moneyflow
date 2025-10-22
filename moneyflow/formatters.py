@@ -7,7 +7,7 @@ fully typed and testable.
 """
 
 from dataclasses import dataclass
-from typing import Literal, TypedDict
+from typing import Any, Dict, Literal, Optional, TypedDict
 
 import polars as pl
 
@@ -113,6 +113,8 @@ class ViewPresenter:
         group_by_field: AggregationField,
         sort_by: SortMode,
         sort_direction: SortDirection,
+        column_config: Optional[Dict[str, Any]] = None,
+        display_labels: Optional[Dict[str, str]] = None,
     ) -> list[ColumnSpec]:
         """
         Prepare column specifications for aggregation views.
@@ -121,6 +123,8 @@ class ViewPresenter:
             group_by_field: The field to group by
             sort_by: Current sort mode
             sort_direction: Current sort direction
+            column_config: Optional backend-specific column width config
+            display_labels: Optional backend-specific display labels
 
         Returns:
             List of column specifications with proper headers and arrows
@@ -134,14 +138,28 @@ class ViewPresenter:
             >>> cols[1]["label"]  # Count column with arrow
             'Count ↓'
         """
+        # Use defaults if not provided
+        if column_config is None:
+            column_config = {"merchant_width_pct": 25, "account_width_pct": 15}
+        if display_labels is None:
+            display_labels = {"merchant": "Merchant", "account": "Account", "accounts": "Accounts"}
+
         # Determine display name for first column
         name_labels: dict[AggregationField, str] = {
-            "merchant": "Merchant",
+            "merchant": display_labels.get("merchant", "Merchant"),
             "category": "Category",
             "group": "Group",
-            "account": "Account",
+            "account": display_labels.get("account", "Account"),
         }
         name_label = name_labels[group_by_field]
+
+        # Get column width based on field type
+        if group_by_field == "merchant":
+            name_width = column_config.get("merchant_width_pct", 25)
+        elif group_by_field == "account":
+            name_width = column_config.get("account_width_pct", 15)
+        else:
+            name_width = 40  # Default for category/group
 
         # Get arrows
         count_arrow = ViewPresenter.get_sort_arrow(sort_by, sort_direction, SortMode.COUNT)
@@ -149,7 +167,7 @@ class ViewPresenter:
 
         # Build column specs
         columns: list[ColumnSpec] = [
-            {"label": name_label, "key": group_by_field, "width": 40},
+            {"label": name_label, "key": group_by_field, "width": name_width},
             {"label": f"Count {count_arrow}".strip(), "key": "count", "width": 10},
             {"label": f"Total {amount_arrow}".strip(), "key": "total", "width": 15},
             {"label": "", "key": "flags", "width": 2},  # Flags column for pending edits
@@ -230,6 +248,8 @@ class ViewPresenter:
         detail_df: pl.DataFrame = None,
         pending_edit_ids: set[str] = None,
         selected_group_keys: set[str] = None,
+        column_config: Optional[Dict[str, Any]] = None,
+        display_labels: Optional[Dict[str, str]] = None,
     ) -> PreparedView:
         """
         Prepare complete aggregation view data.
@@ -262,7 +282,9 @@ class ViewPresenter:
             >>> len(view["columns"])
             4
         """
-        columns = ViewPresenter.prepare_aggregation_columns(group_by_field, sort_by, sort_direction)
+        columns = ViewPresenter.prepare_aggregation_columns(
+            group_by_field, sort_by, sort_direction, column_config, display_labels
+        )
 
         if df.is_empty():
             return PreparedView(columns=columns, rows=[], empty=True)
@@ -275,7 +297,10 @@ class ViewPresenter:
 
     @staticmethod
     def prepare_transaction_columns(
-        sort_by: SortMode, sort_direction: SortDirection
+        sort_by: SortMode,
+        sort_direction: SortDirection,
+        column_config: Optional[Dict[str, Any]] = None,
+        display_labels: Optional[Dict[str, str]] = None,
     ) -> list[ColumnSpec]:
         """
         Prepare column specifications for transaction detail view.
@@ -283,6 +308,8 @@ class ViewPresenter:
         Args:
             sort_by: Current sort mode
             sort_direction: Current sort direction
+            column_config: Optional backend-specific column width config
+            display_labels: Optional backend-specific display labels
 
         Returns:
             List of column specifications for transaction view
@@ -296,6 +323,12 @@ class ViewPresenter:
             >>> cols[5]["label"]  # Flags column
             ''
         """
+        # Use defaults if not provided
+        if column_config is None:
+            column_config = {"merchant_width_pct": 25, "account_width_pct": 15}
+        if display_labels is None:
+            display_labels = {"merchant": "Merchant", "account": "Account", "accounts": "Accounts"}
+
         # Get arrows for each field
         date_arrow = ViewPresenter.get_sort_arrow(sort_by, sort_direction, SortMode.DATE)
         merchant_arrow = ViewPresenter.get_sort_arrow(sort_by, sort_direction, SortMode.MERCHANT)
@@ -303,11 +336,19 @@ class ViewPresenter:
         account_arrow = ViewPresenter.get_sort_arrow(sort_by, sort_direction, SortMode.ACCOUNT)
         amount_arrow = ViewPresenter.get_sort_arrow(sort_by, sort_direction, SortMode.AMOUNT)
 
+        # Get custom labels
+        merchant_label = display_labels.get("merchant", "Merchant")
+        account_label = display_labels.get("account", "Account")
+
+        # Get custom widths
+        merchant_width = column_config.get("merchant_width_pct", 25)
+        account_width = column_config.get("account_width_pct", 15)
+
         columns: list[ColumnSpec] = [
             {"label": f"Date {date_arrow}".strip(), "key": "date", "width": 12},
-            {"label": f"Merchant {merchant_arrow}".strip(), "key": "merchant", "width": 25},
+            {"label": f"{merchant_label} {merchant_arrow}".strip(), "key": "merchant", "width": merchant_width},
             {"label": f"Category {category_arrow}".strip(), "key": "category", "width": 20},
-            {"label": f"Account {account_arrow}".strip(), "key": "account", "width": 18},
+            {"label": f"{account_label} {account_arrow}".strip(), "key": "account", "width": account_width},
             {"label": f"Amount {amount_arrow}".strip(), "key": "amount", "width": 12},
             {"label": "", "key": "flags", "width": 3},  # Flags column (✓ H *)
         ]
@@ -410,6 +451,8 @@ class ViewPresenter:
         sort_direction: SortDirection,
         selected_ids: set[str],
         pending_edit_ids: set[str],
+        column_config: Optional[Dict[str, Any]] = None,
+        display_labels: Optional[Dict[str, str]] = None,
     ) -> PreparedView:
         """
         Prepare complete transaction detail view data.
@@ -440,7 +483,9 @@ class ViewPresenter:
             >>> view["empty"]
             False
         """
-        columns = ViewPresenter.prepare_transaction_columns(sort_by, sort_direction)
+        columns = ViewPresenter.prepare_transaction_columns(
+            sort_by, sort_direction, column_config, display_labels
+        )
 
         if df.is_empty():
             return PreparedView(columns=columns, rows=[], empty=True)

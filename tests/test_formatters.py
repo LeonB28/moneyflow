@@ -74,7 +74,25 @@ class TestPrepareAggregationColumns:
         assert len(cols) == 4
         assert cols[0]["label"] == "Merchant"
         assert cols[0]["key"] == "merchant"
-        assert cols[0]["width"] == 40
+        assert cols[0]["width"] == 25  # Default width from column_config
+
+    def test_merchant_columns_with_custom_config(self):
+        """Should use custom column widths when provided."""
+        column_config = {"merchant_width_pct": 33}  # Amazon's 30% wider
+        cols = ViewPresenter.prepare_aggregation_columns(
+            "merchant", SortMode.COUNT, SortDirection.DESC, column_config
+        )
+
+        assert cols[0]["width"] == 33  # Custom width applied
+
+    def test_merchant_columns_with_custom_labels(self):
+        """Should use custom labels when provided."""
+        display_labels = {"merchant": "Item Name", "account": "Order", "accounts": "Orders"}
+        cols = ViewPresenter.prepare_aggregation_columns(
+            "merchant", SortMode.COUNT, SortDirection.DESC, None, display_labels
+        )
+
+        assert cols[0]["label"] == "Item Name"
 
         assert cols[1]["label"] == "Count ↓"
         assert cols[1]["key"] == "count"
