@@ -688,7 +688,7 @@ class MoneyflowApp(App):
         try:
             # Step 1: Handle credentials (only if backend requires auth)
             creds = None
-            if not self.demo_mode and self.config.requires_auth:
+            if not self.demo_mode and self.backend_config.requires_auth:
                 creds = await self._handle_credentials()
                 if creds is None:
                     return  # User exited
@@ -708,7 +708,7 @@ class MoneyflowApp(App):
                 if self.demo_mode:
                     loading_status.update("🎮 DEMO MODE - No authentication required")
                 else:
-                    loading_status.update(f"📂 Using local {self.config.backend_type} data...")
+                    loading_status.update(f"📂 Using local {self.backend_config.backend_type} data...")
                 await self.backend.login()  # No-op for backends without auth
 
             # Step 3: Initialize managers
