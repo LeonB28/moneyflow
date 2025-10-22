@@ -860,6 +860,51 @@ class TestBreadcrumbs:
         breadcrumb = app_state.get_breadcrumb()
         assert "Merchants" in breadcrumb
 
+    def test_breadcrumb_with_custom_labels(self, app_state):
+        """Test breadcrumb uses custom display labels from backend."""
+        app_state.view_mode = ViewMode.MERCHANT
+
+        # Amazon backend labels
+        amazon_labels = {"merchant": "Item Name", "account": "Order", "accounts": "Orders"}
+        breadcrumb = app_state.get_breadcrumb(amazon_labels)
+
+        assert "Item Names" in breadcrumb  # Pluralized
+        assert "Merchants" not in breadcrumb
+
+    def test_breadcrumb_account_view_with_custom_labels(self, app_state):
+        """Test breadcrumb for account view with custom labels."""
+        app_state.view_mode = ViewMode.ACCOUNT
+
+        amazon_labels = {"merchant": "Item Name", "account": "Order", "accounts": "Orders"}
+        breadcrumb = app_state.get_breadcrumb(amazon_labels)
+
+        assert "Orders" in breadcrumb
+        assert "Accounts" not in breadcrumb
+
+    def test_breadcrumb_drilled_account_with_custom_labels(self, app_state):
+        """Test breadcrumb when drilled into account with custom labels."""
+        app_state.view_mode = ViewMode.DETAIL
+        app_state.selected_account = "113-1234567-8901234"
+
+        amazon_labels = {"merchant": "Item Name", "account": "Order", "accounts": "Orders"}
+        breadcrumb = app_state.get_breadcrumb(amazon_labels)
+
+        assert "Orders" in breadcrumb
+        assert "113-1234567-8901234" in breadcrumb
+        assert "Accounts" not in breadcrumb
+
+    def test_breadcrumb_sub_grouping_with_custom_labels(self, app_state):
+        """Test breadcrumb with sub-grouping uses custom labels."""
+        app_state.view_mode = ViewMode.DETAIL
+        app_state.selected_account = "113-1234567-8901234"
+        app_state.sub_grouping_mode = ViewMode.MERCHANT
+
+        amazon_labels = {"merchant": "Item Name", "account": "Order", "accounts": "Orders"}
+        breadcrumb = app_state.get_breadcrumb(amazon_labels)
+
+        assert "(by Item Name)" in breadcrumb
+        assert "(by Merchant)" not in breadcrumb
+
     def test_breadcrumb_category_view(self, app_state):
         """Test breadcrumb for category view."""
         app_state.view_mode = ViewMode.CATEGORY

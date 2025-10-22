@@ -63,6 +63,18 @@ class AppController:
         self.data_manager = data_manager
         self.cache_manager = cache_manager
 
+    def _get_display_labels(self) -> dict:
+        """Get display labels from backend, with safe fallback to defaults."""
+        try:
+            return self.data_manager.mm.get_display_labels()
+        except (AttributeError, Exception):
+            # Fallback to default labels if backend doesn't support it
+            return {
+                "merchant": "Merchant",
+                "account": "Account",
+                "accounts": "Accounts",
+            }
+
     def refresh_view(self, force_rebuild: bool = True) -> None:
         """
         Refresh the current view.
@@ -193,7 +205,7 @@ class AppController:
         )
 
         # Update other UI elements
-        self.view.update_breadcrumb(self.state.get_breadcrumb())
+        self.view.update_breadcrumb(self.state.get_breadcrumb(self._get_display_labels()))
 
         # Calculate stats
         filtered_df = self.state.get_filtered_df()

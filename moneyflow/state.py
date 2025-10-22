@@ -718,26 +718,45 @@ class AppState:
         self.show_transfers = saved_state.get("show_transfers", self.show_transfers)
         self.show_hidden = saved_state.get("show_hidden", self.show_hidden)
 
-    def get_breadcrumb(self) -> str:
-        """Get breadcrumb string showing current navigation path."""
+    def get_breadcrumb(self, display_labels: Optional[Dict[str, str]] = None) -> str:
+        """
+        Get breadcrumb string showing current navigation path.
+
+        Args:
+            display_labels: Optional dict with backend-specific display labels.
+                           Keys: merchant, account, accounts
+                           If None, uses default labels.
+        """
+        # Use display labels if provided, otherwise defaults
+        if display_labels is None:
+            display_labels = {
+                "merchant": "Merchant",
+                "account": "Account",
+                "accounts": "Accounts",
+            }
+
+        merchants_label = display_labels.get("merchant", "Merchant") + "s"  # Pluralize
+        accounts_label = display_labels.get("accounts", "Accounts")
+        account_label = display_labels.get("account", "Account")
+
         parts = []
 
         # Add view mode
         if self.view_mode == ViewMode.MERCHANT:
-            parts.append("Merchants")
+            parts.append(merchants_label)
         elif self.view_mode == ViewMode.CATEGORY:
             parts.append("Categories")
         elif self.view_mode == ViewMode.GROUP:
             parts.append("Groups")
         elif self.view_mode == ViewMode.ACCOUNT:
-            parts.append("Accounts")
+            parts.append(accounts_label)
         elif self.view_mode == ViewMode.DETAIL:
             # Show all drill-down levels (can have multiple selections for sub-grouping)
             # Order: Merchant → Category → Group → Account
             has_any_selection = False
 
             if self.selected_merchant:
-                parts.append("Merchants")
+                parts.append(merchants_label)
                 parts.append(self.selected_merchant)
                 has_any_selection = True
 
@@ -755,7 +774,7 @@ class AppState:
 
             if self.selected_account:
                 if not has_any_selection:
-                    parts.append("Accounts")
+                    parts.append(accounts_label)
                 parts.append(self.selected_account)
                 has_any_selection = True
 
@@ -765,13 +784,13 @@ class AppState:
             # Add sub-grouping indicator if active
             if self.sub_grouping_mode:
                 if self.sub_grouping_mode == ViewMode.MERCHANT:
-                    parts.append("(by Merchant)")
+                    parts.append(f"(by {display_labels.get('merchant', 'Merchant')})")
                 elif self.sub_grouping_mode == ViewMode.CATEGORY:
                     parts.append("(by Category)")
                 elif self.sub_grouping_mode == ViewMode.GROUP:
                     parts.append("(by Group)")
                 elif self.sub_grouping_mode == ViewMode.ACCOUNT:
-                    parts.append("(by Account)")
+                    parts.append(f"(by {account_label})")
 
         # Add time frame with actual dates
         if self.time_frame == TimeFrame.THIS_YEAR and self.start_date:
