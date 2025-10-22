@@ -48,18 +48,22 @@ class AmazonBackend(FinanceBackend):
         # Create directory if needed
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Initialize schema
+        # Initialize schema for Amazon Orders data
         conn = sqlite3.connect(self.db_path)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS transactions (
                 id TEXT PRIMARY KEY,
                 date TEXT NOT NULL,
                 merchant TEXT NOT NULL,
-                category TEXT,
-                category_id TEXT,
+                category TEXT NOT NULL DEFAULT 'Uncategorized',
+                category_id TEXT NOT NULL DEFAULT 'cat_uncategorized',
                 amount REAL NOT NULL,
-                quantity INTEGER DEFAULT 1,
-                price_per_item REAL,
+                quantity INTEGER NOT NULL,
+                asin TEXT NOT NULL,
+                order_id TEXT NOT NULL,
+                account TEXT NOT NULL,
+                order_status TEXT,
+                shipment_status TEXT,
                 notes TEXT,
                 hideFromReports INTEGER DEFAULT 0,
                 imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -69,7 +73,8 @@ class AmazonBackend(FinanceBackend):
         conn.execute("""
             CREATE TABLE IF NOT EXISTS categories (
                 id TEXT PRIMARY KEY,
-                name TEXT NOT NULL UNIQUE
+                name TEXT NOT NULL UNIQUE,
+                group_name TEXT DEFAULT 'Uncategorized'
             )
         """)
 
@@ -79,6 +84,7 @@ class AmazonBackend(FinanceBackend):
                 filename TEXT NOT NULL,
                 record_count INTEGER,
                 duplicate_count INTEGER,
+                skipped_count INTEGER DEFAULT 0,
                 import_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -87,6 +93,8 @@ class AmazonBackend(FinanceBackend):
         conn.execute("CREATE INDEX IF NOT EXISTS idx_date ON transactions(date)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_merchant ON transactions(merchant)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_category ON transactions(category)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_order_id ON transactions(order_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_asin ON transactions(asin)")
 
         conn.commit()
         conn.close()
@@ -104,21 +112,41 @@ class AmazonBackend(FinanceBackend):
         return sqlite3.connect(self.db_path)
 
     @staticmethod
-    def generate_transaction_id(date: str, merchant: str, amount: float, quantity: int) -> str:
+    def generate_transaction_id(asin: str, order_id: str) -> str:
         """
         Generate a deterministic transaction ID for deduplication.
 
+        Uses ASIN + Order ID to ensure:
+        - Same item in same order = same ID (deduplicate)
+        - Same item in different orders = different IDs
+        - Editing category/merchant doesn't change ID
+
         Args:
-            date: Transaction date (YYYY-MM-DD)
-            merchant: Merchant/item name
-            amount: Transaction amount
-            quantity: Quantity purchased
+            asin: Amazon Standard Identification Number
+            order_id: Amazon Order ID
 
         Returns:
-            16-character hex string (first 16 chars of SHA256 hash)
+            Transaction ID in format: amz_{ASIN}_{clean_order_id}
         """
-        fingerprint = f"{date}|{merchant}|{amount}|{quantity}"
-        return hashlib.sha256(fingerprint.encode()).hexdigest()[:16]
+        # Clean order_id to create filesystem-safe ID
+        clean_order = order_id.replace("-", "").replace(" ", "")
+        return f"amz_{asin}_{clean_order}"
+
+    def get_display_labels(self) -> Dict[str, str]:
+        """
+        Get backend-specific display labels for UI elements.
+
+        Returns:
+            Dictionary mapping standard field names to display names:
+            - merchant: How to display the merchant column
+            - account: How to display the account column (singular)
+            - accounts: How to display accounts in views/breadcrumbs (plural)
+        """
+        return {
+            "merchant": "Item Name",
+            "account": "Order",
+            "accounts": "Orders",
+        }
 
     async def login(
         self,
@@ -199,17 +227,20 @@ class AmazonBackend(FinanceBackend):
                 "amount": row["amount"],
                 "merchant": {"id": row["merchant"], "name": row["merchant"]},
                 "category": {
-                    "id": row["category_id"] or row["category"] or "uncategorized",
+                    "id": row["category_id"] or "cat_uncategorized",
                     "name": row["category"] or "Uncategorized",
                 },
-                "account": {"id": "amazon", "displayName": "Amazon"},  # Fake account
+                "account": {"id": row["order_id"], "displayName": row["order_id"]},
                 "notes": row["notes"] or "",
                 "hideFromReports": bool(row["hideFromReports"]),
                 "pending": False,  # Amazon purchases are never pending
                 "isRecurring": False,  # We don't track this for Amazon
                 # Amazon-specific fields
                 "quantity": row["quantity"],
-                "price_per_item": row["price_per_item"],
+                "asin": row["asin"],
+                "order_id": row["order_id"],
+                "order_status": row["order_status"],
+                "shipment_status": row["shipment_status"],
             }
             transactions.append(txn)
 
@@ -349,9 +380,9 @@ class AmazonBackend(FinanceBackend):
         conn = self._get_connection()
         conn.row_factory = sqlite3.Row
         cursor = conn.execute("""
-            SELECT filename, record_count, duplicate_count, import_date
+            SELECT filename, record_count, duplicate_count, skipped_count, import_date
             FROM import_history
-            ORDER BY import_date DESC
+            ORDER BY id DESC
         """)
         history = [dict(row) for row in cursor.fetchall()]
         conn.close()

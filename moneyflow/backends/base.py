@@ -172,6 +172,28 @@ class FinanceBackend(ABC):
         """
         pass
 
+    def get_display_labels(self) -> Dict[str, str]:
+        """
+        Get backend-specific display labels for UI elements.
+
+        This allows backends to customize how fields are displayed in the UI.
+        For example, Amazon backend shows "Item Name" instead of "Merchant",
+        and "Order" instead of "Account".
+
+        Returns:
+            Dictionary mapping standard field names to display names.
+            Default returns standard labels (no customization).
+
+        Example:
+            >>> backend.get_display_labels()
+            {'merchant': 'Merchant', 'account': 'Account', 'accounts': 'Accounts'}
+        """
+        return {
+            "merchant": "Merchant",
+            "account": "Account",
+            "accounts": "Accounts",
+        }
+
     def delete_session(self) -> None:
         """
         Delete saved session data.
