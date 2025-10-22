@@ -326,3 +326,97 @@ class TestDisplayLabels:
         assert labels["merchant"] == "Merchant"
         assert labels["account"] == "Account"
         assert labels["accounts"] == "Accounts"
+
+
+class TestTransactionUpdates:
+    """Test transaction update operations."""
+
+    @pytest.mark.asyncio
+    async def test_update_item_name(self, temp_db):
+        """Test updating item/merchant name."""
+        backend = AmazonBackend(temp_db)
+
+        # Import a test transaction first
+        conn = backend._get_connection()
+        conn.execute("""
+            INSERT INTO transactions
+            (id, date, merchant, category, category_id, group_name, amount, quantity,
+             asin, order_id, account, order_status, shipment_status, hideFromReports)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, ("amz_B001_order1", "2025-01-01", "Old Name", "Uncategorized", "cat_uncategorized",
+              "Uncategorized", -10.0, 1, "B001", "order1", "order1", "Closed", "Shipped", 0))
+        conn.commit()
+        conn.close()
+
+        # Update merchant name
+        await backend.update_transaction("amz_B001_order1", merchant_name="New Name")
+
+        # Verify
+        conn = backend._get_connection()
+        row = conn.execute("SELECT merchant FROM transactions WHERE id = ?", ("amz_B001_order1",)).fetchone()
+        conn.close()
+
+        assert row[0] == "New Name"
+
+    @pytest.mark.asyncio
+    async def test_update_category_updates_group(self, temp_db):
+        """Test that updating category also updates group."""
+        backend = AmazonBackend(temp_db)
+
+        # Create a category with a group
+        conn = backend._get_connection()
+        conn.execute("""
+            INSERT INTO categories (id, name, group_name)
+            VALUES ('cat_groceries', 'Groceries', 'Food & Dining')
+        """)
+
+        # Insert test transaction
+        conn.execute("""
+            INSERT INTO transactions
+            (id, date, merchant, category, category_id, group_name, amount, quantity,
+             asin, order_id, account, order_status, shipment_status, hideFromReports)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, ("amz_B001_order1", "2025-01-01", "Apples", "Uncategorized", "cat_uncategorized",
+              "Uncategorized", -5.0, 1, "B001", "order1", "order1", "Closed", "Shipped", 0))
+        conn.commit()
+        conn.close()
+
+        # Update category
+        await backend.update_transaction("amz_B001_order1", category_id="cat_groceries")
+
+        # Verify both category and group were updated
+        conn = backend._get_connection()
+        row = conn.execute(
+            "SELECT category, category_id, group_name FROM transactions WHERE id = ?",
+            ("amz_B001_order1",)
+        ).fetchone()
+        conn.close()
+
+        assert row[0] == "Groceries"  # category name
+        assert row[1] == "cat_groceries"  # category_id
+        assert row[2] == "Food & Dining"  # group_name (updated automatically!)
+
+    @pytest.mark.asyncio
+    async def test_get_transactions_returns_group(self, temp_db):
+        """Test that get_transactions returns group field."""
+        backend = AmazonBackend(temp_db)
+
+        # Insert test transaction with group
+        conn = backend._get_connection()
+        conn.execute("""
+            INSERT INTO transactions
+            (id, date, merchant, category, category_id, group_name, amount, quantity,
+             asin, order_id, account, order_status, shipment_status, hideFromReports)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, ("amz_B001_order1", "2025-01-01", "Test Item", "Groceries", "cat_groceries",
+              "Food & Dining", -10.0, 1, "B001", "order1", "order1", "Closed", "Shipped", 0))
+        conn.commit()
+        conn.close()
+
+        # Fetch transactions
+        result = await backend.get_transactions()
+
+        assert len(result["allTransactions"]) == 1
+        txn = result["allTransactions"][0]
+        assert "group" in txn
+        assert txn["group"] == "Food & Dining"

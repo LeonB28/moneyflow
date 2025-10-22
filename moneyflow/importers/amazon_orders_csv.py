@@ -175,9 +175,9 @@ def import_amazon_orders(
         conn.execute(
             f"""
             {insert_mode} INTO transactions
-            (id, date, merchant, category, category_id, amount, quantity,
+            (id, date, merchant, category, category_id, group_name, amount, quantity,
              asin, order_id, account, order_status, shipment_status, hideFromReports)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 txn_id,
@@ -185,6 +185,7 @@ def import_amazon_orders(
                 product_name,
                 "Uncategorized",
                 "cat_uncategorized",
+                "Uncategorized",  # Default group matches category
                 amount,
                 quantity,
                 asin,

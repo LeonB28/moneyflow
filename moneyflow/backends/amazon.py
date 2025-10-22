@@ -57,6 +57,7 @@ class AmazonBackend(FinanceBackend):
                 merchant TEXT NOT NULL,
                 category TEXT NOT NULL DEFAULT 'Uncategorized',
                 category_id TEXT NOT NULL DEFAULT 'cat_uncategorized',
+                group_name TEXT NOT NULL DEFAULT 'Uncategorized',
                 amount REAL NOT NULL,
                 quantity INTEGER NOT NULL,
                 asin TEXT NOT NULL,
@@ -247,6 +248,7 @@ class AmazonBackend(FinanceBackend):
                     "id": row["category_id"] or "cat_uncategorized",
                     "name": row["category"] or "Uncategorized",
                 },
+                "group": row["group_name"] or "Uncategorized",  # Group name from transaction
                 "account": {"id": row["order_id"], "displayName": row["order_id"]},
                 "notes": row["notes"] or "",
                 "hideFromReports": bool(row["hideFromReports"]),
@@ -332,13 +334,15 @@ class AmazonBackend(FinanceBackend):
         if category_id is not None:
             updates.append("category_id = ?")
             params.append(category_id)
-            # Also update category name from categories table
+            # Also update category name and group from categories table
             category_row = conn.execute(
-                "SELECT name FROM categories WHERE id = ?", (category_id,)
+                "SELECT name, group_name FROM categories WHERE id = ?", (category_id,)
             ).fetchone()
             if category_row:
                 updates.append("category = ?")
                 params.append(category_row[0])
+                updates.append("group_name = ?")
+                params.append(category_row[1])
 
         if hide_from_reports is not None:
             updates.append("hideFromReports = ?")
