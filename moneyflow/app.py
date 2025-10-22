@@ -1631,16 +1631,58 @@ class MoneyflowApp(App):
             self.notify("Edit Category only works in transaction detail view", timeout=2)
 
     def action_toggle_hide_from_reports(self) -> None:
-        """Toggle hide from reports flag for current transaction(s)."""
-        if self.data_manager is None or self.state.view_mode != ViewMode.DETAIL:
-            self.notify("Hide/unhide only works in transaction view", timeout=2)
-            return
-
-        if self.state.current_data is None:
+        """Toggle hide from reports flag for current transaction(s) or selected groups."""
+        if self.data_manager is None or self.state.current_data is None:
             return
 
         table = self.query_one("#data-table", DataTable)
         if table.cursor_row < 0:
+            return
+
+        # Handle aggregate/subgroup views (bulk hide for groups)
+        if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
+            # Get transactions for selected groups
+            transactions_to_toggle = self.controller.get_transactions_from_selected_groups()
+
+            if transactions_to_toggle.is_empty():
+                self.notify("No groups selected. Use Space to select groups first.", timeout=2)
+                return
+
+            # Queue hide toggle for all transactions in selected groups
+            count = self.controller.queue_hide_toggle_edits(transactions_to_toggle)
+            self.state.clear_selection()
+            self.notify(
+                f"Toggled hide/unhide for {count} transactions. Press w to commit.",
+                timeout=3,
+            )
+            self.refresh_view()
+            return
+
+        # Handle subgrouped detail view (when drilled down with sub-grouping)
+        if (
+            self.state.view_mode == ViewMode.DETAIL
+            and self.state.is_drilled_down()
+            and self.state.sub_grouping_mode
+        ):
+            # Get transactions for selected sub-groups
+            transactions_to_toggle = self.controller.get_transactions_from_selected_groups()
+
+            if transactions_to_toggle.is_empty():
+                self.notify("No groups selected. Use Space to select groups first.", timeout=2)
+                return
+
+            count = self.controller.queue_hide_toggle_edits(transactions_to_toggle)
+            self.state.clear_selection()
+            self.notify(
+                f"Toggled hide/unhide for {count} transactions. Press w to commit.",
+                timeout=3,
+            )
+            self.refresh_view()
+            return
+
+        # Detail view - handle individual or multi-selected transactions
+        if self.state.view_mode != ViewMode.DETAIL:
+            self.notify("Hide/unhide only works in transaction or aggregate views", timeout=2)
             return
 
         # Check if multi-select is active
