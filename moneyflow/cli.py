@@ -84,7 +84,7 @@ def amazon(ctx, db_path):
         if not backend.db_path.exists():
             click.echo("No Amazon data found.")
             click.echo("\nPlease import your Amazon purchase data first:")
-            click.echo("  $ moneyflow amazon import ~/Downloads/amazon-purchases.csv")
+            click.echo('  $ moneyflow amazon import ~/Downloads/"Your Orders"')
             click.echo("\nFor help:")
             click.echo("  $ moneyflow amazon --help")
             raise click.Abort()
@@ -94,7 +94,7 @@ def amazon(ctx, db_path):
         if stats["total_transactions"] == 0:
             click.echo("Amazon database is empty.")
             click.echo("\nPlease import your Amazon purchase data:")
-            click.echo("  $ moneyflow amazon import ~/Downloads/amazon-purchases.csv")
+            click.echo('  $ moneyflow amazon import ~/Downloads/"Your Orders"')
             raise click.Abort()
 
         # Launch the UI
@@ -103,51 +103,60 @@ def amazon(ctx, db_path):
 
 @amazon.command(name="import")
 @click.pass_context
-@click.argument("csv_path", type=click.Path(exists=True))
+@click.argument("orders_dir", type=click.Path(exists=True))
 @click.option("--force", is_flag=True, help="Force reimport of duplicates (overwrites existing)")
-def amazon_import(ctx, csv_path, force):
-    """Import Amazon purchases from CSV file.
+def amazon_import(ctx, orders_dir, force):
+    """Import Amazon orders from 'Your Orders' data dump directory.
 
-    Expected CSV format:
-    Order Date, Title, Category, Quantity, Item Total, ...
+    Scans directory for Retail.OrderHistory.*.csv files and imports all orders.
+
+    Expected directory: Unzipped 'Your Orders' folder from Amazon data export.
+    Contains files like: Retail.OrderHistory.1/Retail.OrderHistory.1.csv
 
     Example:
-        moneyflow amazon import ~/Downloads/amazon-purchases.csv
+        moneyflow amazon import ~/Downloads/"Your Orders"
     """
     from moneyflow.backends.amazon import AmazonBackend
-    from moneyflow.importers.amazon_csv import import_amazon_csv
+    from moneyflow.importers.amazon_orders_csv import import_amazon_orders
 
-    click.echo(f"Importing Amazon purchases from {csv_path}...")
+    click.echo(f"Importing Amazon orders from {orders_dir}...")
 
     try:
         db_path = ctx.obj.get("db_path")
         backend = AmazonBackend(db_path=db_path)
-        stats = import_amazon_csv(csv_path, backend=backend, force=force)
+        stats = import_amazon_orders(orders_dir, backend=backend, force=force)
 
-        click.echo(f"Parsed {stats['total_rows']} items from CSV")
-
-        if stats["categories_created"] > 0:
-            click.echo(f"Created {stats['categories_created']} new categories")
+        click.echo(f"\n✓ Import complete!")
+        click.echo(f"  Imported: {stats['imported']:,} new transactions")
 
         if stats["duplicates"] > 0:
-            if force:
-                click.echo(f"Updated {stats['duplicates']} existing transactions")
-            else:
-                click.echo(f"Skipped {stats['duplicates']} duplicates")
+            click.echo(f"  Duplicates: {stats['duplicates']:,} (already in database)")
 
-        click.echo(f"Imported {stats['imported']} new transactions")
+        if stats["skipped"] > 0:
+            click.echo(f"  Skipped: {stats['skipped']:,} (cancelled/invalid orders)")
 
         # Show database stats
         db_stats = backend.get_database_stats()
         click.echo("\nDatabase summary:")
-        click.echo(f"  Total transactions: {db_stats['total_transactions']}")
-        click.echo(f"  Date range: {db_stats['earliest_date']} to {db_stats['latest_date']}")
+        click.echo(f"  Total transactions: {db_stats['total_transactions']:,}")
+        click.echo(f"  Date range: {db_stats['earliest_date']} → {db_stats['latest_date']}")
         click.echo(f"  Total spent: ${abs(db_stats['total_amount']):,.2f}")
-        click.echo(f"  Unique items: {db_stats['item_count']}")
-        click.echo(f"  Categories: {db_stats['category_count']}")
+        click.echo(f"  Unique items: {db_stats['item_count']:,}")
 
-        click.echo("\nLaunch moneyflow: $ moneyflow amazon")
+        click.echo("\n✓ Ready! Launch moneyflow:")
+        click.echo("  $ moneyflow amazon")
 
+    except FileNotFoundError as e:
+        click.echo(f"Error: {e}", err=True)
+        click.echo("\nMake sure you've unzipped the Amazon data dump first.", err=True)
+        raise click.Abort()
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        click.echo("\nExpected directory structure:", err=True)
+        click.echo("  Your Orders/", err=True)
+        click.echo("    Retail.OrderHistory.1/Retail.OrderHistory.1.csv", err=True)
+        click.echo("    Retail.OrderHistory.2/Retail.OrderHistory.2.csv", err=True)
+        raise click.Abort()
     except Exception as e:
         click.echo(f"Import failed: {e}", err=True)
         raise click.Abort()
