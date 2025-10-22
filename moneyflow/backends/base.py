@@ -194,6 +194,29 @@ class FinanceBackend(ABC):
             "accounts": "Accounts",
         }
 
+    def get_column_config(self) -> Dict[str, Any]:
+        """
+        Get backend-specific column display configuration.
+
+        This allows backends to customize column widths and other display properties.
+        For example, Amazon backend uses wider columns for Item Names since product
+        names are typically longer than merchant names.
+
+        Returns:
+            Dictionary with column configuration:
+            - merchant_width_pct: Percentage width for merchant column (default: 25)
+            - account_width_pct: Percentage width for account column (default: 15)
+            - Other columns auto-size based on remaining space
+
+        Example:
+            >>> backend.get_column_config()
+            {'merchant_width_pct': 25, 'account_width_pct': 15}
+        """
+        return {
+            "merchant_width_pct": 25,  # Default 25% width
+            "account_width_pct": 15,   # Default 15% width
+        }
+
     def delete_session(self) -> None:
         """
         Delete saved session data.

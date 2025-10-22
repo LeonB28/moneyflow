@@ -148,6 +148,23 @@ class AmazonBackend(FinanceBackend):
             "accounts": "Orders",
         }
 
+    def get_column_config(self) -> Dict[str, Any]:
+        """
+        Get column configuration for Amazon backend.
+
+        Amazon product names are typically longer than merchant names,
+        so we use 30% wider columns for better readability.
+
+        Returns:
+            Dictionary with column width percentages:
+            - merchant_width_pct: 33 (30% wider than default 25)
+            - account_width_pct: 15 (standard)
+        """
+        return {
+            "merchant_width_pct": 33,  # 30% wider than default (25 * 1.3 ≈ 33)
+            "account_width_pct": 15,
+        }
+
     async def login(
         self,
         email: Optional[str] = None,
