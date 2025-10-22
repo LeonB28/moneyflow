@@ -189,6 +189,7 @@ class AmazonBackend(FinanceBackend):
         offset: int = 0,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        hidden_from_reports: Optional[bool] = None,
         **kwargs,
     ) -> Dict[str, Any]:
         """
@@ -199,6 +200,7 @@ class AmazonBackend(FinanceBackend):
             offset: Number of transactions to skip (for pagination)
             start_date: Filter transactions from this date (ISO format: YYYY-MM-DD)
             end_date: Filter transactions to this date (ISO format: YYYY-MM-DD)
+            hidden_from_reports: Filter by hideFromReports status (True/False/None for all)
 
         Returns:
             Dictionary containing transaction data in Monarch-compatible format
@@ -217,6 +219,10 @@ class AmazonBackend(FinanceBackend):
             query += " AND date <= ?"
             params.append(end_date)
 
+        if hidden_from_reports is not None:
+            query += " AND hideFromReports = ?"
+            params.append(1 if hidden_from_reports else 0)
+
         query += " ORDER BY date DESC LIMIT ? OFFSET ?"
         params.extend([limit, offset])
 
@@ -232,6 +238,9 @@ class AmazonBackend(FinanceBackend):
         if end_date:
             count_query += " AND date <= ?"
             count_params.append(end_date)
+        if hidden_from_reports is not None:
+            count_query += " AND hideFromReports = ?"
+            count_params.append(1 if hidden_from_reports else 0)
 
         total_count = conn.execute(count_query, count_params).fetchone()[0]
         conn.close()
@@ -239,6 +248,15 @@ class AmazonBackend(FinanceBackend):
         # Convert to Monarch-compatible format
         transactions = []
         for row in rows:
+            # sqlite3.Row supports dict-style access but not .get()
+            # Check available columns for backwards compatibility
+            row_keys = row.keys()
+
+            # Extract fields with backwards compatibility
+            group_name = row["group_name"] if "group_name" in row_keys else "Uncategorized"
+            order_status = row["order_status"] if "order_status" in row_keys else None
+            shipment_status = row["shipment_status"] if "shipment_status" in row_keys else None
+
             txn = {
                 "id": row["id"],
                 "date": row["date"],
@@ -248,7 +266,7 @@ class AmazonBackend(FinanceBackend):
                     "id": row["category_id"] or "cat_uncategorized",
                     "name": row["category"] or "Uncategorized",
                 },
-                "group": row["group_name"] or "Uncategorized",  # Group name from transaction
+                "group": group_name or "Uncategorized",
                 "account": {"id": row["order_id"], "displayName": row["order_id"]},
                 "notes": row["notes"] or "",
                 "hideFromReports": bool(row["hideFromReports"]),
@@ -258,14 +276,16 @@ class AmazonBackend(FinanceBackend):
                 "quantity": row["quantity"],
                 "asin": row["asin"],
                 "order_id": row["order_id"],
-                "order_status": row["order_status"],
-                "shipment_status": row["shipment_status"],
+                "order_status": order_status,
+                "shipment_status": shipment_status,
             }
             transactions.append(txn)
 
         return {
-            "allTransactions": transactions,
-            "totalCount": total_count,
+            "allTransactions": {
+                "results": transactions,
+                "totalCount": total_count,
+            }
         }
 
     async def get_transaction_categories(self) -> Dict[str, Any]:
