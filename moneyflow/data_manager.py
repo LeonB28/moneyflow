@@ -336,10 +336,11 @@ class DataManager:
         # Parse categories
         categories = {}
         for cat in categories_data.get("categories", []):
+            group_data = cat.get("group") or {}
             categories[cat["id"]] = {
                 "name": cat["name"],
-                "group_id": cat.get("group", {}).get("id"),
-                "group_type": cat.get("group", {}).get("type"),
+                "group_id": group_data.get("id") if group_data else None,
+                "group_type": group_data.get("type") if group_data else None,
             }
 
         # Parse category groups
