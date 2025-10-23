@@ -50,4 +50,4 @@ The status bar shows your current filter settings:
 
 More advanced filtering capabilities (by amount range, date range, merchant patterns, etc.) are planned for future releases.
 
-For now, use [Search](navigation.md#search) to filter by text matching, and [Time Navigation](time-navigation.md) to filter by date.
+For now, use [Search](navigation.md#search) to filter by text matching, and [Time Navigation](navigation.md#time-navigation) to filter by date.

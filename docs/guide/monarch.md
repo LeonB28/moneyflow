@@ -148,7 +148,7 @@ moneyflow --days 90
 moneyflow --month 2025-03
 ```
 
-See [Time Navigation](time-navigation.md) for more options.
+See [Time Navigation](navigation.md#time-navigation) for more options.
 
 ---
 
@@ -236,7 +236,7 @@ See [Security Documentation](https://github.com/wesm/moneyflow/blob/main/SECURIT
 - [Keyboard Shortcuts](keyboard-shortcuts.md) - Essential keybindings
 - [Views & Navigation](views.md) - Understanding the interface
 - [Editing Transactions](editing.md) - Making changes
-- [Time Navigation](time-navigation.md) - Filtering by date
+- [Time Navigation](navigation.md#time-navigation) - Filtering by date
 
 ---
 
