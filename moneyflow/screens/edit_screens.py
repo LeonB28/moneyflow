@@ -120,7 +120,7 @@ class EditMerchantScreen(ModalScreen):
             if self.transaction_details:
                 if self.transaction_count == 1:
                     # Single transaction details
-                    amount = self.transaction_details.get('amount')
+                    amount = self.transaction_details.get("amount")
                     amount_str = f"${amount:,.2f}" if amount is not None else "N/A"
                     details_text = (
                         f"Transaction: {self.transaction_details.get('date', 'N/A')} | "
@@ -338,7 +338,7 @@ class SelectCategoryScreen(ModalScreen):
 
             # Show transaction details if available
             if self.transaction_details:
-                amount = self.transaction_details.get('amount')
+                amount = self.transaction_details.get("amount")
                 amount_str = f"${amount:,.2f}" if amount is not None else "N/A"
                 details_text = (
                     f"Transaction: {self.transaction_details.get('date', 'N/A')} | "

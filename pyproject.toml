@@ -75,10 +75,16 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+exclude = [
+    "**/monarchmoney.py",  # External vendor code (from hammem/monarchmoney)
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
-ignore = ["E501"]  # Line too long (handled by formatter)
+ignore = [
+    "E501",  # Line too long (handled by formatter)
+    "N818",  # Exception naming (RetryAborted is clearer than RetryAbortedError)
+]
 
 [tool.pyright]
 include = ["moneyflow", "tests"]

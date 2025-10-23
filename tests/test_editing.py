@@ -305,7 +305,6 @@ class TestEditValidation:
         """Test that empty merchant names are not accepted."""
         # This would be handled by the EditMerchantScreen
         # If user submits empty string, modal returns None
-        current = "Amazon"
         new_value = ""  # Empty
 
         # Modal should not return empty string
@@ -457,7 +456,6 @@ class TestEdgeCase:
         """Test that empty merchant name is rejected by validation logic."""
         # This simulates the validation that should happen in the UI layer
         # before an edit is created
-        current_merchant = "Amazon"
         user_input = ""  # Empty string
 
         # Validation logic: strip and reject if empty
@@ -468,7 +466,6 @@ class TestEdgeCase:
 
     async def test_edit_merchant_to_whitespace_only_validation(self):
         """Test that whitespace-only merchant name is rejected."""
-        current_merchant = "Amazon"
         user_input = "   "  # Only spaces
 
         validated = user_input.strip()

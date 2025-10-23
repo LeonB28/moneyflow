@@ -3,7 +3,6 @@ Tests for Amazon Orders CSV importer.
 """
 
 import tempfile
-from datetime import date
 from pathlib import Path
 
 import pytest
@@ -25,12 +24,12 @@ def temp_db():
 @pytest.fixture
 def sample_orders_csv(tmp_path):
     """Create a sample Retail.OrderHistory CSV file."""
-    csv_content = '''﻿"Website","Order ID","Order Date","Purchase Order Number","Currency","Unit Price","Unit Price Tax","Shipping Charge","Total Discounts","Total Owed","Shipment Item Subtotal","Shipment Item Subtotal Tax","ASIN","Product Condition","Quantity","Payment Instrument Type","Order Status","Shipment Status","Ship Date","Shipping Option","Shipping Address","Billing Address","Carrier Name & Tracking Number","Product Name","Gift Message","Gift Sender Name","Gift Recipient Contact Details","Item Serial Number"
+    csv_content = """﻿"Website","Order ID","Order Date","Purchase Order Number","Currency","Unit Price","Unit Price Tax","Shipping Charge","Total Discounts","Total Owed","Shipment Item Subtotal","Shipment Item Subtotal Tax","ASIN","Product Condition","Quantity","Payment Instrument Type","Order Status","Shipment Status","Ship Date","Shipping Option","Shipping Address","Billing Address","Carrier Name & Tracking Number","Product Name","Gift Message","Gift Sender Name","Gift Recipient Contact Details","Item Serial Number"
 "Amazon.com","113-1234567-8901234","2025-10-13T22:08:07Z","Not Applicable","USD","23.50","2.29","0","0","25.79","23.50","2.29","B0BZGVCW1Z","New","1","Visa","Closed","Shipped","2025-10-14T06:50:22.292Z","next-1dc","Address1","Address1","AMZN_US(TBA123)","Test Product 1","","","","Auth123"
 "Amazon.com","113-2345678-9012345","2025-10-12T10:00:00Z","Not Applicable","USD","69.00","6.73","0","0","75.73","69.00","6.73","B0FNQKK1C1","New","2","Visa","Closed","Shipped","2025-10-13T06:50:17.127Z","next-1dc","Address2","Address2","AMZN_US(TBA456)","Test Product 2","","","",""
 "Amazon.com","113-3456789-0123456","2025-10-11T15:30:00Z","Not Applicable","USD","50.00","0","0","0","0","50.00","0","B00004OCIZ","New","1","Visa","Cancelled","Not Available","","","Address3","Address3","","Test Product 3 Cancelled","","","",""
 "Amazon.com","113-4567890-1234567","2025-10-10T12:00:00Z","Not Applicable","USD","100.00","10.00","0","0","110.00","100.00","10.00","B0759G4TC6","New","1","Visa","New","Not Shipped","","","Address4","Address4","","Test Product 4 Pending","","","",""
-'''
+"""
 
     orders_dir = tmp_path / "Retail.OrderHistory.1"
     orders_dir.mkdir()
@@ -109,7 +108,9 @@ class TestImportBasic:
         import_amazon_orders(str(sample_orders_csv), backend)
 
         conn = backend._get_connection()
-        conn.row_factory = lambda cursor, row: dict(zip([col[0] for col in cursor.description], row))
+        conn.row_factory = lambda cursor, row: dict(
+            zip([col[0] for col in cursor.description], row)
+        )
         cursor = conn.execute("SELECT * FROM transactions WHERE asin = 'B0BZGVCW1Z'")
         row = cursor.fetchone()
         conn.close()
@@ -315,13 +316,26 @@ class TestDisplayLabels:
 
         # Create a minimal concrete implementation for testing
         class TestBackend(FinanceBackend):
-            async def login(self, **kwargs): pass
-            async def get_transactions(self, **kwargs): return {}
-            async def get_transaction_categories(self): return {}
-            async def get_transaction_category_groups(self): return {}
-            async def update_transaction(self, **kwargs): return {}
-            async def delete_transaction(self, **kwargs): return False
-            async def get_all_merchants(self): return []
+            async def login(self, **kwargs):
+                pass
+
+            async def get_transactions(self, **kwargs):
+                return {}
+
+            async def get_transaction_categories(self):
+                return {}
+
+            async def get_transaction_category_groups(self):
+                return {}
+
+            async def update_transaction(self, **kwargs):
+                return {}
+
+            async def delete_transaction(self, **kwargs):
+                return False
+
+            async def get_all_merchants(self):
+                return []
 
         backend = TestBackend()
         labels = backend.get_display_labels()
@@ -341,13 +355,29 @@ class TestTransactionUpdates:
 
         # Import a test transaction first
         conn = backend._get_connection()
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO transactions
             (id, date, merchant, category, category_id, amount, quantity,
              asin, order_id, account, order_status, shipment_status, hideFromReports)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, ("amz_B001_order1", "2025-01-01", "Old Name", "Uncategorized", "cat_uncategorized",
-              -10.0, 1, "B001", "order1", "order1", "Closed", "Shipped", 0))
+        """,
+            (
+                "amz_B001_order1",
+                "2025-01-01",
+                "Old Name",
+                "Uncategorized",
+                "cat_uncategorized",
+                -10.0,
+                1,
+                "B001",
+                "order1",
+                "order1",
+                "Closed",
+                "Shipped",
+                0,
+            ),
+        )
         conn.commit()
         conn.close()
 
@@ -356,7 +386,9 @@ class TestTransactionUpdates:
 
         # Verify
         conn = backend._get_connection()
-        row = conn.execute("SELECT merchant FROM transactions WHERE id = ?", ("amz_B001_order1",)).fetchone()
+        row = conn.execute(
+            "SELECT merchant FROM transactions WHERE id = ?", ("amz_B001_order1",)
+        ).fetchone()
         conn.close()
 
         assert row[0] == "New Name"
@@ -371,13 +403,29 @@ class TestTransactionUpdates:
         conn = backend._get_connection()
 
         # Insert test transaction
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO transactions
             (id, date, merchant, category, category_id, amount, quantity,
              asin, order_id, account, order_status, shipment_status, hideFromReports)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, ("amz_B001_order1", "2025-01-01", "Apples", "Uncategorized", "cat_uncategorized",
-              -5.0, 1, "B001", "order1", "order1", "Closed", "Shipped", 0))
+        """,
+            (
+                "amz_B001_order1",
+                "2025-01-01",
+                "Apples",
+                "Uncategorized",
+                "cat_uncategorized",
+                -5.0,
+                1,
+                "B001",
+                "order1",
+                "order1",
+                "Closed",
+                "Shipped",
+                0,
+            ),
+        )
         conn.commit()
         conn.close()
 
@@ -387,8 +435,7 @@ class TestTransactionUpdates:
         # Verify category was updated (group will be added by data_manager later)
         conn = backend._get_connection()
         row = conn.execute(
-            "SELECT category, category_id FROM transactions WHERE id = ?",
-            ("amz_B001_order1",)
+            "SELECT category, category_id FROM transactions WHERE id = ?", ("amz_B001_order1",)
         ).fetchone()
         conn.close()
 
@@ -402,13 +449,29 @@ class TestTransactionUpdates:
 
         # Insert test transaction
         conn = backend._get_connection()
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO transactions
             (id, date, merchant, category, category_id, amount, quantity,
              asin, order_id, account, order_status, shipment_status, hideFromReports)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, ("amz_B001_order1", "2025-01-01", "Test Item", "Groceries", "cat_groceries",
-              -10.0, 1, "B001", "order1", "order1", "Closed", "Shipped", 0))
+        """,
+            (
+                "amz_B001_order1",
+                "2025-01-01",
+                "Test Item",
+                "Groceries",
+                "cat_groceries",
+                -10.0,
+                1,
+                "B001",
+                "order1",
+                "order1",
+                "Closed",
+                "Shipped",
+                0,
+            ),
+        )
         conn.commit()
         conn.close()
 
@@ -458,10 +521,7 @@ class TestEndToEndDataFetch:
         import_amazon_orders(str(sample_orders_csv), backend)
 
         # Fetch with date filter
-        result = await backend.get_transactions(
-            start_date="2025-10-12",
-            end_date="2025-10-13"
-        )
+        result = await backend.get_transactions(start_date="2025-10-12", end_date="2025-10-13")
 
         # Should get 2 transactions in this date range
         transactions = result["allTransactions"]["results"]

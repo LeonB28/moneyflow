@@ -37,7 +37,7 @@ class TestCredentialManagerInit:
         config_dir = tmp_path / "new_config"
         assert not config_dir.exists()
 
-        manager = CredentialManager(config_dir=config_dir)
+        CredentialManager(config_dir=config_dir)
 
         assert config_dir.exists()
         assert config_dir.is_dir()

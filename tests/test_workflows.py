@@ -204,7 +204,6 @@ class TestSubGroupedEditWorkflow:
 
     def test_sub_grouped_view_has_aggregate_columns(self, loaded_data_manager, app_state):
         """Verify sub-grouped views show aggregate data, not transaction details."""
-        from moneyflow.data_manager import DataManager
         from moneyflow.state import ViewMode
 
         dm, df, _, _ = loaded_data_manager
@@ -229,7 +228,6 @@ class TestSubGroupedEditWorkflow:
 
     def test_edit_category_from_sub_grouped_by_category(self, loaded_data_manager, app_state):
         """Test editing category from a sub-grouped-by-category view."""
-        from moneyflow.data_manager import DataManager
         from moneyflow.state import ViewMode
 
         dm, df, categories, _ = loaded_data_manager
@@ -248,7 +246,7 @@ class TestSubGroupedEditWorkflow:
         # Simulate selecting first category row
         first_category = agg.row(0, named=True)
         category_name = first_category["category"]
-        category_id = first_category["category_id"]
+        first_category["category_id"]
 
         # Find transactions in this category within the merchant
         txns_to_edit = filtered.filter(pl.col("category") == category_name)
@@ -259,7 +257,6 @@ class TestSubGroupedEditWorkflow:
 
     def test_edit_merchant_from_sub_grouped_by_category(self, loaded_data_manager, app_state):
         """Test editing merchant from a sub-grouped-by-category view."""
-        from moneyflow.data_manager import DataManager
         from moneyflow.state import ViewMode
 
         dm, df, _, _ = loaded_data_manager
@@ -289,7 +286,6 @@ class TestSubGroupedEditWorkflow:
 
     def test_edit_from_sub_grouped_by_group(self, loaded_data_manager, app_state):
         """Test editing from sub-grouped-by-group view."""
-        from moneyflow.data_manager import DataManager
         from moneyflow.state import ViewMode
 
         dm, df, _, _ = loaded_data_manager
@@ -312,7 +308,6 @@ class TestSubGroupedEditWorkflow:
 
     def test_edit_from_sub_grouped_by_account(self, loaded_data_manager, app_state):
         """Test editing from sub-grouped-by-account view."""
-        from moneyflow.data_manager import DataManager
         from moneyflow.state import ViewMode
 
         dm, df, _, _ = loaded_data_manager
@@ -335,7 +330,6 @@ class TestSubGroupedEditWorkflow:
 
     def test_edit_from_sub_grouped_by_merchant(self, loaded_data_manager, app_state):
         """Test editing from sub-grouped-by-merchant view (drilled into category)."""
-        from moneyflow.data_manager import DataManager
         from moneyflow.state import ViewMode
 
         dm, df, _, _ = loaded_data_manager

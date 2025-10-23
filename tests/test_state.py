@@ -1217,7 +1217,7 @@ class TestSubGrouping:
         state.sort_by = SortMode.AMOUNT
 
         # Cycle to aggregated sub-grouping
-        result = state.cycle_sub_grouping()
+        state.cycle_sub_grouping()
 
         # Should preserve AMOUNT sort
         assert state.sub_grouping_mode == ViewMode.MERCHANT

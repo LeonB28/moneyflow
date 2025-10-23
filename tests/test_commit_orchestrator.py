@@ -412,9 +412,7 @@ class TestDataFramePurity:
         def mock_apply_groups(df):
             return df
 
-        updated = CommitOrchestrator.apply_edits_to_dataframe(
-            df, [edit1, edit2], {}, mock_apply_groups
-        )
+        CommitOrchestrator.apply_edits_to_dataframe(df, [edit1, edit2], {}, mock_apply_groups)
 
         # Original unchanged
         assert df["merchant"][0] == original_merchant

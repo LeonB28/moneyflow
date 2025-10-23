@@ -126,7 +126,7 @@ def amazon_import(ctx, orders_dir, force):
         backend = AmazonBackend(db_path=db_path)
         stats = import_amazon_orders(orders_dir, backend=backend, force=force)
 
-        click.echo(f"\n✓ Import complete!")
+        click.echo("\n✓ Import complete!")
         click.echo(f"  Imported: {stats['imported']:,} new transactions")
 
         if stats["duplicates"] > 0:

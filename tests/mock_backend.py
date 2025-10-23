@@ -180,7 +180,9 @@ class MockMonarchMoney(FinanceBackend):
 
         # Filter by hideFromReports if specified
         if hidden_from_reports is not None:
-            filtered = [t for t in filtered if t.get("hideFromReports", False) == hidden_from_reports]
+            filtered = [
+                t for t in filtered if t.get("hideFromReports", False) == hidden_from_reports
+            ]
 
         # Apply pagination
         start = offset

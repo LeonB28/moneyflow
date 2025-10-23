@@ -188,6 +188,45 @@ open htmlcov/index.html
 4. Run tests to verify they pass
 5. Refactor while keeping tests green
 
+## Code Quality Checks
+
+**CRITICAL**: All code quality checks MUST pass before committing. This ensures consistent code quality and prevents regressions.
+
+### Required Checks (run before EVERY commit)
+
+```bash
+# 1. Run full test suite
+uv run pytest -v
+
+# 2. Type checking (pyright)
+uv run pyright moneyflow/
+
+# 3. Code formatting (ruff format)
+uv run ruff format --check moneyflow/ tests/
+
+# 4. Linting (ruff check)
+uv run ruff check moneyflow/ tests/
+```
+
+**All four checks must pass with zero errors** before creating a commit or release.
+
+### Auto-Fixing Issues
+
+```bash
+# Auto-format code
+uv run ruff format moneyflow/ tests/
+
+# Auto-fix linting issues
+uv run ruff check --fix moneyflow/ tests/
+```
+
+### Configuration
+
+- `pyproject.toml` contains configuration for ruff and pyright
+- `monarchmoney.py` is excluded from ruff checks (external vendor code)
+- Line length: 100 characters
+- Target Python version: 3.11
+
 ## Code Style
 
 - **Use type hints** for all function signatures
@@ -255,7 +294,7 @@ uv sync
 
 ## Git Workflow
 
-**CRITICAL**: Never commit without running tests first!
+**CRITICAL**: Never commit without running all code quality checks first!
 
 **IMPORTANT**: When working with Claude Code or AI assistants:
 - ✅ AI can create commits locally
@@ -263,10 +302,13 @@ uv sync
 - 💡 User should review commits before pushing
 
 ```bash
-# MANDATORY: Run tests before committing
-uv run pytest -v
+# MANDATORY: Run all code quality checks before committing
+uv run pytest -v                          # All tests must pass
+uv run pyright moneyflow/                 # Type checking must be clean
+uv run ruff format --check moneyflow/ tests/  # Code must be formatted
+uv run ruff check moneyflow/ tests/       # Linting must pass
 
-# Only if all tests pass, then commit
+# Only if ALL checks pass, then commit
 git add -A
 git commit -m "Descriptive commit message"
 
@@ -281,9 +323,11 @@ git commit -m "Descriptive commit message"
 # docs: Documentation updates
 ```
 
-**Pre-commit Checklist**:
+**Pre-commit Checklist** (ALL must pass):
 - [ ] All tests pass (`uv run pytest -v`)
 - [ ] Type checking passes (`uv run pyright moneyflow/`)
+- [ ] Code formatting passes (`uv run ruff format --check moneyflow/ tests/`)
+- [ ] Linting passes (`uv run ruff check moneyflow/ tests/`)
 - [ ] Coverage hasn't decreased
 - [ ] No debug print statements left in code
 - [ ] Updated tests for any changed behavior

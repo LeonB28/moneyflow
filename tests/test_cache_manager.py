@@ -56,7 +56,7 @@ class TestCacheManagerInit:
 
     def test_creates_cache_directory(self, temp_cache_dir):
         """Test that cache directory is created if it doesn't exist."""
-        cache_mgr = CacheManager(cache_dir=temp_cache_dir)
+        CacheManager(cache_dir=temp_cache_dir)
         assert Path(temp_cache_dir).exists()
 
     def test_uses_default_cache_dir(self):

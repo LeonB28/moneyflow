@@ -214,7 +214,7 @@ class FinanceBackend(ABC):
         """
         return {
             "merchant_width_pct": 25,  # Default 25% width
-            "account_width_pct": 15,   # Default 15% width
+            "account_width_pct": 15,  # Default 15% width
         }
 
     def delete_session(self) -> None:

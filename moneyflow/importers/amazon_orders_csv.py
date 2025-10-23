@@ -8,7 +8,7 @@ Supports Retail.OrderHistory.*.csv files with columns from Amazon's data export 
 import hashlib
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 import polars as pl
 

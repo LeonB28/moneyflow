@@ -258,7 +258,7 @@ class TestTupleStructure:
     def test_all_methods_return_three_element_tuple(self):
         """Ensure all notification methods return (str, str, int)."""
         # Get all static methods
-        methods = [
+        [
             getattr(NotificationHelper, method)
             for method in dir(NotificationHelper)
             if not method.startswith("_") and callable(getattr(NotificationHelper, method))

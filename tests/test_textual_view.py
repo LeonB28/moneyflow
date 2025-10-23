@@ -41,7 +41,7 @@ class TestUpdateTable:
     async def test_update_table_with_force_rebuild(self, view_presenter, mock_app):
         """Test that force_rebuild clears columns and rebuilds."""
         # Mount the app
-        async with mock_app.run_test() as pilot:
+        async with mock_app.run_test():
             table = mock_app.query_one("#data-table", DataTable)
 
             # Add some initial columns
@@ -68,7 +68,7 @@ class TestUpdateTable:
         self, view_presenter, mock_app
     ):
         """Test that smooth update keeps columns when they exist."""
-        async with mock_app.run_test() as pilot:
+        async with mock_app.run_test():
             table = mock_app.query_one("#data-table", DataTable)
 
             # Add initial columns and rows
@@ -93,7 +93,7 @@ class TestUpdateTable:
 
     async def test_update_table_without_force_rebuild_no_columns(self, view_presenter, mock_app):
         """Test that smooth update adds columns if none exist (edge case)."""
-        async with mock_app.run_test() as pilot:
+        async with mock_app.run_test():
             table = mock_app.query_one("#data-table", DataTable)
 
             # Ensure no columns
@@ -114,7 +114,7 @@ class TestUpdateTable:
 
     async def test_update_table_empty_rows(self, view_presenter, mock_app):
         """Test updating table with no rows."""
-        async with mock_app.run_test() as pilot:
+        async with mock_app.run_test():
             table = mock_app.query_one("#data-table", DataTable)
 
             columns = [
@@ -129,7 +129,7 @@ class TestUpdateTable:
 
     async def test_update_table_handles_column_mismatch(self, view_presenter, mock_app):
         """Test that column mismatch triggers rebuild even with force_rebuild=False."""
-        async with mock_app.run_test() as pilot:
+        async with mock_app.run_test():
             table = mock_app.query_one("#data-table", DataTable)
 
             # Initial setup with 2 columns
@@ -175,31 +175,31 @@ class TestWidgetUpdates:
 
     async def test_update_breadcrumb(self, view_presenter, mock_app):
         """Test breadcrumb update."""
-        async with mock_app.run_test() as pilot:
+        async with mock_app.run_test():
             # Just verify the method doesn't crash
             view_presenter.update_breadcrumb("Test > Path")
 
     async def test_update_stats(self, view_presenter, mock_app):
         """Test stats update."""
-        async with mock_app.run_test() as pilot:
+        async with mock_app.run_test():
             # Just verify the method doesn't crash
             view_presenter.update_stats("Total: $100")
 
     async def test_update_hints(self, view_presenter, mock_app):
         """Test action hints update."""
-        async with mock_app.run_test() as pilot:
+        async with mock_app.run_test():
             # Just verify the method doesn't crash
             view_presenter.update_hints("Press q to quit")
 
     async def test_update_pending_changes_with_count(self, view_presenter, mock_app):
         """Test pending changes display with count."""
-        async with mock_app.run_test() as pilot:
+        async with mock_app.run_test():
             # Just verify the method doesn't crash
             view_presenter.update_pending_changes(5)
 
     async def test_update_pending_changes_zero(self, view_presenter, mock_app):
         """Test pending changes cleared when zero."""
-        async with mock_app.run_test() as pilot:
+        async with mock_app.run_test():
             # Just verify the method doesn't crash
             view_presenter.update_pending_changes(3)
             view_presenter.update_pending_changes(0)

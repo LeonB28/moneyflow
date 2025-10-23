@@ -6,7 +6,6 @@ This backend does not connect to any Amazon API - it works with locally
 imported CSV files from Amazon's order history export.
 """
 
-import hashlib
 import sqlite3
 from pathlib import Path
 from typing import Any, Dict, List, Optional

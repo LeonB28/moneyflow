@@ -76,7 +76,9 @@ class DemoBackend(FinanceBackend):
         # Filter by hideFromReports if specified (to match Monarch API behavior)
         hidden_from_reports = kwargs.get("hidden_from_reports")
         if hidden_from_reports is not None:
-            filtered = [t for t in filtered if t.get("hideFromReports", False) == hidden_from_reports]
+            filtered = [
+                t for t in filtered if t.get("hideFromReports", False) == hidden_from_reports
+            ]
 
         # Sort by date descending (most recent first)
         filtered = sorted(filtered, key=lambda x: x["date"], reverse=True)

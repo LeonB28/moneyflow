@@ -649,7 +649,7 @@ class TestEditQueueing:
 
         # Queue more edits
         txn_df = controller.data_manager.df.head(2)
-        count = controller.queue_category_edits(txn_df, "cat_new")
+        controller.queue_category_edits(txn_df, "cat_new")
 
         # Should have 3 total (1 existing + 2 new)
         assert len(controller.data_manager.pending_edits) == 3
@@ -658,7 +658,7 @@ class TestEditQueueing:
     async def test_queue_hide_toggle_edits_single_transaction(self, controller):
         """Test queueing hide toggle for a single transaction."""
         # Get a transaction that's not hidden
-        txn_df = controller.data_manager.df.filter(pl.col("hideFromReports") == False).head(1)
+        txn_df = controller.data_manager.df.filter(not pl.col("hideFromReports")).head(1)
 
         count = controller.queue_hide_toggle_edits(txn_df)
 
@@ -726,7 +726,9 @@ class TestEditQueueing:
         if not transactions.is_empty():
             count = controller.queue_hide_toggle_edits(transactions)
             assert count > 0
-            assert all(e.field == "hide_from_reports" for e in controller.data_manager.pending_edits)
+            assert all(
+                e.field == "hide_from_reports" for e in controller.data_manager.pending_edits
+            )
 
 
 class TestSortFieldCycling:

@@ -346,9 +346,17 @@ class ViewPresenter:
 
         columns: list[ColumnSpec] = [
             {"label": f"Date {date_arrow}".strip(), "key": "date", "width": 12},
-            {"label": f"{merchant_label} {merchant_arrow}".strip(), "key": "merchant", "width": merchant_width},
+            {
+                "label": f"{merchant_label} {merchant_arrow}".strip(),
+                "key": "merchant",
+                "width": merchant_width,
+            },
             {"label": f"Category {category_arrow}".strip(), "key": "category", "width": 20},
-            {"label": f"{account_label} {account_arrow}".strip(), "key": "account", "width": account_width},
+            {
+                "label": f"{account_label} {account_arrow}".strip(),
+                "key": "account",
+                "width": account_width,
+            },
             {"label": f"Amount {amount_arrow}".strip(), "key": "amount", "width": 12},
             {"label": "", "key": "flags", "width": 3},  # Flags column (✓ H *)
         ]

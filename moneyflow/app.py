@@ -58,7 +58,7 @@ from .screens.edit_screens import DeleteConfirmationScreen, EditMerchantScreen, 
 from .screens.review_screen import ReviewChangesScreen
 from .screens.search_screen import SearchScreen
 from .screens.transaction_detail_screen import TransactionDetailScreen
-from .state import AppState, SortDirection, SortMode, ViewMode
+from .state import AppState, ViewMode
 from .textual_view import TextualViewPresenter
 from .widgets.help_screen import HelpScreen
 
@@ -708,7 +708,9 @@ class MoneyflowApp(App):
                 if self.demo_mode:
                     loading_status.update("🎮 DEMO MODE - No authentication required")
                 else:
-                    loading_status.update(f"📂 Using local {self.backend_config.backend_type} data...")
+                    loading_status.update(
+                        f"📂 Using local {self.backend_config.backend_type} data..."
+                    )
                 await self.backend.login()  # No-op for backends without auth
 
             # Step 3: Initialize managers
@@ -1157,7 +1159,9 @@ class MoneyflowApp(App):
 
         # Determine what field we're grouping by
         # If in sub-grouping mode, use that instead of view_mode
-        grouping_mode = self.state.sub_grouping_mode if self.state.sub_grouping_mode else self.state.view_mode
+        grouping_mode = (
+            self.state.sub_grouping_mode if self.state.sub_grouping_mode else self.state.view_mode
+        )
 
         if grouping_mode == ViewMode.MERCHANT:
             merchant_name = row_data["merchant"]
@@ -1235,7 +1239,9 @@ class MoneyflowApp(App):
 
             # Show edit modal
             new_merchant = await self.push_screen(
-                EditMerchantScreen(display_merchant, transaction_count, all_merchants, bulk_summary),
+                EditMerchantScreen(
+                    display_merchant, transaction_count, all_merchants, bulk_summary
+                ),
                 wait_for_dismiss=True,
             )
 
@@ -1248,7 +1254,9 @@ class MoneyflowApp(App):
                 matching_txns = filter_func(filtered_df, field_name)
 
                 # Use controller helper to queue edits
-                count = self.controller.queue_merchant_edits(matching_txns, field_name, new_merchant)
+                count = self.controller.queue_merchant_edits(
+                    matching_txns, field_name, new_merchant
+                )
 
                 self._notify(NotificationHelper.edit_queued(count))
                 self.refresh_view()
@@ -1408,7 +1416,9 @@ class MoneyflowApp(App):
         """Edit Category all transactions in selected merchant/category/group."""
         logger = get_logger(__name__)
 
-        logger.debug(f"_bulk_edit_category_from_aggregate called, view_mode={self.state.view_mode}, sub_grouping_mode={self.state.sub_grouping_mode}")
+        logger.debug(
+            f"_bulk_edit_category_from_aggregate called, view_mode={self.state.view_mode}, sub_grouping_mode={self.state.sub_grouping_mode}"
+        )
 
         # Check if multi-select is active
         if len(self.state.selected_group_keys) > 0:
@@ -1431,7 +1441,9 @@ class MoneyflowApp(App):
 
         # Determine what field we're grouping by
         # If in sub-grouping mode, use that instead of view_mode
-        grouping_mode = self.state.sub_grouping_mode if self.state.sub_grouping_mode else self.state.view_mode
+        grouping_mode = (
+            self.state.sub_grouping_mode if self.state.sub_grouping_mode else self.state.view_mode
+        )
 
         # Determine what field we're grouping by and get transactions
         if grouping_mode == ViewMode.MERCHANT:
@@ -1637,7 +1649,12 @@ class MoneyflowApp(App):
             return
 
         # Handle aggregate/subgroup views (bulk hide for groups)
-        if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
+        if self.state.view_mode in [
+            ViewMode.MERCHANT,
+            ViewMode.CATEGORY,
+            ViewMode.GROUP,
+            ViewMode.ACCOUNT,
+        ]:
             # Determine the field to filter by based on view mode
             field_map = {
                 ViewMode.MERCHANT: "merchant",
@@ -1650,7 +1667,9 @@ class MoneyflowApp(App):
             # Check if multi-select is active
             if len(self.state.selected_group_keys) > 0:
                 # Multi-select: get transactions from all selected groups
-                transactions_to_toggle = self.controller.get_transactions_from_selected_groups(group_by_field)
+                transactions_to_toggle = self.controller.get_transactions_from_selected_groups(
+                    group_by_field
+                )
                 self.state.clear_selection()
             else:
                 # Single selection: get transactions from current row
@@ -1663,13 +1682,21 @@ class MoneyflowApp(App):
                     return
 
                 if group_by_field == "merchant":
-                    transactions_to_toggle = self.data_manager.filter_by_merchant(filtered_df, group_name)
+                    transactions_to_toggle = self.data_manager.filter_by_merchant(
+                        filtered_df, group_name
+                    )
                 elif group_by_field == "category":
-                    transactions_to_toggle = self.data_manager.filter_by_category(filtered_df, group_name)
+                    transactions_to_toggle = self.data_manager.filter_by_category(
+                        filtered_df, group_name
+                    )
                 elif group_by_field == "group":
-                    transactions_to_toggle = self.data_manager.filter_by_group(filtered_df, group_name)
+                    transactions_to_toggle = self.data_manager.filter_by_group(
+                        filtered_df, group_name
+                    )
                 elif group_by_field == "account":
-                    transactions_to_toggle = self.data_manager.filter_by_account(filtered_df, group_name)
+                    transactions_to_toggle = self.data_manager.filter_by_account(
+                        filtered_df, group_name
+                    )
 
             # Queue hide toggle for all transactions
             count = self.controller.queue_hide_toggle_edits(transactions_to_toggle)
@@ -1698,7 +1725,9 @@ class MoneyflowApp(App):
             # Check if multi-select is active
             if len(self.state.selected_group_keys) > 0:
                 # Multi-select: get transactions from all selected sub-groups
-                transactions_to_toggle = self.controller.get_transactions_from_selected_groups(group_by_field)
+                transactions_to_toggle = self.controller.get_transactions_from_selected_groups(
+                    group_by_field
+                )
                 self.state.clear_selection()
             else:
                 # Single selection: get transactions from current row
@@ -1711,13 +1740,21 @@ class MoneyflowApp(App):
                     return
 
                 if group_by_field == "merchant":
-                    transactions_to_toggle = self.data_manager.filter_by_merchant(filtered_df, group_name)
+                    transactions_to_toggle = self.data_manager.filter_by_merchant(
+                        filtered_df, group_name
+                    )
                 elif group_by_field == "category":
-                    transactions_to_toggle = self.data_manager.filter_by_category(filtered_df, group_name)
+                    transactions_to_toggle = self.data_manager.filter_by_category(
+                        filtered_df, group_name
+                    )
                 elif group_by_field == "group":
-                    transactions_to_toggle = self.data_manager.filter_by_group(filtered_df, group_name)
+                    transactions_to_toggle = self.data_manager.filter_by_group(
+                        filtered_df, group_name
+                    )
                 elif group_by_field == "account":
-                    transactions_to_toggle = self.data_manager.filter_by_account(filtered_df, group_name)
+                    transactions_to_toggle = self.data_manager.filter_by_account(
+                        filtered_df, group_name
+                    )
 
             count = self.controller.queue_hide_toggle_edits(transactions_to_toggle)
             self.notify(
