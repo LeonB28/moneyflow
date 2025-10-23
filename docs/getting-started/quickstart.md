@@ -108,7 +108,7 @@ Done! The change is now saved.
 ## Next Steps
 
 - [Keyboard Shortcuts](../guide/keyboard-shortcuts.md) - Learn all the keybindings
-- [Views & Navigation](../guide/views.md) - Understand the different views
+- [Navigation & Search](../guide/navigation.md) - Understand the different views
 - [Editing Transactions](../guide/editing.md) - Master bulk operations
 
 ---

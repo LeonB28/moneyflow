@@ -234,7 +234,7 @@ See [Security Documentation](https://github.com/wesm/moneyflow/blob/main/SECURIT
 
 - [Quick Start Tutorial](../getting-started/quickstart.md) - Learn the basics
 - [Keyboard Shortcuts](keyboard-shortcuts.md) - Essential keybindings
-- [Views & Navigation](views.md) - Understanding the interface
+- [Navigation & Search](navigation.md) - Understanding how to navigate the interface
 - [Editing Transactions](editing.md) - Making changes
 - [Time Navigation](navigation.md#time-navigation) - Filtering by date
 
