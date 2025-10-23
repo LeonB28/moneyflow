@@ -107,8 +107,9 @@ nav:
     - Quick Start: getting-started/quickstart.md
   - Getting Started:
     - Installation: getting-started/installation.md
-    - First Run: getting-started/first-run.md
+    - Quick Start: getting-started/quickstart.md
   - User Guide:
+    - Monarch Money: guide/monarch.md
     - Keyboard Shortcuts: guide/keyboard-shortcuts.md
     - Views & Navigation: guide/views.md
     - Drill-Down & Sub-Grouping: guide/drill-down.md

@@ -82,7 +82,8 @@ If you see the demo data load successfully, you're all set!
 ## Next Steps
 
 - [Quick Start Guide](quickstart.md) - Get up and running in 5 minutes
-- [First Run Setup](first-run.md) - Configure Monarch Money credentials or import Amazon order history
+- [Monarch Money Setup](../guide/monarch.md) - Detailed guide for Monarch Money users
+- [Amazon Mode](../guide/amazon-mode.md) - Import and analyze Amazon purchase history
 - [Keyboard Shortcuts](../guide/keyboard-shortcuts.md) - Learn the keybindings
 
 ---
