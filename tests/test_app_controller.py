@@ -658,7 +658,7 @@ class TestEditQueueing:
     async def test_queue_hide_toggle_edits_single_transaction(self, controller):
         """Test queueing hide toggle for a single transaction."""
         # Get a transaction that's not hidden
-        txn_df = controller.data_manager.df.filter(not pl.col("hideFromReports")).head(1)
+        txn_df = controller.data_manager.df.filter(~pl.col("hideFromReports")).head(1)
 
         count = controller.queue_hide_toggle_edits(txn_df)
 

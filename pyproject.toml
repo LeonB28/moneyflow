@@ -83,6 +83,7 @@ exclude = [
 select = ["E", "F", "I", "N", "W"]
 ignore = [
     "E501",  # Line too long (handled by formatter)
+    "E712",  # Avoid `== False` - conflicts with Polars syntax (must use == not ~)
     "N818",  # Exception naming (RetryAborted is clearer than RetryAbortedError)
 ]
 
