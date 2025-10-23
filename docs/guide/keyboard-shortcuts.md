@@ -22,8 +22,8 @@ moneyflow is designed to be used entirely with the keyboard. Here's your complet
 | Key | Action |
 |-----|--------|
 | ++g++ | Cycle grouping (Merchant → Category → Group → Account) |
-| ++u++ | All transactions (ungrouped detail view) |
-| ++d++ | Find duplicates |
+| ++d++ | Detail view (all transactions) |
+| ++shift+d++ | Find duplicates |
 
 ### Direct View Access
 
@@ -70,7 +70,6 @@ moneyflow is designed to be used entirely with the keyboard. Here's your complet
 | ++m++ | Edit merchant name |
 | ++c++ | Edit category |
 | ++h++ | Hide/unhide from reports |
-| ++d++ | Delete (with confirmation) |
 | ++i++ | View full transaction details |
 
 ### Multi-Select
@@ -88,6 +87,14 @@ moneyflow is designed to be used entirely with the keyboard. Here's your complet
     3. Select new category
     4. Press ++w++ to review
     5. Press ++enter++ to commit
+
+### Undo
+
+| Key | Action |
+|-----|--------|
+| ++u++ | Undo most recent pending edit |
+
+Removes the most recent edit from the pending changes queue. Press multiple times to undo edits in reverse order. Shows notification with field type and remaining edit count.
 
 ---
 

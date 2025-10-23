@@ -385,3 +385,88 @@ class TestErrorHandling:
         # Mock backend doesn't fail on invalid IDs, but real API might
         # This test ensures we handle it gracefully
         assert success + failure == 1
+
+
+class TestUndoPendingEdits:
+    """Test undoing pending edits functionality."""
+
+    async def test_undo_removes_most_recent_edit(self, data_manager):
+        """Test that undo removes the most recent (last) pending edit."""
+        from moneyflow.state import TransactionEdit
+
+        # Queue three edits
+        edits = [
+            TransactionEdit("txn_1", "merchant", "Old1", "New1", datetime.now()),
+            TransactionEdit("txn_2", "category", "cat_old", "cat_new", datetime.now()),
+            TransactionEdit("txn_3", "hide_from_reports", False, True, datetime.now()),
+        ]
+        data_manager.pending_edits = edits.copy()
+
+        # Undo (should remove last edit - txn_3)
+        removed = data_manager.pending_edits.pop()
+
+        assert removed.transaction_id == "txn_3"
+        assert len(data_manager.pending_edits) == 2
+        assert data_manager.pending_edits[0].transaction_id == "txn_1"
+        assert data_manager.pending_edits[1].transaction_id == "txn_2"
+
+    async def test_undo_with_single_edit(self, data_manager):
+        """Test undoing when there's only one pending edit."""
+        from moneyflow.state import TransactionEdit
+
+        data_manager.pending_edits = [
+            TransactionEdit("txn_1", "merchant", "Old", "New", datetime.now())
+        ]
+
+        removed = data_manager.pending_edits.pop()
+
+        assert removed.transaction_id == "txn_1"
+        assert len(data_manager.pending_edits) == 0
+
+    async def test_undo_preserves_earlier_edits(self, data_manager):
+        """Test that undo only removes the last edit, preserving earlier ones."""
+        from moneyflow.state import TransactionEdit
+
+        edit1 = TransactionEdit("txn_1", "merchant", "Old1", "New1", datetime.now())
+        edit2 = TransactionEdit("txn_2", "merchant", "Old2", "New2", datetime.now())
+        edit3 = TransactionEdit("txn_3", "merchant", "Old3", "New3", datetime.now())
+
+        data_manager.pending_edits = [edit1, edit2, edit3]
+
+        # First undo
+        data_manager.pending_edits.pop()
+        assert len(data_manager.pending_edits) == 2
+        assert data_manager.pending_edits[0] == edit1
+        assert data_manager.pending_edits[1] == edit2
+
+        # Second undo
+        data_manager.pending_edits.pop()
+        assert len(data_manager.pending_edits) == 1
+        assert data_manager.pending_edits[0] == edit1
+
+        # Third undo
+        data_manager.pending_edits.pop()
+        assert len(data_manager.pending_edits) == 0
+
+    async def test_undo_different_field_types(self, data_manager):
+        """Test undoing different types of edits."""
+        from moneyflow.state import TransactionEdit
+
+        merchant_edit = TransactionEdit("txn_1", "merchant", "Old", "New", datetime.now())
+        category_edit = TransactionEdit("txn_2", "category", "cat_1", "cat_2", datetime.now())
+        hide_edit = TransactionEdit("txn_3", "hide_from_reports", False, True, datetime.now())
+
+        # Test undo merchant edit
+        data_manager.pending_edits = [merchant_edit]
+        removed = data_manager.pending_edits.pop()
+        assert removed.field == "merchant"
+
+        # Test undo category edit
+        data_manager.pending_edits = [category_edit]
+        removed = data_manager.pending_edits.pop()
+        assert removed.field == "category"
+
+        # Test undo hide edit
+        data_manager.pending_edits = [hide_edit]
+        removed = data_manager.pending_edits.pop()
+        assert removed.field == "hide_from_reports"

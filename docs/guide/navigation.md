@@ -65,7 +65,7 @@ Press `g` to cycle through aggregate views. Aggregate views group your transacti
 
 ### Detail View
 
-Press `u` to view all transactions ungrouped in chronological order, or press `Enter` from any aggregate row to see the transactions for that specific item.
+Press `d` to view all transactions ungrouped in chronological order (detail view), or press `Enter` from any aggregate row to see the transactions for that specific item.
 
 The detail view shows individual transactions with all fields:
 - Columns: Date, Merchant, Category, Account, Amount
@@ -252,7 +252,7 @@ Here are some practical examples of using moneyflow's navigation features to ans
 | Key | Action |
 |-----|--------|
 | `g` | Cycle views (Merchant/Category/Group/Account) |
-| `u` | All transactions |
+| `d` | Detail view (all transactions) |
 | `Enter` | Drill down |
 | `Escape` | Go back |
 | `s` | Cycle sort field |
@@ -261,6 +261,8 @@ Here are some practical examples of using moneyflow's navigation features to ans
 | `f` | Filters |
 | `Space` | Select row |
 | `Ctrl+A` | Select all |
+| `u` | Undo pending edit |
+| `w` | Commit pending edits |
 | `t` / `y` / `a` | Time filters |
 | `←` / `→` | Previous/next period |
 

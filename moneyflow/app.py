@@ -112,7 +112,7 @@ class MoneyflowApp(App):
     BINDINGS = [
         # View mode
         Binding("g", "cycle_grouping", "Group By", show=True),
-        Binding("u", "view_ungrouped", "All Txns", show=True),
+        Binding("d", "view_ungrouped", "Detail", show=True),
         Binding("D", "find_duplicates", "Duplicates", show=True, key_display="D"),
         # Hidden direct access bindings (still available in aggregate views, not shown in footer)
         # Note: 'm' conflicts with edit_merchant in detail view, so view_merchants removed
@@ -131,11 +131,11 @@ class MoneyflowApp(App):
         # Editing
         Binding("m", "edit_merchant", "Edit Merchant", show=False),
         Binding("c", "edit_category", "Edit Category", show=False),
-        Binding("d", "delete_transaction", "Delete", show=False),
         Binding("h", "toggle_hide_from_reports", "Hide/Unhide", show=False),
         Binding("i", "show_transaction_details", "Info", show=False),
         Binding("space", "toggle_select", "Select", show=False),
         Binding("ctrl+a", "select_all", "Select All", show=False),
+        Binding("u", "undo_pending_edits", "Undo", show=True),
         # Other actions
         Binding("f", "show_filters", "Filters", show=True),
         Binding("question_mark", "help", "Help", show=True, key_display="?"),
@@ -865,6 +865,33 @@ class MoneyflowApp(App):
             groups = DuplicateDetector.get_duplicate_groups(filtered_df, duplicates)
             # Show duplicates screen
             self.push_screen(DuplicatesScreen(duplicates, groups, filtered_df))
+
+    def action_undo_pending_edits(self) -> None:
+        """Undo the most recent pending edit."""
+        if self.data_manager is None or not self.data_manager.pending_edits:
+            self.notify("No pending edits to undo", timeout=2)
+            return
+
+        # Save cursor and scroll position
+        saved_position = self._save_table_position()
+
+        # Remove the most recent edit (last one in the list)
+        removed_edit = self.data_manager.pending_edits.pop()
+
+        # Refresh view to update indicators
+        self.refresh_view(force_rebuild=False)
+
+        # Restore cursor and scroll position
+        self._restore_table_position(saved_position)
+
+        # Show notification with what was undone
+        count_remaining = len(self.data_manager.pending_edits)
+        field_name = removed_edit.field.replace("_", " ").title()
+        self.notify(
+            f"Undone {field_name} edit ({count_remaining} remaining)",
+            severity="information",
+            timeout=2,
+        )
 
     # Time navigation actions
     def action_this_year(self) -> None:

@@ -145,7 +145,7 @@ Amazon mode uses the same keyboard shortcuts as Monarch mode:
 
 ### View Modes
 - `g` - Cycle between Item and Category views
-- `u` - View all transactions (ungrouped)
+- `d` - View all transactions (detail view)
 
 ### Time Navigation
 - `y` - Current year
@@ -158,6 +158,7 @@ Amazon mode uses the same keyboard shortcuts as Monarch mode:
 - `c` - Edit category
 - `h` - Hide/unhide from reports
 - `Space` - Multi-select for bulk operations
+- `u` - Undo most recent pending edit
 - `w` - Review and commit changes
 
 ### Other
