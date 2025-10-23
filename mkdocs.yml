@@ -109,13 +109,13 @@ nav:
     - Installation: getting-started/installation.md
     - Quick Start: getting-started/quickstart.md
   - User Guide:
-    - Monarch Money: guide/monarch.md
     - Keyboard Shortcuts: guide/keyboard-shortcuts.md
     - Views & Navigation: guide/views.md
     - Drill-Down & Sub-Grouping: guide/drill-down.md
     - Editing Transactions: guide/editing.md
     - Time Navigation: guide/time-navigation.md
     - Filters & Search: guide/filters.md
+    - Monarch Money Mode: guide/monarch.md
     - Amazon Mode: guide/amazon-mode.md
   - Configuration:
     - Credentials: config/credentials.md

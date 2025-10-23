@@ -1,6 +1,6 @@
 # Monarch Money Integration
 
-**This guide is specifically for Monarch Money users.** If you're using Amazon Mode or Demo Mode, see the [Quick Start](../getting-started/quickstart.md) instead.
+**This guide is specifically for Monarch Money users.** 
 
 ---
 
@@ -189,10 +189,15 @@ moneyflow
 
 ### "Session expired" errors
 
-moneyflow maintains a session with Monarch Money that expires after ~24 hours. If you see session errors:
+moneyflow maintains a session with Monarch Money that expires after
+~24 hours. moneyflow should recreate the session automatically, but if
+you still see session errors:
 
 1. Restart moneyflow - it will automatically re-authenticate
 2. If that doesn't work, try resetting credentials
+
+If you see session errors repeatedly, please [open a GitHub
+issue](https://github.com/wesm/moneyflow/issues).
 
 ### Slow startup
 
@@ -202,10 +207,10 @@ If startup is slow (>60 seconds), try filtering to recent data:
 moneyflow --year 2025
 ```
 
-You can also enable caching (experimental):
+You can also enable caching:
 
 ```bash
-moneyflow --use-cache
+moneyflow --cache
 ```
 
 See [Caching](../config/caching.md) for details.

@@ -29,7 +29,7 @@ Select multiple transactions to edit them all at once:
 3. Or press ++c++ to recategorize all selected
 4. Or press ++h++ to hide/unhide all selected
 
-**Example: Recategorize 10 transactions**
+**Example: Recategorize 3 transactions**
 
 1. Navigate to transactions
 2. ++space++ on transaction 1 → ✓
