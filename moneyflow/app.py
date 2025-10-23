@@ -1650,16 +1650,32 @@ class MoneyflowApp(App):
             }
             group_by_field = field_map[self.state.view_mode]
 
-            # Get transactions for selected groups
-            transactions_to_toggle = self.controller.get_transactions_from_selected_groups(group_by_field)
+            # Check if multi-select is active
+            if len(self.state.selected_group_keys) > 0:
+                # Multi-select: get transactions from all selected groups
+                transactions_to_toggle = self.controller.get_transactions_from_selected_groups(group_by_field)
+                self.state.clear_selection()
+            else:
+                # Single selection: get transactions from current row
+                row_data = self.state.current_data.row(table.cursor_row, named=True)
+                group_name = str(row_data.get(self.state.current_data.columns[0]))
 
-            if transactions_to_toggle.is_empty():
-                self.notify("No groups selected. Use Space to select groups first.", timeout=2)
-                return
+                # Get all transactions for this group
+                filtered_df = self.state.get_filtered_df()
+                if filtered_df is None:
+                    return
 
-            # Queue hide toggle for all transactions in selected groups
+                if group_by_field == "merchant":
+                    transactions_to_toggle = self.data_manager.filter_by_merchant(filtered_df, group_name)
+                elif group_by_field == "category":
+                    transactions_to_toggle = self.data_manager.filter_by_category(filtered_df, group_name)
+                elif group_by_field == "group":
+                    transactions_to_toggle = self.data_manager.filter_by_group(filtered_df, group_name)
+                elif group_by_field == "account":
+                    transactions_to_toggle = self.data_manager.filter_by_account(filtered_df, group_name)
+
+            # Queue hide toggle for all transactions
             count = self.controller.queue_hide_toggle_edits(transactions_to_toggle)
-            self.state.clear_selection()
             self.notify(
                 f"Toggled hide/unhide for {count} transactions. Press w to commit.",
                 timeout=3,
@@ -1682,15 +1698,31 @@ class MoneyflowApp(App):
             }
             group_by_field = field_map[self.state.sub_grouping_mode]
 
-            # Get transactions for selected sub-groups
-            transactions_to_toggle = self.controller.get_transactions_from_selected_groups(group_by_field)
+            # Check if multi-select is active
+            if len(self.state.selected_group_keys) > 0:
+                # Multi-select: get transactions from all selected sub-groups
+                transactions_to_toggle = self.controller.get_transactions_from_selected_groups(group_by_field)
+                self.state.clear_selection()
+            else:
+                # Single selection: get transactions from current row
+                row_data = self.state.current_data.row(table.cursor_row, named=True)
+                group_name = str(row_data.get(self.state.current_data.columns[0]))
 
-            if transactions_to_toggle.is_empty():
-                self.notify("No groups selected. Use Space to select groups first.", timeout=2)
-                return
+                # Get all transactions for this sub-group
+                filtered_df = self.state.get_filtered_df()
+                if filtered_df is None:
+                    return
+
+                if group_by_field == "merchant":
+                    transactions_to_toggle = self.data_manager.filter_by_merchant(filtered_df, group_name)
+                elif group_by_field == "category":
+                    transactions_to_toggle = self.data_manager.filter_by_category(filtered_df, group_name)
+                elif group_by_field == "group":
+                    transactions_to_toggle = self.data_manager.filter_by_group(filtered_df, group_name)
+                elif group_by_field == "account":
+                    transactions_to_toggle = self.data_manager.filter_by_account(filtered_df, group_name)
 
             count = self.controller.queue_hide_toggle_edits(transactions_to_toggle)
-            self.state.clear_selection()
             self.notify(
                 f"Toggled hide/unhide for {count} transactions. Press w to commit.",
                 timeout=3,
