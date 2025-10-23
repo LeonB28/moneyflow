@@ -167,6 +167,8 @@ class EditMerchantScreen(ModalScreen):
         """Update merchant suggestions based on query."""
         option_list = self.query_one("#suggestions", OptionList)
         count_widget = self.query_one("#suggestions-count", Static)
+        merchant_input = self.query_one("#merchant-input", Input)
+        user_input = merchant_input.value.strip()
 
         # Filter merchants
         if query and query != self.current_merchant.lower():
@@ -188,6 +190,12 @@ class EditMerchantScreen(ModalScreen):
         for merchant in sorted(set(matches))[:20]:
             option_list.add_option(Option(merchant, id=merchant))
 
+        # Always add user's input as "create new" option (if not empty and different from current)
+        if user_input and user_input != self.current_merchant:
+            # Add as second option (or first if no matches)
+            # Use special ID prefix to distinguish from existing merchants
+            option_list.add_option(Option(f'"{user_input}"', id=f"__new__:{user_input}"))
+
         # Highlight first item by default so Enter works immediately
         if option_list.option_count > 0:
             option_list.highlighted = 0
@@ -203,8 +211,15 @@ class EditMerchantScreen(ModalScreen):
     async def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         """Handle merchant selection from suggestions."""
         if event.option.id:
-            # Set input value and dismiss
-            self.dismiss(str(event.option.id))
+            option_id = str(event.option.id)
+            # Check if this is a "create new" option
+            if option_id.startswith("__new__:"):
+                # Extract the actual merchant name after the prefix
+                new_merchant = option_id[8:]  # Remove "__new__:" prefix
+                self.dismiss(new_merchant)
+            else:
+                # Existing merchant selected
+                self.dismiss(option_id)
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "cancel-button":
@@ -221,13 +236,23 @@ class EditMerchantScreen(ModalScreen):
         if event.input.id != "merchant-input":
             return
 
-        # Check if there's exactly one filtered suggestion
+        # Check if there's exactly one existing merchant match (ignoring the "create new" option)
         if self.all_merchants:
             option_list = self.query_one("#suggestions", OptionList)
-            if option_list.option_count == 1:
-                # Auto-select the single match
-                highlighted_option = option_list.get_option_at_index(0)
-                self.dismiss(str(highlighted_option.id))
+
+            # Count non-"create new" options
+            existing_matches = 0
+            first_existing = None
+            for i in range(option_list.option_count):
+                option = option_list.get_option_at_index(i)
+                if not str(option.id).startswith("__new__:"):
+                    existing_matches += 1
+                    if first_existing is None:
+                        first_existing = option
+
+            # If exactly one existing match, auto-select it (user can arrow down to create new)
+            if existing_matches == 1 and first_existing:
+                self.dismiss(str(first_existing.id))
                 return
 
         # Otherwise save the typed value

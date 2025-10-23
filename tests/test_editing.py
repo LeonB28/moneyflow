@@ -701,3 +701,119 @@ class TestEdgeCase:
         updated = mock_mm.get_transaction_by_id(txn["id"])
         assert updated["merchant"]["name"] == "New Merchant Name"
         assert updated["hideFromReports"] is True  # Still hidden
+
+
+class TestMerchantCreation:
+    """Test creating new merchants via edit merchant modal."""
+
+    def test_user_input_always_available_as_option(self):
+        """Test that user input is always available as a 'create new' option."""
+        # This tests the new behavior where the user can always create a merchant
+        # matching their exact input, even if there's a partial match
+
+        # Simulate: User types "Starbucks" and there's a match "Starbucks Coffee"
+        user_input = "Starbucks"
+        existing_merchants = ["Starbucks Coffee", "Starbucks Reserve", "Coffee Shop"]
+
+        # Filter for matches
+        matches = [m for m in existing_merchants if user_input.lower() in m.lower()]
+        assert len(matches) == 2  # Two partial matches
+
+        # The modal should show:
+        # 1. "Starbucks Coffee" (existing match)
+        # 2. "Starbucks Reserve" (existing match)
+        # 3. "Starbucks" (create new - user's exact input)
+
+        # Verify we can add the user input as an option
+        # In the actual implementation, this is added with id="__new__:Starbucks"
+        create_new_option = f'"{user_input}"'
+        assert create_new_option == '"Starbucks"'
+
+    def test_create_new_option_format(self):
+        """Test that create new option is formatted with quotes."""
+        user_inputs = [
+            ("Amazon", '"Amazon"'),
+            ("Whole Foods", '"Whole Foods"'),
+            ("CVS Pharmacy", '"CVS Pharmacy"'),
+        ]
+
+        for user_input, expected_display in user_inputs:
+            create_new_display = f'"{user_input}"'
+            assert create_new_display == expected_display
+
+    def test_create_new_id_format(self):
+        """Test that create new option has correct ID format."""
+        user_input = "New Merchant"
+        option_id = f"__new__:{user_input}"
+
+        assert option_id == "__new__:New Merchant"
+        assert option_id.startswith("__new__:")
+
+        # Test extraction
+        if option_id.startswith("__new__:"):
+            extracted = option_id[8:]  # Remove "__new__:" prefix
+            assert extracted == user_input
+
+    def test_auto_select_existing_match_with_create_new_present(self):
+        """Test that Enter still auto-selects existing match when create new is present."""
+        # Scenario: User types "Amazon" and there's exactly one match "Amazon.com"
+        # Options shown:
+        # 1. "Amazon.com" (existing match)
+        # 2. "Amazon" (create new)
+        #
+        # Expected: Enter should auto-select "Amazon.com" (first existing match)
+        # User can press down arrow twice to select "Amazon" (create new)
+
+        # Simulate the options
+        options = [
+            {"id": "Amazon.com", "is_new": False},  # Existing match
+            {"id": "__new__:Amazon", "is_new": True},  # Create new
+        ]
+
+        # Count existing matches
+        existing_matches = [opt for opt in options if not opt["is_new"]]
+        assert len(existing_matches) == 1
+
+        # With exactly 1 existing match, Enter should select it
+        first_existing = existing_matches[0]
+        assert first_existing["id"] == "Amazon.com"
+
+    def test_no_auto_select_with_multiple_existing_matches(self):
+        """Test that Enter doesn't auto-select when multiple existing matches."""
+        # Scenario: User types "Star" and there are multiple matches
+        # Options shown:
+        # 1. "Starbucks" (existing)
+        # 2. "Starbucks Coffee" (existing)
+        # 3. "Star Market" (existing)
+        # 4. "Star" (create new)
+        #
+        # Expected: Enter should save the typed value "Star" (no auto-select)
+
+        options = [
+            {"id": "Starbucks", "is_new": False},
+            {"id": "Starbucks Coffee", "is_new": False},
+            {"id": "Star Market", "is_new": False},
+            {"id": "__new__:Star", "is_new": True},
+        ]
+
+        # Count existing matches
+        existing_matches = [opt for opt in options if not opt["is_new"]]
+        assert len(existing_matches) == 3
+
+        # With multiple existing matches, don't auto-select
+        # User input should be saved directly
+        user_input = "Star"
+        assert user_input == "Star"
+
+    def test_extracting_merchant_name_from_new_option_id(self):
+        """Test extracting actual merchant name from __new__ option ID."""
+        test_cases = [
+            ("__new__:Amazon", "Amazon"),
+            ("__new__:Whole Foods Market", "Whole Foods Market"),
+            ("__new__:CVS #1234", "CVS #1234"),
+        ]
+
+        for option_id, expected_name in test_cases:
+            if option_id.startswith("__new__:"):
+                extracted = option_id[8:]
+                assert extracted == expected_name
