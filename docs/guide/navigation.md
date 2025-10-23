@@ -10,6 +10,11 @@ Press `g` to cycle through aggregate views. Aggregate views group transactions b
 
 **Cycle Order**: Merchant → Category → Group → Account → Merchant...
 
+![Merchant View](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/cycle-1.png)
+![Category View](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/cycle-2.png)
+![Group View](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/cycle-3.png)
+![Account View](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/cycle-4.png)
+
 **Merchant View**
 - Groups transactions by merchant name
 - Shows: Merchant, Count, Total
@@ -43,11 +48,13 @@ Shows individual transactions:
 - Indicators: ✓ (selected), H (hidden), * (pending edit)
 - Full editing capabilities
 
+![Detail view with indicators](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/detail-view-flags.png)
+
 ## Drill-Down
 
 From any aggregate view, press `Enter` to drill into that row and see its transactions.
 
-![Drilled down into Amazon - transaction detail view](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-detail.png)
+![Merchant view with Amazon highlighted](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/merchants-view.png)
 
 **Example:**
 1. Start in Merchant view
@@ -55,13 +62,13 @@ From any aggregate view, press `Enter` to drill into that row and see its transa
 3. Press `Enter`
 4. See all Amazon transactions
 
+![Drilled down into Amazon - transaction detail view](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-detail.png)
+
 The breadcrumb shows your path: `Merchants > Amazon`
 
 ## Sub-Grouping
 
 Once drilled down, press `g` to sub-group the filtered data instead of returning to the top.
-
-![Drilled into Amazon, grouped by Category](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-group-by-category.png)
 
 **Example - Analyzing Amazon purchases:**
 1. Drill into Amazon (Merchant view → Enter)
@@ -69,6 +76,8 @@ Once drilled down, press `g` to sub-group the filtered data instead of returning
 3. Press `g` → see `Merchants > Amazon (by Group)`
 4. Press `g` → see `Merchants > Amazon (by Account)`
 5. Press `g` → back to detail view
+
+![Drilled into Merchant, grouped by Category](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/merchants-drill-by-category.png)
 
 ![Drilled into Amazon, grouped by Account](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-group-by-account.png)
 
@@ -141,11 +150,15 @@ moneyflow --month 2025-03  # Load March 2025
 
 Press `/` to search across merchant, category, and notes fields.
 
+![Search modal](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/search-modal.png)
+
 **Usage:**
 1. Press `/` → search modal opens
 2. Type query (case-insensitive, partial matching)
 3. Press `Enter` → apply filter
 4. Press `Escape` → clear search
+
+![Search results for "coffee"](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/merchants-search.png)
 
 Search persists across view changes. Breadcrumb shows "Search: your query".
 
