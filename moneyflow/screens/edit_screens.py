@@ -148,9 +148,7 @@ class EditMerchantScreen(ModalScreen):
             )
 
             if self.all_merchants:
-                yield Static(
-                    "Existing merchants - ↑/↓=Navigate | Enter=Select:", id="suggestions-count"
-                )
+                yield Static("Existing merchants - ↑/↓=Navigate | Enter=Select", id="suggestions-count")
                 yield OptionList(id="suggestions")
 
             with Container(id="button-container"):
