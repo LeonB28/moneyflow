@@ -363,12 +363,9 @@ class TestTransactionUpdates:
         """Test that updating category works correctly."""
         backend = AmazonBackend(temp_db)
 
-        # Create a category with a group
+        # Categories are pre-populated from STANDARD_CATEGORIES during init
+        # No need to insert - just use existing category
         conn = backend._get_connection()
-        conn.execute("""
-            INSERT INTO categories (id, name, group_name)
-            VALUES ('cat_groceries', 'Groceries', 'Food & Dining')
-        """)
 
         # Insert test transaction
         conn.execute("""

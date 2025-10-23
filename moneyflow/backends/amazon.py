@@ -11,6 +11,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from ..categories import STANDARD_CATEGORIES
 from .base import FinanceBackend
 
 
@@ -77,6 +78,14 @@ class AmazonBackend(FinanceBackend):
                 group_name TEXT DEFAULT 'Uncategorized'
             )
         """)
+
+        # Pre-populate with standard moneyflow categories
+        # This allows users to categorize purchases using common categories
+        for cat_id, cat_name, group_name in STANDARD_CATEGORIES:
+            conn.execute(
+                "INSERT OR IGNORE INTO categories (id, name, group_name) VALUES (?, ?, ?)",
+                (cat_id, cat_name, group_name)
+            )
 
         conn.execute("""
             CREATE TABLE IF NOT EXISTS import_history (
