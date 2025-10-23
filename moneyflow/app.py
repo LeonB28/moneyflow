@@ -787,12 +787,14 @@ class MoneyflowApp(App):
             cursor_row = saved_position.get("cursor_row", 0)
             scroll_y = saved_position.get("scroll_y", 0)
 
+            # IMPORTANT: Set scroll position BEFORE moving cursor
+            # If we move cursor first, move_cursor auto-scrolls to bring the row into view,
+            # which interferes with the scroll_y we're trying to restore
+            table.scroll_y = scroll_y
+
             # Restore cursor (bounded by current row count)
             if cursor_row < table.row_count:
                 table.move_cursor(row=cursor_row)
-
-            # Restore scroll position
-            table.scroll_y = scroll_y
         except Exception:
             pass  # Table might not be ready yet
 
