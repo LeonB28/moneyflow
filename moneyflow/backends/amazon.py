@@ -71,21 +71,8 @@ class AmazonBackend(FinanceBackend):
             )
         """)
 
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS categories (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL UNIQUE,
-                group_name TEXT DEFAULT 'Uncategorized'
-            )
-        """)
-
-        # Pre-populate with standard moneyflow categories
-        # This allows users to categorize purchases using common categories
-        for cat_id, cat_name, group_name in STANDARD_CATEGORIES:
-            conn.execute(
-                "INSERT OR IGNORE INTO categories (id, name, group_name) VALUES (?, ?, ?)",
-                (cat_id, cat_name, group_name)
-            )
+        # Note: Categories are NOT stored in database - they come from categories.py
+        # This avoids data duplication and allows easy category updates via config
 
         conn.execute("""
             CREATE TABLE IF NOT EXISTS import_history (
@@ -296,25 +283,21 @@ class AmazonBackend(FinanceBackend):
 
     async def get_transaction_categories(self) -> Dict[str, Any]:
         """
-        Fetch all categories from the database.
+        Fetch all categories from centralized category list.
+
+        Returns categories from categories.py (not database) to avoid data duplication
+        and allow easy updates via config file.
 
         Returns:
             Dictionary containing categories in Monarch-compatible format
         """
-        conn = self._get_connection()
-        conn.row_factory = sqlite3.Row
-
-        cursor = conn.execute("SELECT * FROM categories ORDER BY name")
-        rows = cursor.fetchall()
-        conn.close()
-
         categories = []
-        for row in rows:
+        for cat_id, cat_name, group_name in STANDARD_CATEGORIES:
             categories.append(
                 {
-                    "id": row["id"],
-                    "name": row["name"],
-                    "group": None,  # Amazon doesn't use groups (yet)
+                    "id": cat_id,
+                    "name": cat_name,
+                    "group": {"name": group_name, "id": group_name},  # Group info for data_manager
                 }
             )
 
@@ -360,14 +343,16 @@ class AmazonBackend(FinanceBackend):
         if category_id is not None:
             updates.append("category_id = ?")
             params.append(category_id)
-            # Also update category name from categories table
-            # (group is derived from category via JOIN at query time, not stored)
-            category_row = conn.execute(
-                "SELECT name FROM categories WHERE id = ?", (category_id,)
-            ).fetchone()
-            if category_row:
+            # Also update category name from STANDARD_CATEGORIES
+            # (group is derived from category by data_manager, not stored)
+            category_name = None
+            for cat_id, cat_name, _ in STANDARD_CATEGORIES:
+                if cat_id == category_id:
+                    category_name = cat_name
+                    break
+            if category_name:
                 updates.append("category = ?")
-                params.append(category_row[0])
+                params.append(category_name)
 
         if hide_from_reports is not None:
             updates.append("hideFromReports = ?")

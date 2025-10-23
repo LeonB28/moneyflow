@@ -68,19 +68,22 @@ class TestImportBasic:
 
         assert count == 3  # Cancelled order excluded
 
-    def test_import_creates_uncategorized_category(self, sample_orders_csv, temp_db):
-        """Test that Uncategorized category is created."""
+    @pytest.mark.asyncio
+    async def test_import_makes_categories_available(self, sample_orders_csv, temp_db):
+        """Test that categories are available from backend after import."""
         backend = AmazonBackend(temp_db)
 
         import_amazon_orders(str(sample_orders_csv), backend)
 
-        conn = backend._get_connection()
-        cursor = conn.execute("SELECT name FROM categories WHERE id = 'cat_uncategorized'")
-        row = cursor.fetchone()
-        conn.close()
+        # Categories come from categories.py module, not database
+        result = await backend.get_transaction_categories()
+        categories = result["categories"]
 
-        assert row is not None
-        assert row[0] == "Uncategorized"
+        # Should have all 88 standard categories
+        assert len(categories) >= 88
+        # Uncategorized should be available
+        cat_ids = [c["id"] for c in categories]
+        assert "cat_uncategorized" in cat_ids
 
     def test_import_generates_correct_ids(self, sample_orders_csv, temp_db):
         """Test that transaction IDs are generated correctly."""

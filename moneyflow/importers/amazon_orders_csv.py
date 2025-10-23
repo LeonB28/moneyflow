@@ -97,11 +97,8 @@ def import_amazon_orders(
 
     conn = backend._get_connection()
 
-    # Ensure Uncategorized category exists
-    conn.execute("""
-        INSERT OR IGNORE INTO categories (id, name, group_name)
-        VALUES ('cat_uncategorized', 'Uncategorized', 'Uncategorized')
-    """)
+    # Note: Categories come from categories.py, not database
+    # No need to create/insert categories
 
     # Track seen ASIN+OrderID combinations to handle CSV duplicates
     seen_combinations = {}
