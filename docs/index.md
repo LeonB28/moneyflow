@@ -28,11 +28,11 @@ Track spending, bulk edit transactions, and navigate your financial data at ligh
 
 moneyflow is perfect if you:
 
-- ✨ **Live in the terminal** - Prefer keyboard-driven workflows over clicking through web UIs
-- 🚀 **Have lots of transactions to clean up** - Need to rename dozens of merchants or recategorize hundreds of transactions
-- 🔍 **Want to analyze spending patterns** - Quickly drill down by merchant, category, or time period
-- 📊 **Track Amazon purchases** - Want insights into your Amazon spending habits
-- 🔒 **Value privacy** - Prefer local data processing over cloud-only platforms
+- **Live in the terminal** - Prefer keyboard-driven workflows over clicking through web UIs
+- **Have lots of transactions to clean up** - Need to rename dozens of merchants or recategorize hundreds of transactions
+-  **Want to analyze spending patterns** - Quickly drill down by merchant, category, or time period
+- **Track Amazon purchases** - Want insights into your Amazon spending habits
+- **Value privacy** - Prefer local data processing over cloud-only platforms
 
 ---
 
@@ -57,7 +57,7 @@ Select multiple transactions. Rename merchants or recategorize hundreds of trans
 
 <div class="feature-card" markdown>
 ### Smart Views & Drill-Down
-Aggregate by merchant, category, group, or account. Drill down and sub-group within any view—see your Amazon purchases by category, or your Groceries spending by merchant.
+Aggregate by merchant, category, group, or account. Drill down and sub-group within any view—see your Amazon purchases by category, or your restaurant spending grouped by merchant or credit card.
 </div>
 
 <div class="feature-card" markdown>
@@ -79,16 +79,17 @@ See exactly what changes you're making before saving. All edits are queued and r
 **View and analyze spending:**
 
 - ++g++ - Cycle between merchant/category/group/account views
-- ++u++ - Show all transactions
+- ++u++ - Show all transactions details
 - ++slash++ - Search by merchant or category
 - ++arrow-left++ ++arrow-right++ - Navigate time periods
 
 **Edit transactions:**
 
-- ++m++ - Rename merchant
+- ++m++ - Edit merchant
 - ++c++ - Edit category
-- ++h++ - Hide/unhide from reports
-- ++space++ - Select multiple (bulk operations)
+- ++h++ - Hide/unhide from aggregate totals and reports
+- ++space++ - Select multiple (for bulk operations)
+- ++Ctrl-A++ - Select all in view (for bulk operations)
 
 **Review and save:**
 
@@ -104,18 +105,16 @@ See exactly what changes you're making before saving. All edits are queued and r
 **Currently supported:**
 
 - **[Monarch Money](https://www.monarchmoney.com/)** - Full-featured integration with real-time sync
-- **Amazon Purchase History** - Import and analyze your Amazon order history from official data exports
-- **Demo Mode** - Realistic synthetic data for testing features
+- **[Amazon Purchase History](guide/amazon-mode.md)** - Import and analyze your Amazon order history from official data exports
+- **Demo Mode** - Synthetic data for testing features
 
-**Coming soon:**
+**Future:**
 
 - YNAB (You Need A Budget)
 - Lunch Money
 - Generic CSV import for any platform
 
 The backend system is pluggable—adding new platforms is straightforward. See [Contributing](development/contributing.md) if you want to add support for your platform.
-
-[Learn more about Amazon Mode →](guide/amazon-mode.md)
 
 ---
 
@@ -133,9 +132,9 @@ uvx moneyflow --demo
 
 **Next steps:**
 
-1. [📚 Full installation guide](getting-started/installation.md) - Detailed setup instructions
-2. [🚀 Quick start guide](getting-started/quickstart.md) - Get up and running in 2 minutes
-3. [⌨️ Keyboard shortcuts](guide/keyboard-shortcuts.md) - Master the interface
+1. [Full installation guide](getting-started/installation.md) - Detailed setup instructions
+2. [Quick start guide](getting-started/quickstart.md) - Get up and running in 2 minutes
+3. [ Keyboard shortcuts](guide/keyboard-shortcuts.md) - Master the interface
 
 ---
 

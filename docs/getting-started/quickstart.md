@@ -6,13 +6,13 @@ Get up and running with moneyflow in 5 minutes.
 
 ## Demo Mode (No Account Required)
 
-Try moneyflow instantly without any Monarch Money account:
+Try moneyflow instantly without connecting any accounts:
 
 ```bash
 moneyflow --demo
 ```
 
-This loads realistic synthetic data so you can explore all features risk-free.
+This loads synthetic spending data so you can explore all features risk-free.
 
 **What you'll see:**
 - 1,000+ transactions

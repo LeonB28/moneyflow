@@ -4,7 +4,7 @@ moneyflow can be installed in multiple ways depending on your preference.
 
 ## Quick Install
 
-=== "pip (Recommended)"
+=== "pip"
 
     ```bash
     pip install moneyflow
@@ -15,15 +15,13 @@ moneyflow can be installed in multiple ways depending on your preference.
     moneyflow
     ```
 
-=== "uvx (No Install)"
+=== "uv"
 
-    Try moneyflow without installing anything:
+    Run with `uvx`:
 
     ```bash
     uvx moneyflow
     ```
-
-    Perfect for one-time use or trying before installing.
 
 === "pipx (Isolated)"
 
@@ -63,7 +61,7 @@ uv run moneyflow
 
 - **Python 3.11+** (automatically handled by pip/uvx/pipx)
 - **Terminal**: Any modern terminal with Unicode support
-- **Account**: Monarch Money account (or use `--demo` mode)
+- **Account**: Monarch Money or Amazon account (or use `--demo` mode)
 
 ---
 
@@ -84,7 +82,7 @@ If you see the demo data load successfully, you're all set!
 ## Next Steps
 
 - [Quick Start Guide](quickstart.md) - Get up and running in 5 minutes
-- [First Run Setup](first-run.md) - Configure Monarch Money credentials
+- [First Run Setup](first-run.md) - Configure Monarch Money credentials or import Amazon order history
 - [Keyboard Shortcuts](../guide/keyboard-shortcuts.md) - Learn the keybindings
 
 ---
