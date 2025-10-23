@@ -184,15 +184,23 @@ class EditMerchantScreen(ModalScreen):
         # Clear and rebuild
         option_list.clear_options()
 
-        # Show top 20 matches
-        for merchant in sorted(set(matches))[:20]:
-            option_list.add_option(Option(merchant, id=merchant))
+        # Add matches (sorted)
+        sorted_matches = sorted(set(matches))[:20]
 
-        # Always add user's input as "create new" option (if not empty and different from current)
+        # Add first match (if any)
+        if sorted_matches:
+            option_list.add_option(Option(sorted_matches[0], id=sorted_matches[0]))
+
+        # Always add user's input as "create new" option as SECOND option
+        # (if not empty and different from current)
         if user_input and user_input != self.current_merchant:
-            # Add as second option (or first if no matches)
             # Use special ID prefix to distinguish from existing merchants
             option_list.add_option(Option(f'"{user_input}"', id=f"__new__:{user_input}"))
+
+        # Add remaining matches (positions 3+)
+        if len(sorted_matches) > 1:
+            for merchant in sorted_matches[1:]:
+                option_list.add_option(Option(merchant, id=merchant))
 
         # Highlight first item by default so Enter works immediately
         if option_list.option_count > 0:
@@ -230,30 +238,30 @@ class EditMerchantScreen(ModalScreen):
                 self.dismiss(None)
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
-        """Handle Enter key in input - auto-select if only one match, else save typed value."""
+        """Handle Enter key in input - auto-select first existing match if any exist."""
         if event.input.id != "merchant-input":
             return
 
-        # Check if there's exactly one existing merchant match (ignoring the "create new" option)
+        # When Enter is pressed in the input field (without using arrow keys to navigate),
+        # always auto-select the first existing match if there are any matches.
+        # To use the "create new" option, user must explicitly arrow down to it.
         if self.all_merchants:
             option_list = self.query_one("#suggestions", OptionList)
 
-            # Count non-"create new" options
-            existing_matches = 0
+            # Find first non-"create new" option (first existing match)
             first_existing = None
             for i in range(option_list.option_count):
                 option = option_list.get_option_at_index(i)
                 if not str(option.id).startswith("__new__:"):
-                    existing_matches += 1
-                    if first_existing is None:
-                        first_existing = option
+                    first_existing = option
+                    break
 
-            # If exactly one existing match, auto-select it (user can arrow down to create new)
-            if existing_matches == 1 and first_existing:
+            # If there's any existing match, auto-select the first one
+            if first_existing:
                 self.dismiss(str(first_existing.id))
                 return
 
-        # Otherwise save the typed value
+        # No existing matches - save the typed value as new merchant
         new_merchant = event.value.strip()
         if new_merchant and new_merchant != self.current_merchant:
             self.dismiss(new_merchant)

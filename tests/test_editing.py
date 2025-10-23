@@ -778,32 +778,35 @@ class TestMerchantCreation:
         first_existing = existing_matches[0]
         assert first_existing["id"] == "Amazon.com"
 
-    def test_no_auto_select_with_multiple_existing_matches(self):
-        """Test that Enter doesn't auto-select when multiple existing matches."""
+    def test_auto_select_first_match_with_multiple_existing_matches(self):
+        """Test that Enter auto-selects first match even with multiple matches."""
         # Scenario: User types "Star" and there are multiple matches
-        # Options shown:
-        # 1. "Starbucks" (existing)
-        # 2. "Starbucks Coffee" (existing)
-        # 3. "Star Market" (existing)
-        # 4. "Star" (create new)
+        # Options shown (in order):
+        # 1. "Star Market" (first alphabetically - existing)
+        # 2. "Star" (create new)
+        # 3. "Starbucks" (existing)
+        # 4. "Starbucks Coffee" (existing)
         #
-        # Expected: Enter should save the typed value "Star" (no auto-select)
+        # Expected: Enter should auto-select "Star Market" (first existing match)
+        # To create new "Star", user must arrow down to position 2
 
         options = [
+            {"id": "Star Market", "is_new": False},  # First alphabetically
+            {"id": "__new__:Star", "is_new": True},
             {"id": "Starbucks", "is_new": False},
             {"id": "Starbucks Coffee", "is_new": False},
-            {"id": "Star Market", "is_new": False},
-            {"id": "__new__:Star", "is_new": True},
         ]
 
-        # Count existing matches
-        existing_matches = [opt for opt in options if not opt["is_new"]]
-        assert len(existing_matches) == 3
+        # Find first existing match
+        first_existing = None
+        for opt in options:
+            if not opt["is_new"]:
+                first_existing = opt
+                break
 
-        # With multiple existing matches, don't auto-select
-        # User input should be saved directly
-        user_input = "Star"
-        assert user_input == "Star"
+        # With multiple existing matches, Enter should select the first one
+        assert first_existing is not None
+        assert first_existing["id"] == "Star Market"
 
     def test_extracting_merchant_name_from_new_option_id(self):
         """Test extracting actual merchant name from __new__ option ID."""
