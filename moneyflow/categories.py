@@ -15,7 +15,7 @@ from typing import List, Tuple
 STANDARD_CATEGORIES: List[Tuple[str, str, str]] = [
     # Food & Dining
     ("cat_groceries", "Groceries", "Food & Dining"),
-    ("cat_restaurants", "Restaurants", "Food & Dining"),
+    ("cat_restaurants", "Restaurants & Dining", "Food & Dining"),
     ("cat_coffee", "Coffee Shops", "Food & Dining"),
     ("cat_fast_food", "Fast Food", "Food & Dining"),
     ("cat_alcohol", "Alcohol & Bars", "Food & Dining"),
@@ -23,7 +23,8 @@ STANDARD_CATEGORIES: List[Tuple[str, str, str]] = [
     # Shopping
     ("cat_shopping", "Shopping", "Shopping"),
     ("cat_clothing", "Clothing", "Shopping"),
-    ("cat_electronics", "Electronics & Software", "Shopping"),
+    ("cat_electronics", "Electronics", "Shopping"),
+    ("cat_software", "Software", "Shopping"),
     ("cat_books", "Books", "Shopping"),
     ("cat_hobbies", "Hobbies", "Shopping"),
     ("cat_sporting_goods", "Sporting Goods", "Shopping"),
