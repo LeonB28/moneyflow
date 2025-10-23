@@ -64,7 +64,7 @@ When drilled down, ++g++ cycles through available sub-groupings. The field you'r
 
 ### Press ++escape++ - Go Back One Level
 
-Escape navigates backwards through your drill-down path:
+Escape navigates backwards through your drill-down path. If search was the last action you performed, pressing ++escape++ will clear the search first before navigating back.
 
 **Single-level with sub-grouping:**
 
@@ -77,6 +77,12 @@ Escape navigates backwards through your drill-down path:
 1. `Merchants > Amazon > Groceries`
 2. Press ++escape++ goes to `Merchants > Amazon` (clears category)
 3. Press ++escape++ goes to `Merchants` (clears merchant)
+
+**With search active:**
+
+1. `Search: starbucks` (search applied)
+2. Press ++escape++ clears search and returns to previous view
+3. Subsequent ++escape++ presses navigate through drill-down levels
 
 <!-- TODO: Add diagram showing navigation flow -->
 
