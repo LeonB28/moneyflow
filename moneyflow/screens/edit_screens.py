@@ -19,6 +19,8 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, OptionList, Static
 from textual.widgets.option_list import Option
 
+import polars as pl
+
 
 class EditMerchantScreen(ModalScreen):
     """
@@ -104,7 +106,10 @@ class EditMerchantScreen(ModalScreen):
         super().__init__()
         self.current_merchant = current_merchant
         self.transaction_count = transaction_count
-        self.all_merchants = all_merchants or []
+        # Store merchants as Polars Series for fast vectorized filtering
+        self.all_merchants: pl.Series | None = (
+            pl.Series("merchant", all_merchants) if all_merchants else None
+        )
         self.transaction_details = transaction_details
 
     def compose(self) -> ComposeResult:
@@ -147,7 +152,7 @@ class EditMerchantScreen(ModalScreen):
                 classes="edit-input",
             )
 
-            if self.all_merchants:
+            if self.all_merchants is not None:
                 yield Static("Existing merchants - ↑/↓=Navigate | Enter=Select", id="suggestions-count")
                 yield OptionList(id="suggestions")
 
@@ -157,7 +162,7 @@ class EditMerchantScreen(ModalScreen):
 
     async def on_mount(self) -> None:
         """Initialize suggestions list."""
-        if self.all_merchants:
+        if self.all_merchants is not None:
             await self._update_suggestions("")
         self.query_one("#merchant-input", Input).focus()
 
@@ -168,24 +173,28 @@ class EditMerchantScreen(ModalScreen):
         merchant_input = self.query_one("#merchant-input", Input)
         user_input = merchant_input.value.strip()
 
-        # Filter merchants (include current merchant in results)
+        # Filter merchants using Polars for performance with large merchant lists
         if query:
-            matches = [m for m in self.all_merchants if m and query in m.lower()]
+            # Filter using Polars str.contains (much faster than Python loop for thousands of merchants)
+            filtered = self.all_merchants.filter(
+                self.all_merchants.str.to_lowercase().str.contains(query.lower())
+            )
         else:
-            matches = list(self.all_merchants)
+            filtered = self.all_merchants
+
+        # Deduplicate, sort, and limit using Polars operations (faster than Python)
+        top_matches = filtered.unique().sort().head(20)
+        matches_list = top_matches.to_list()
 
         # Update count
-        count_widget.update(f"{len(matches)} matching merchants - ↑/↓=Navigate | Enter=Select")
+        count_widget.update(f"{len(filtered)} matching merchants - ↑/↓=Navigate | Enter=Select")
 
         # Clear and rebuild
         option_list.clear_options()
 
-        # Add matches (sorted)
-        sorted_matches = sorted(set(matches))[:20]
-
         # Add first match (if any)
-        if sorted_matches:
-            option_list.add_option(Option(sorted_matches[0], id=sorted_matches[0]))
+        if len(matches_list) > 0:
+            option_list.add_option(Option(matches_list[0], id=matches_list[0]))
 
         # Always add user's input as "create new" option as SECOND option
         # (if not empty and different from current)
@@ -194,8 +203,8 @@ class EditMerchantScreen(ModalScreen):
             option_list.add_option(Option(f'"{user_input}"', id=f"__new__:{user_input}"))
 
         # Add remaining matches (positions 3+)
-        if len(sorted_matches) > 1:
-            for merchant in sorted_matches[1:]:
+        if len(matches_list) > 1:
+            for merchant in matches_list[1:]:
                 option_list.add_option(Option(merchant, id=merchant))
 
         # Highlight first item by default so Enter works immediately
@@ -204,7 +213,7 @@ class EditMerchantScreen(ModalScreen):
 
     async def on_input_changed(self, event: Input.Changed) -> None:
         """Filter merchant suggestions as user types."""
-        if event.input.id != "merchant-input" or not self.all_merchants:
+        if event.input.id != "merchant-input" or self.all_merchants is None:
             return
 
         query = event.value.lower().strip()
@@ -249,7 +258,7 @@ class EditMerchantScreen(ModalScreen):
         # When Enter is pressed in the input field (without using arrow keys to navigate),
         # always auto-select the first existing match if there are any matches.
         # To use the "create new" option, user must explicitly arrow down to it.
-        if self.all_merchants:
+        if self.all_merchants is not None:
             option_list = self.query_one("#suggestions", OptionList)
 
             # Find first non-"create new" option (first existing match)
@@ -284,14 +293,14 @@ class EditMerchantScreen(ModalScreen):
             self.dismiss(None)
         elif event.key == "down":
             # Move focus from input to suggestions (if list has items)
-            if self.all_merchants:
+            if self.all_merchants is not None:
                 option_list = self.query_one("#suggestions", OptionList)
                 if not option_list.has_focus and option_list.option_count > 0:
                     event.stop()  # Stop only when moving TO the list
                     option_list.focus()
         elif event.key == "up":
             # Move focus from list back to input (if at top of list)
-            if self.all_merchants:
+            if self.all_merchants is not None:
                 option_list = self.query_one("#suggestions", OptionList)
                 merchant_input = self.query_one("#merchant-input", Input)
                 if option_list.has_focus and option_list.highlighted == 0:
