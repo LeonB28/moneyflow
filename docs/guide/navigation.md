@@ -10,10 +10,10 @@ Press `g` to cycle through aggregate views. Aggregate views group transactions b
 
 **Cycle Order**: Merchant → Category → Group → Account → Merchant...
 
-![Merchant View](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/cycle-1.png)
-![Category View](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/cycle-2.png)
-![Group View](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/cycle-3.png)
-![Account View](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/cycle-4.png)
+![Merchant View](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/cycle-1-merchants.png)
+![Category View](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/cycle-2-categories.png)
+![Group View](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/cycle-3-groups.png)
+![Account View](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/cycle-4-accounts.png)
 
 **Merchant View**
 - Groups transactions by merchant name
