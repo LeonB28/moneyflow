@@ -110,6 +110,23 @@ class AppController:
         if self.data_manager is None or self.data_manager.df is None:
             return
 
+        # Validate sort field for current view type
+        # Detail views (transaction lists) don't have a 'count' column
+        # Aggregate views and sub-grouped views DO have a 'count' column
+        is_aggregate_view = self.state.view_mode in [
+            ViewMode.MERCHANT,
+            ViewMode.CATEGORY,
+            ViewMode.GROUP,
+            ViewMode.ACCOUNT,
+        ]
+        is_sub_grouped = self.state.is_drilled_down() and self.state.sub_grouping_mode is not None
+        is_detail_view = not is_aggregate_view and not is_sub_grouped
+
+        if is_detail_view and self.state.sort_by == SortMode.COUNT:
+            # COUNT sort is invalid for detail views - reset to DATE descending
+            self.state.sort_by = SortMode.DATE
+            self.state.sort_direction = SortDirection.DESC
+
         # Prepare view data based on current state
         if self.state.view_mode in [
             ViewMode.MERCHANT,

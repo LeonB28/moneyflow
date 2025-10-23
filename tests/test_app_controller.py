@@ -1122,6 +1122,241 @@ class TestTimeNavigationFacade:
         assert "April" in description or "Apr" in description
 
 
+class TestSortFieldValidation:
+    """
+    Test automatic sort field validation in refresh_view.
+
+    The refresh_view method should automatically detect when the current sort field
+    is invalid for the view type and reset it to a valid field.
+
+    Key scenarios:
+    - Detail views don't have 'count' column → reset COUNT to DATE
+    - Aggregate views DO have 'count' column → preserve COUNT
+    - Sub-grouped views (aggregate within drill-down) → preserve COUNT
+    - Other sort fields (AMOUNT, DATE) should be preserved
+    """
+
+    async def test_count_sort_reset_in_detail_view(self, controller, mock_view):
+        """COUNT sort should be reset to DATE in detail views."""
+        # Setup: Detail view with COUNT sort (invalid)
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.state.sort_by = SortMode.COUNT
+        controller.state.sort_direction = SortDirection.ASC
+
+        # Refresh view - should auto-reset sort
+        controller.refresh_view()
+
+        # Verify: Sort reset to DATE DESC
+        assert controller.state.sort_by == SortMode.DATE
+        assert controller.state.sort_direction == SortDirection.DESC
+
+    async def test_count_sort_preserved_in_aggregate_view(self, controller, mock_view):
+        """COUNT sort should be preserved in aggregate views."""
+        # Setup: Merchant view with COUNT sort (valid)
+        controller.state.view_mode = ViewMode.MERCHANT
+        controller.state.sort_by = SortMode.COUNT
+        controller.state.sort_direction = SortDirection.ASC
+
+        # Refresh view
+        controller.refresh_view()
+
+        # Verify: Sort preserved
+        assert controller.state.sort_by == SortMode.COUNT
+        assert controller.state.sort_direction == SortDirection.ASC
+
+    async def test_count_sort_reset_when_drilling_into_detail(self, controller, mock_view):
+        """COUNT sort should reset when drilling from aggregate to detail view."""
+        # Setup: Start in merchant aggregate view with COUNT sort
+        controller.state.view_mode = ViewMode.MERCHANT
+        controller.state.sort_by = SortMode.COUNT
+
+        # Drill down to a merchant's transactions (detail view)
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.state.selected_merchant = "Amazon"
+
+        # Refresh view - should reset sort
+        controller.refresh_view()
+
+        # Verify: COUNT reset to DATE
+        assert controller.state.sort_by == SortMode.DATE
+        assert controller.state.sort_direction == SortDirection.DESC
+
+    async def test_count_sort_preserved_in_subgrouped_view(self, controller, mock_view):
+        """COUNT sort should be preserved in sub-grouped views (aggregate within drill-down)."""
+        # Setup: Drilled down with sub-grouping (aggregate view)
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.state.selected_category = "Groceries"
+        controller.state.sub_grouping_mode = ViewMode.MERCHANT  # Sub-group by merchant
+        controller.state.sort_by = SortMode.COUNT
+
+        # Refresh view - should preserve COUNT (sub-grouped is aggregate)
+        controller.refresh_view()
+
+        # Verify: COUNT preserved
+        assert controller.state.sort_by == SortMode.COUNT
+
+    async def test_amount_sort_preserved_in_detail_view(self, controller, mock_view):
+        """AMOUNT sort should be preserved in detail views (valid sort field)."""
+        # Setup: Detail view with AMOUNT sort (valid)
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.state.sort_by = SortMode.AMOUNT
+        controller.state.sort_direction = SortDirection.DESC
+
+        # Refresh view
+        controller.refresh_view()
+
+        # Verify: AMOUNT sort preserved
+        assert controller.state.sort_by == SortMode.AMOUNT
+        assert controller.state.sort_direction == SortDirection.DESC
+
+    async def test_date_sort_preserved_in_detail_view(self, controller, mock_view):
+        """DATE sort should be preserved in detail views (valid sort field)."""
+        # Setup: Detail view with DATE sort (valid)
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.state.sort_by = SortMode.DATE
+        controller.state.sort_direction = SortDirection.ASC
+
+        # Refresh view
+        controller.refresh_view()
+
+        # Verify: DATE sort preserved
+        assert controller.state.sort_by == SortMode.DATE
+        assert controller.state.sort_direction == SortDirection.ASC
+
+    async def test_count_sort_reset_with_category_filter(self, controller, mock_view):
+        """COUNT sort should reset in detail view even with category filter."""
+        # Setup: Detail view filtered by category with COUNT sort
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.state.selected_category = "Shopping"
+        controller.state.sub_grouping_mode = None  # No sub-grouping → detail view
+        controller.state.sort_by = SortMode.COUNT
+
+        # Refresh view
+        controller.refresh_view()
+
+        # Verify: COUNT reset to DATE
+        assert controller.state.sort_by == SortMode.DATE
+        assert controller.state.sort_direction == SortDirection.DESC
+
+    async def test_count_sort_reset_with_merchant_filter(self, controller, mock_view):
+        """COUNT sort should reset in detail view with merchant filter."""
+        # Setup: Detail view filtered by merchant
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.state.selected_merchant = "Amazon"
+        controller.state.sub_grouping_mode = None
+        controller.state.sort_by = SortMode.COUNT
+
+        # Refresh view
+        controller.refresh_view()
+
+        # Verify: COUNT reset to DATE
+        assert controller.state.sort_by == SortMode.DATE
+
+    async def test_count_sort_reset_with_multiple_filters(self, controller, mock_view):
+        """COUNT sort should reset with multiple drill-down filters."""
+        # Setup: Detail view with multiple filters (merchant + category)
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.state.selected_merchant = "Amazon"
+        controller.state.selected_category = "Shopping"
+        controller.state.sub_grouping_mode = None
+        controller.state.sort_by = SortMode.COUNT
+
+        # Refresh view
+        controller.refresh_view()
+
+        # Verify: COUNT reset to DATE
+        assert controller.state.sort_by == SortMode.DATE
+
+    async def test_sort_validation_all_aggregate_view_types(self, controller, mock_view):
+        """COUNT sort should be preserved in all aggregate view types."""
+        aggregate_views = [
+            ViewMode.MERCHANT,
+            ViewMode.CATEGORY,
+            ViewMode.GROUP,
+            ViewMode.ACCOUNT,
+        ]
+
+        for view_mode in aggregate_views:
+            # Setup
+            controller.state.view_mode = view_mode
+            controller.state.sort_by = SortMode.COUNT
+            controller.state.sort_direction = SortDirection.ASC
+
+            # Refresh
+            controller.refresh_view()
+
+            # Verify: COUNT preserved for this aggregate view
+            assert controller.state.sort_by == SortMode.COUNT, (
+                f"COUNT should be preserved in {view_mode.value} view"
+            )
+
+    async def test_sort_validation_happens_before_view_preparation(self, controller, mock_view):
+        """Sort validation should happen before data is sorted (preventing crashes)."""
+        # This test ensures the validation happens early enough to prevent
+        # the "unable to find column 'count'" error
+
+        # Setup: Detail view with COUNT sort
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.state.sort_by = SortMode.COUNT
+
+        # This should NOT crash - validation should reset sort before attempting to sort data
+        controller.refresh_view()
+
+        # Verify: No crash, sort was reset, and view updated
+        assert controller.state.sort_by == SortMode.DATE
+        assert len(mock_view.table_updates) > 0
+
+    async def test_count_sort_preserved_switching_between_aggregates(self, controller, mock_view):
+        """COUNT sort should be preserved when switching between aggregate views."""
+        # Setup: Start in merchant view with COUNT sort
+        controller.state.view_mode = ViewMode.MERCHANT
+        controller.state.sort_by = SortMode.COUNT
+
+        # Switch to category view (also aggregate)
+        controller.state.view_mode = ViewMode.CATEGORY
+        controller.refresh_view()
+
+        # Verify: COUNT preserved
+        assert controller.state.sort_by == SortMode.COUNT
+
+        # Switch to group view
+        controller.state.view_mode = ViewMode.GROUP
+        controller.refresh_view()
+
+        # Verify: Still preserved
+        assert controller.state.sort_by == SortMode.COUNT
+
+    async def test_subgroup_mode_none_triggers_reset(self, controller, mock_view):
+        """Clearing sub_grouping_mode should trigger sort reset."""
+        # Setup: Sub-grouped view with COUNT sort
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.state.selected_merchant = "Amazon"
+        controller.state.sub_grouping_mode = ViewMode.CATEGORY
+        controller.state.sort_by = SortMode.COUNT
+
+        # First refresh - COUNT valid (sub-grouped is aggregate)
+        controller.refresh_view()
+        assert controller.state.sort_by == SortMode.COUNT
+
+        # Clear sub-grouping (now it's a detail view)
+        controller.state.sub_grouping_mode = None
+        controller.refresh_view()
+
+        # Verify: COUNT reset to DATE (no longer sub-grouped)
+        assert controller.state.sort_by == SortMode.DATE
+
+    async def test_merchant_sort_preserved_in_detail_view(self, controller, mock_view):
+        """MERCHANT sort should be preserved in detail views."""
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.state.sort_by = SortMode.MERCHANT
+        controller.state.sort_direction = SortDirection.ASC
+
+        controller.refresh_view()
+
+        assert controller.state.sort_by == SortMode.MERCHANT
+        assert controller.state.sort_direction == SortDirection.ASC
+
+
 class TestMultiSelectGroups:
     """Tests for multi-selecting groups in aggregate views."""
 

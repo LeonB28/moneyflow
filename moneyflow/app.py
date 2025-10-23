@@ -1844,21 +1844,6 @@ class MoneyflowApp(App):
         """
         success, cursor_position, scroll_y = self.state.go_back()
         if success:
-            # Reset sort to valid field for detail view if needed
-            # Detail views don't have 'count' column, so switch to date-based sorting
-            if self.state.sort_by == SortMode.COUNT:
-                # Check if we're now in a detail view (not an aggregate view)
-                is_detail_view = (
-                    self.state.view_mode == ViewMode.DETAIL
-                    or self.state.selected_merchant is not None
-                    or self.state.selected_category is not None
-                    or self.state.selected_group is not None
-                    or self.state.selected_account is not None
-                )
-                if is_detail_view:
-                    self.state.sort_by = SortMode.DATE
-                    self.state.sort_direction = SortDirection.DESC
-
             self.refresh_view()
             # Restore cursor and scroll position
             saved_position = {"cursor_row": cursor_position, "scroll_y": scroll_y}
@@ -2120,13 +2105,6 @@ class MoneyflowApp(App):
 
             # Clear sub-grouping mode (show detail view at this level)
             self.state.sub_grouping_mode = None
-
-            # Reset sort to valid field for detail view if needed
-            # Detail views don't have 'count' column, so switch to date-based sorting
-            if self.state.sort_by == SortMode.COUNT:
-                self.state.sort_by = SortMode.DATE
-                self.state.sort_direction = SortDirection.DESC
-
             self.refresh_view()
 
         elif self.state.view_mode in [
