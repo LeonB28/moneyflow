@@ -58,7 +58,7 @@ from .screens.edit_screens import DeleteConfirmationScreen, EditMerchantScreen, 
 from .screens.review_screen import ReviewChangesScreen
 from .screens.search_screen import SearchScreen
 from .screens.transaction_detail_screen import TransactionDetailScreen
-from .state import AppState, ViewMode
+from .state import AppState, SortDirection, SortMode, ViewMode
 from .textual_view import TextualViewPresenter
 from .widgets.help_screen import HelpScreen
 
@@ -2105,6 +2105,13 @@ class MoneyflowApp(App):
 
             # Clear sub-grouping mode (show detail view at this level)
             self.state.sub_grouping_mode = None
+
+            # Reset sort to valid field for detail view if needed
+            # Detail views don't have 'count' column, so switch to date-based sorting
+            if self.state.sort_by == SortMode.COUNT:
+                self.state.sort_by = SortMode.DATE
+                self.state.sort_direction = SortDirection.DESC
+
             self.refresh_view()
 
         elif self.state.view_mode in [

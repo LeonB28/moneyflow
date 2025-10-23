@@ -104,7 +104,7 @@ See exactly what changes you're making before saving. All edits are queued and r
 **Currently supported:**
 
 - **[Monarch Money](https://www.monarchmoney.com/)** - Full-featured integration with real-time sync
-- **Amazon Purchase History** - Import and analyze your Amazon order history from CSV exports
+- **Amazon Purchase History** - Import and analyze your Amazon order history from official data exports
 - **Demo Mode** - Realistic synthetic data for testing features
 
 **Coming soon:**

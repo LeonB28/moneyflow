@@ -46,10 +46,10 @@ moneyflow --demo
 moneyflow
 
 # Analyze your Amazon purchase history
-moneyflow amazon import ~/Downloads/amazon-purchases.csv
+moneyflow amazon import ~/Downloads/"Your Orders"
 moneyflow amazon
 
-# Load only recent data for faster startup
+# Load only recent data for faster startup (Monarch only)
 moneyflow --year 2025
 ```
 
@@ -81,33 +81,28 @@ moneyflow --year 2025
 
 ### Amazon Purchases
 
-Analyze Amazon purchase history with the same interface. Import CSV files from your personal tracking or Amazon's order history exports.
+Analyze Amazon purchase history using the official "Your Orders" data export from Amazon. Import and explore with the same powerful interface.
 
 **Features:**
-- Import CSV with automatic deduplication
-- Category normalization
+- Import from official Amazon data export (Your Orders.zip)
+- Automatic deduplication and category assignment
 - View by item, category, or time period
 - Edit item names and categories
-- Track quantity and price per item
+- Track quantity, pricing, and order status
 - SQLite storage (no cloud dependencies)
 
 **Getting started:**
 ```bash
-# Import your CSV
-moneyflow amazon import ~/Downloads/amazon-purchases.csv
+# 1. Request your data from Amazon Account Settings > Privacy
+#    (See docs/guide/amazon-mode.md for detailed instructions)
 
-# Launch the UI
+# 2. Unzip the "Your Orders.zip" file
+
+# 3. Import the directory
+moneyflow amazon import ~/Downloads/"Your Orders"
+
+# 4. Launch the UI
 moneyflow amazon
-
-# Use custom database location
-moneyflow amazon --db-path ~/my-amazon-data.db
-```
-
-**Expected CSV format:**
-```csv
-Order Date,Title,Category,Quantity,Item Total
-01/15/2024,Python Crash Course,Books,1,39.99
-01/20/2024,USB-C Cable,Electronics,2,15.99
 ```
 
 ### Demo Mode

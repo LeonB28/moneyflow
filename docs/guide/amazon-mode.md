@@ -1,35 +1,53 @@
 # Amazon Purchase Analysis Mode
 
-moneyflow includes a dedicated mode for analyzing Amazon purchase history. This allows you to import, categorize, and explore your Amazon purchases using the same powerful terminal UI.
+moneyflow includes a dedicated mode for analyzing Amazon purchase history using Amazon's official "Your Orders" data export. This allows you to import, categorize, and explore your Amazon purchases using the same powerful terminal UI.
 
 ## Overview
 
 Amazon mode provides:
 
-- Import Amazon purchase data from CSV files
-- Automatic deduplication across imports
-- Category normalization and management
+- Import from official Amazon "Your Orders" data export
+- Automatic deduplication and category assignment
 - SQLite storage (local, no cloud dependencies)
 - Same TUI experience as Monarch mode
-- Track quantity and price per item
+- Track quantity, pricing, and order status
 
 ## Getting Started
 
-### 1. Import Your Purchase Data
+### 1. Request Your Amazon Data
+
+**IMPORTANT**: You need to request your purchase history from Amazon first.
+
+!!! note "How to Request Your Amazon Data"
+    1. Log into your Amazon account
+    2. Go to **Account Settings** → **Privacy** → **Request My Data**
+    3. Select **"Your Orders"** (you don't need all your data)
+    4. Submit the request
+    5. Wait 1-3 days for Amazon to prepare your data
+    6. Download the **Your Orders.zip** file when ready
+    7. Unzip it to get the "Your Orders" directory
+
+The directory will contain files like:
+- `Retail.OrderHistory.1/Retail.OrderHistory.1.csv`
+- `Retail.OrderHistory.2/Retail.OrderHistory.2.csv`
+- etc.
+
+### 2. Import Your Purchase Data
 
 ```bash
-# Import from CSV file
-moneyflow amazon import ~/Downloads/amazon-purchases.csv
+# Import from the unzipped directory
+moneyflow amazon import ~/Downloads/"Your Orders"
 ```
 
 The import will:
-- Parse the CSV and validate data
-- Normalize category names (e.g., "BOoks" → "Books")
+- Scan for all Retail.OrderHistory CSV files
+- Parse and validate order data
+- Assign categories automatically using Monarch category mappings
 - Detect and skip duplicates
-- Calculate price per item
+- Skip cancelled orders
 - Store everything in SQLite
 
-### 2. Check Import Status
+### 3. Check Import Status
 
 ```bash
 # View database statistics
@@ -43,7 +61,7 @@ This shows:
 - Number of unique items and categories
 - Import history
 
-### 3. Launch the UI
+### 4. Launch the UI
 
 ```bash
 # Open the terminal UI
@@ -54,69 +72,59 @@ Uses the same keyboard-driven interface as Monarch mode.
 
 ## CSV Format
 
-### Personal Format (Currently Supported)
+moneyflow imports from the official Amazon "Your Orders" data export format.
 
-Your personal Amazon purchase tracking CSV:
+### Expected Files
 
-```csv
-Order Date,Title,Category,Quantity,Item Total,Reimbursed,Year,Regret,Disposed,Sale Price
-01/15/2024,Python Crash Course,Books,1,39.99,,,,,
-01/20/2024,USB-C Cable,Electronics,2,15.99,,,,,
-03/01/2024,Coffee Maker,Kitchen,1,89.99,,,,,
-```
+Files named: `Retail.OrderHistory.*.csv`
 
-**Required columns:**
-- `Order Date` - Purchase date (MM/DD/YYYY format)
-- `Title` - Item name/description
-- `Category` - Product category
-- `Quantity` - Number of items (must be > 0)
-- `Item Total` - Total cost (positive number)
+### Expected Columns
 
-Additional columns are ignored.
+- **ASIN**: Amazon Standard Identification Number
+- **Order ID**: Amazon order identifier
+- **Order Date**: ISO timestamp (e.g., "2025-10-13T22:08:07Z")
+- **Product Name**: Item description/title
+- **Quantity**: Number of items ordered
+- **Total Owed**: Final amount paid (after tax)
+- **Unit Price**: Item price before tax
+- **Order Status**: "Closed", "New", "Cancelled", etc.
+- **Shipment Status**: "Shipped", "Delivered", etc.
 
-### Official Amazon Export (Planned)
+### Category Assignment
 
-Support for the official Amazon.com order history export format is planned for a future release. This will include automatic category mapping from Amazon's internal categories to moneyflow categories.
+Categories are automatically assigned using moneyflow's centralized category mappings (same as Monarch mode). You can edit categories in the UI after import.
 
 ## Features
 
 ### Automatic Deduplication
 
-Transactions are deduplicated based on a fingerprint of:
-- Order date
-- Item title
-- Amount
-- Quantity
+Transactions are deduplicated based on a unique ID generated from:
+- ASIN (or product name hash if ASIN missing)
+- Order ID
 
-This means you can safely re-import the same CSV file multiple times - duplicates will be automatically skipped.
+This means you can safely re-import the same directory multiple times - duplicates will be automatically skipped.
 
 ```bash
 # First import
-moneyflow amazon import purchases.csv
+moneyflow amazon import ~/Downloads/"Your Orders"
 # Output: Imported 100 new transactions
 
 # Re-import (safe!)
-moneyflow amazon import purchases.csv
+moneyflow amazon import ~/Downloads/"Your Orders"
 # Output: Skipped 100 duplicates, Imported 0 new transactions
 ```
 
-### Category Normalization
-
-Common category variants are automatically normalized:
-- `BOoks` → `Books`
-- `VIdeo Game` → `Video Game`
-- `Office Products` → `Office Product`
-
-This ensures consistent categorization even if your CSV has typos or variants.
+Cancelled orders are automatically skipped during import.
 
 ### Incremental Imports
 
 Amazon mode supports incremental imports, preserving any manual edits you've made:
 
-1. Import initial data
+1. Import initial data export
 2. Edit categories and item names in the UI
-3. Import updated CSV with new purchases
-4. Only new items are added - your edits are preserved
+3. Request and import a fresh data export from Amazon (with new purchases)
+4. Only new orders are added - your edits are preserved
+5. Use `--force` flag to re-import and overwrite existing transactions if needed
 
 ### Custom Database Location
 
@@ -127,7 +135,7 @@ By default, data is stored in `~/.moneyflow/amazon.db`. You can use a custom loc
 moneyflow amazon --db-path ~/Documents/amazon-purchases.db
 
 # All commands support --db-path
-moneyflow amazon --db-path ~/custom.db import purchases.csv
+moneyflow amazon --db-path ~/custom.db import ~/Downloads/"Your Orders"
 moneyflow amazon --db-path ~/custom.db status
 ```
 
@@ -164,31 +172,32 @@ See [Keyboard Shortcuts](keyboard-shortcuts.md) for the complete list.
 
 Each Amazon purchase is stored as a transaction with:
 
-- **ID**: Generated from fingerprint (for deduplication)
-- **Date**: Purchase date
-- **Item**: Item title/name (displayed as "Merchant" in UI)
-- **Category**: Product category (editable)
-- **Amount**: Total cost (negative, like expenses)
-- **Quantity**: Number of items purchased
-- **Price per Item**: Calculated unit price
-- **Notes**: Additional info (e.g., "Qty: 2")
+- **ID**: Generated from ASIN + Order ID (for deduplication)
+- **Date**: Order date
+- **Merchant**: Product name (displayed as "Merchant" in UI)
+- **Category**: Automatically assigned from category mappings (editable)
+- **Amount**: Total Owed (negative, like expenses)
+- **Quantity**: Number of items ordered
+- **ASIN**: Amazon product identifier
+- **Order ID**: Amazon order number
+- **Order Status**: Order state (Closed, New, etc.)
+- **Shipment Status**: Shipping state (Shipped, Delivered, etc.)
+- **Notes**: Additional info (e.g., order details)
 - **Hide from Reports**: Toggle visibility
 
 ### Categories
 
-Categories are created automatically from your CSV. You can:
+Categories are assigned automatically using moneyflow's centralized category module (shared with Monarch mode). You can:
 - Edit category assignments in the UI
-- Rename categories
-- Create new categories
 - View spending by category
+- Categories are NOT stored in the database - they come from `categories.py`
 
 ## Database
 
 Amazon data is stored in a local SQLite database (default: `~/.moneyflow/amazon.db`).
 
 **Tables:**
-- `transactions` - Purchase records
-- `categories` - Category definitions
+- `transactions` - Order records (one row per item)
 - `import_history` - Audit trail of imports
 
 **To inspect directly:**
@@ -196,6 +205,7 @@ Amazon data is stored in a local SQLite database (default: `~/.moneyflow/amazon.
 sqlite3 ~/.moneyflow/amazon.db
 .tables
 SELECT * FROM import_history;
+SELECT COUNT(*) FROM transactions WHERE order_status = 'Closed';
 .quit
 ```
 
@@ -205,59 +215,68 @@ SELECT * FROM import_history;
 rm ~/.moneyflow/amazon.db
 
 # Re-import
-moneyflow amazon import purchases.csv
+moneyflow amazon import ~/Downloads/"Your Orders"
 ```
 
 ## Limitations
 
 - **Read-only**: No sync back to Amazon (local edits only)
-- **No API**: Works with CSV files only (no live Amazon connection)
-- **UI labels**: Currently shows Monarch-style labels (will be customized in future)
+- **Manual data export**: Requires requesting "Your Orders" export from Amazon
+- **No live updates**: Must re-request data from Amazon to get new orders
+- **Item-level only**: Each item in an order is a separate transaction (no order grouping)
 
 ## Future Enhancements
 
 Planned improvements:
-- Support for official Amazon.com CSV export format
-- Automatic category mapping from Amazon categories
-- Seller name extraction
-- Order-level grouping (multiple items per order)
+- Order-level grouping (link items from same order)
+- Seller name extraction and filtering
 - Returns and refunds tracking
 - Subscription detection
+- Amazon category to moneyflow category mapping improvements
+- Custom category rules
 
 ## Troubleshooting
 
-### Import fails with "Missing required columns"
+### Import fails with "No Retail.OrderHistory CSV files found"
 
-**Cause**: CSV doesn't have the expected column names.
+**Cause**: The directory doesn't contain Amazon export files.
 
-**Solution**: Verify your CSV has these exact column headers:
-- `Order Date`
-- `Title`
-- `Category`
-- `Quantity`
-- `Item Total`
+**Solution**:
+1. Make sure you've unzipped the "Your Orders.zip" file
+2. Point to the unzipped directory (not individual CSV files)
+3. The directory should contain folders like `Retail.OrderHistory.1/`
 
 ### "Amazon database is empty" when launching
 
 **Cause**: No data has been imported yet.
 
-**Solution**: Import your CSV first:
+**Solution**: Import your data first:
 ```bash
-moneyflow amazon import ~/path/to/purchases.csv
+moneyflow amazon import ~/Downloads/"Your Orders"
 ```
 
-### Duplicate transactions after import
+### Import shows "0 new transactions"
 
-**Cause**: Transaction fingerprints are different (different date/amount/quantity).
+**Cause**: All transactions already exist in the database.
 
-**Solution**: This is expected if the transactions are actually different. If they're true duplicates, check that the CSV columns match exactly.
+**Solution**:
+- This is expected if you're re-importing the same data
+- Use `--force` flag to re-import: `moneyflow amazon import --force ~/Downloads/"Your Orders"`
+- Or delete the database and start fresh: `rm ~/.moneyflow/amazon.db`
+
+### Missing ASIN for some items
+
+**Cause**: Some Amazon items don't have ASINs (e.g., digital content, gift cards).
+
+**Solution**: moneyflow automatically generates a pseudo-ASIN from the product name hash. This is normal and doesn't affect functionality.
 
 ## Tips
 
-- **Start with a subset**: Test with a small CSV first (10-20 rows)
 - **Check status often**: Use `moneyflow amazon status` to verify imports
 - **Safe to experiment**: Edits are local only, delete the database to reset
 - **Use custom paths**: Keep different analyses separate with `--db-path`
+- **Re-import periodically**: Request fresh exports from Amazon to get new orders
+- **Filter by status**: Use order status and shipment status to find specific orders
 
 ## Questions?
 
