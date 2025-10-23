@@ -837,6 +837,42 @@ class TestSortFieldCycling:
         assert new_sort == SortMode.ACCOUNT
         assert display == "Account"
 
+    async def test_toggle_sort_in_subgroup_view_uses_subgroup_mode(self, controller):
+        """Test that toggle_sort_field uses sub_grouping_mode when in subgroup view."""
+        # Setup: Drilled down with sub-grouping by merchant
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.state.selected_category = "Groceries"
+        controller.state.sub_grouping_mode = ViewMode.MERCHANT
+        controller.state.sort_by = SortMode.AMOUNT
+
+        # Toggle sort field
+        display = controller.toggle_sort_field()
+
+        # Should cycle like merchant aggregate view (not detail view)
+        # Merchant aggregate: Amount → Merchant → Count
+        assert controller.state.sort_by == SortMode.MERCHANT
+        assert display == "Merchant"
+
+        # Should not offer DATE (which would crash)
+        display = controller.toggle_sort_field()
+        assert controller.state.sort_by == SortMode.COUNT
+        assert display == "Count"
+
+    async def test_toggle_sort_in_detail_view_without_subgrouping(self, controller):
+        """Test that toggle_sort_field uses view_mode when not in subgroup."""
+        # Setup: Detail view without sub-grouping
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.state.selected_merchant = "Amazon"
+        controller.state.sub_grouping_mode = None
+        controller.state.sort_by = SortMode.DATE
+
+        # Toggle sort field
+        display = controller.toggle_sort_field()
+
+        # Should cycle like detail view: Date → Merchant → Category → Account → Amount → Date
+        assert controller.state.sort_by == SortMode.MERCHANT
+        assert display == "Merchant"
+
 
 class TestViewModeSwitching:
     """
