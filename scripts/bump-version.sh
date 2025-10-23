@@ -72,12 +72,15 @@ echo "New version: $NEW_VERSION"
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS
     sed -i '' "s/^version = \".*\"/version = \"$NEW_VERSION\"/" pyproject.toml
+    sed -i '' "s/^  version: \".*\"/  version: \"$NEW_VERSION\"/" mkdocs.yml
 else
     # Linux
     sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" pyproject.toml
+    sed -i "s/^  version: \".*\"/  version: \"$NEW_VERSION\"/" mkdocs.yml
 fi
 
 echo "✓ Updated pyproject.toml"
+echo "✓ Updated mkdocs.yml"
 
 # Verify the change
 NEW_VERSION_CHECK=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
@@ -92,7 +95,7 @@ uv lock
 echo "✓ Updated uv.lock"
 
 # Stage and commit
-git add pyproject.toml uv.lock
+git add pyproject.toml mkdocs.yml uv.lock
 git commit -m "chore: Bump version to $NEW_VERSION"
 echo "✓ Committed version bump"
 
