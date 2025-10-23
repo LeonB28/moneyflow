@@ -408,7 +408,13 @@ class AppController:
         Returns:
             Display name of new sort field
         """
-        new_sort, display = self.get_next_sort_field(self.state.view_mode, self.state.sort_by)
+        # Determine effective view mode (sub_grouping_mode takes precedence when drilled down)
+        effective_view_mode = self.state.view_mode
+        if self.state.sub_grouping_mode and self.state.is_drilled_down():
+            # In subgroup view - use sub_grouping_mode to determine sort options
+            effective_view_mode = self.state.sub_grouping_mode
+
+        new_sort, display = self.get_next_sort_field(effective_view_mode, self.state.sort_by)
         self.state.sort_by = new_sort
         self.refresh_view()
         return display
