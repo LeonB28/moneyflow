@@ -16,7 +16,44 @@ The cursor stays in place after editing, so you can quickly edit multiple transa
 
 All edits are queued (not committed immediately) so you can review them before saving.
 
-<!-- TODO: Add screenshot of editing a single transaction -->
+### Edit Merchant Modal
+
+When you press ++m++ to edit a merchant, the edit modal shows:
+
+1. **Input field** with the current merchant name (pre-filled)
+2. **Autocomplete suggestions** showing existing merchants that match your typing
+3. **Your exact input as "create new" option** - displayed in quotes: `"Your Input"`
+
+**Selecting existing merchants:**
+- Type to filter the list of existing merchants
+- If exactly one match: press `Enter` to auto-select it
+- If multiple matches: use arrow keys to select, then `Enter`
+
+**Creating new merchants:**
+- Your typed input always appears in the list as `"Your Input"` (in quotes)
+- Press down arrow to navigate to this option
+- Press `Enter` to create a new merchant with exactly that name
+
+**Example workflow - Consolidating "Amazon" merchants:**
+
+Scenario: You have "Amazon.com", "AMZN Mktp US", and want to rename both to "Amazon"
+
+1. Navigate to first Amazon transaction, press ++m++
+2. Type "Amazon" → see:
+   - "Amazon.com" (existing match)
+   - `"Amazon"` (create new)
+3. Press down arrow twice → highlights `"Amazon"`
+4. Press `Enter` → creates new merchant "Amazon"
+5. Navigate to next transaction, press ++m++
+6. Type "Amazon" → now see:
+   - "Amazon" (existing - the one you just created)
+   - "Amazon.com" (existing)
+   - `"Amazon"` (create new - but you want the existing one now)
+7. Press `Enter` → auto-selects existing "Amazon" merchant
+
+This workflow gives you precise control over merchant names while making it easy to select existing ones.
+
+<!-- TODO: Add screenshot of edit merchant modal showing autocomplete list with "create new" option -->
 
 ## Multi-Select in Detail View
 
