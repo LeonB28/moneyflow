@@ -23,6 +23,46 @@ fi
 
 echo "Bumping version to $NEW_VERSION..."
 
+# Run code quality checks before bumping version
+echo ""
+echo "Running code quality checks..."
+echo ""
+
+echo "1. Running tests..."
+if ! uv run pytest -v; then
+    echo "❌ Tests failed! Fix errors before bumping version."
+    exit 1
+fi
+echo "✓ All tests pass"
+
+echo ""
+echo "2. Running type checking..."
+if ! uv run pyright moneyflow/; then
+    echo "❌ Type checking failed! Fix errors before bumping version."
+    exit 1
+fi
+echo "✓ Type checking passes"
+
+echo ""
+echo "3. Checking code formatting..."
+if ! uv run ruff format --check moneyflow/ tests/; then
+    echo "❌ Code not formatted! Run: uv run ruff format moneyflow/ tests/"
+    exit 1
+fi
+echo "✓ Code formatting passes"
+
+echo ""
+echo "4. Running linter..."
+if ! uv run ruff check moneyflow/ tests/; then
+    echo "❌ Linting failed! Fix errors before bumping version."
+    exit 1
+fi
+echo "✓ Linting passes"
+
+echo ""
+echo "All code quality checks passed!"
+echo ""
+
 # Get current version from pyproject.toml
 CURRENT_VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
 echo "Current version: $CURRENT_VERSION"
