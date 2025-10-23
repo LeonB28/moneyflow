@@ -11,9 +11,10 @@ In detail view, edit individual transactions:
 | ++m++ | Edit merchant name |
 | ++c++ | Edit category |
 | ++h++ | Hide/unhide from reports |
-| ++d++ | Delete transaction |
 
 The cursor stays in place after editing, so you can quickly edit multiple transactions by pressing the same key repeatedly.
+
+All edits are queued (not committed immediately) so you can review them before saving.
 
 <!-- TODO: Add screenshot of editing a single transaction -->
 
@@ -126,6 +127,27 @@ This works in **all aggregate views**:
 3. ++space++ select expensive merchants
 4. Press ++c++ to recategorize to "Dining Out" (maybe they weren't groceries)
 
+## Undo Pending Edits
+
+Made a mistake while queueing edits? Press `u` to undo the most recent pending edit.
+
+**How undo works:**
+- Removes the last edit from your pending changes queue
+- Press `u` multiple times to undo edits in reverse order (last in, first out)
+- Preserves your cursor position and scroll state
+- Shows notification: "Undone {Field} edit (N remaining)"
+- Only affects pending edits - committed changes cannot be undone
+
+**Example workflow:**
+1. Edit merchant on transaction 1 → queued
+2. Edit merchant on transaction 2 → queued
+3. Edit category on transaction 3 → queued
+4. Press `u` → undoes category edit (most recent)
+5. Press `u` → undoes merchant edit on transaction 2
+6. Press `u` → undoes merchant edit on transaction 1
+
+This is useful when you've queued multiple edits and realize one was a mistake, without having to discard all your pending changes.
+
 ## Review Before Commit
 
 All edits are queued locally until you commit:
@@ -133,11 +155,11 @@ All edits are queued locally until you commit:
 1. Press ++w++ to review all pending changes
 2. See table showing: Type | Transaction | Field | Old Value → New Value
 3. Press ++enter++ to commit
-4. Or press ++escape++ to cancel
+4. Or press ++escape++ to cancel and return without committing
 
 <!-- TODO: Add screenshot of review changes screen -->
 
-The `*` indicator shows which transactions/groups have pending edits before you commit.
+The `*` indicator shows which transactions/groups have pending edits before you commit. If you need to remove edits before reviewing, use `u` to undo them one by one.
 
 ## Tips
 
@@ -168,10 +190,12 @@ The `*` indicator shows which transactions/groups have pending edits before you 
 | Context | Key | Action |
 |---------|-----|--------|
 | Any view | ++space++ | Select current row |
-| Detail view | ++m++ / ++c++ | Edit selected transaction(s) |
+| Detail view | ++m++ / ++c++ / ++h++ | Edit selected transaction(s) |
 | Aggregate view | ++m++ / ++c++ | Edit transactions in current group |
 | Aggregate view (multi-select) | ++m++ / ++c++ | Edit transactions in ALL selected groups |
+| Any view | ++u++ | Undo most recent pending edit |
 | Any view | ++w++ | Review pending changes |
 | Review screen | ++enter++ | Commit all changes |
+| Review screen | ++escape++ | Cancel (keep edits queued) |
 
 Multi-select works consistently across all views for maximum productivity.
