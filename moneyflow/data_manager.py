@@ -278,15 +278,19 @@ class DataManager:
         Returns:
             Sorted, deduplicated list of all merchants
         """
-        # Start with cached merchants
-        merchants_set = set(self.all_merchants)
+        # Use Polars operations for performance with large merchant lists
+        # Convert cached merchants to Series
+        cached_series = pl.Series("merchant", self.all_merchants)
 
-        # Add merchants from currently loaded transactions
+        # Merge with current merchants if we have loaded data
         if self.df is not None and not self.df.is_empty():
-            current_merchants = self.df["merchant"].unique().to_list()
-            merchants_set.update(current_merchants)
+            current_series = self.df["merchant"].unique()
+            # Concatenate and deduplicate using Polars
+            all_merchants = pl.concat([cached_series, current_series]).unique().sort()
+        else:
+            all_merchants = cached_series.unique().sort()
 
-        return sorted(merchants_set)
+        return all_merchants.to_list()
 
     async def fetch_all_data(
         self,
