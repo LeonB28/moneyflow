@@ -980,8 +980,8 @@ class MoneyflowApp(App):
         if table.cursor_row < 0:
             return
 
-        # Save cursor position
-        saved_cursor_row = table.cursor_row
+        # Save cursor and scroll position
+        saved_position = self._save_table_position()
 
         row_data = self.state.current_data.row(table.cursor_row, named=True)
 
@@ -999,9 +999,8 @@ class MoneyflowApp(App):
             count = len(self.state.selected_group_keys)
             # Refresh view to show checkmark
             self.refresh_view()
-            # Restore cursor position
-            if saved_cursor_row < table.row_count:
-                table.move_cursor(row=saved_cursor_row)
+            # Restore cursor and scroll position
+            self._restore_table_position(saved_position)
             self.notify(f"Selected: {count} group(s)", timeout=1)
 
         elif (
@@ -1014,8 +1013,7 @@ class MoneyflowApp(App):
             self.state.toggle_group_selection(group_name)
             count = len(self.state.selected_group_keys)
             self.refresh_view()
-            if saved_cursor_row < table.row_count:
-                table.move_cursor(row=saved_cursor_row)
+            self._restore_table_position(saved_position)
             self.notify(f"Selected: {count} group(s)", timeout=1)
 
         else:
@@ -1026,9 +1024,8 @@ class MoneyflowApp(App):
                 count = len(self.state.selected_ids)
                 # Refresh view to show checkmark
                 self.refresh_view()
-                # Restore cursor position
-                if saved_cursor_row < table.row_count:
-                    table.move_cursor(row=saved_cursor_row)
+                # Restore cursor and scroll position
+                self._restore_table_position(saved_position)
                 self.notify(f"Selected: {count} transaction(s)", timeout=1)
 
     def action_select_all(self) -> None:
