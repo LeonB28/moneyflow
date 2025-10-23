@@ -168,15 +168,11 @@ class EditMerchantScreen(ModalScreen):
         merchant_input = self.query_one("#merchant-input", Input)
         user_input = merchant_input.value.strip()
 
-        # Filter merchants
-        if query and query != self.current_merchant.lower():
-            matches = [
-                m
-                for m in self.all_merchants
-                if m and query in m.lower() and m != self.current_merchant
-            ]
+        # Filter merchants (include current merchant in results)
+        if query:
+            matches = [m for m in self.all_merchants if m and query in m.lower()]
         else:
-            matches = [m for m in self.all_merchants if m and m != self.current_merchant]
+            matches = list(self.all_merchants)
 
         # Update count
         count_widget.update(f"{len(matches)} matching merchants - ↑/↓=Navigate | Enter=Select")
@@ -222,10 +218,18 @@ class EditMerchantScreen(ModalScreen):
             if option_id.startswith("__new__:"):
                 # Extract the actual merchant name after the prefix
                 new_merchant = option_id[8:]  # Remove "__new__:" prefix
-                self.dismiss(new_merchant)
+                # Don't queue no-op edit
+                if new_merchant == self.current_merchant:
+                    self.dismiss(None)
+                else:
+                    self.dismiss(new_merchant)
             else:
                 # Existing merchant selected
-                self.dismiss(option_id)
+                # Don't queue no-op edit
+                if option_id == self.current_merchant:
+                    self.dismiss(None)
+                else:
+                    self.dismiss(option_id)
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "cancel-button":
@@ -258,7 +262,12 @@ class EditMerchantScreen(ModalScreen):
 
             # If there's any existing match, auto-select the first one
             if first_existing:
-                self.dismiss(str(first_existing.id))
+                selected_merchant = str(first_existing.id)
+                # Don't queue no-op edit if selecting current merchant
+                if selected_merchant == self.current_merchant:
+                    self.dismiss(None)
+                else:
+                    self.dismiss(selected_merchant)
                 return
 
         # No existing matches - save the typed value as new merchant
@@ -438,7 +447,12 @@ class SelectCategoryScreen(ModalScreen):
     async def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         """Handle category selection with Enter key."""
         if event.option.id:
-            self.dismiss(str(event.option.id))
+            selected_cat_id = str(event.option.id)
+            # Don't queue no-op edit if selecting current category
+            if selected_cat_id == self.current_category_id:
+                self.dismiss(None)
+            else:
+                self.dismiss(selected_cat_id)
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle Enter key in search - auto-select if only one match."""
@@ -449,11 +463,21 @@ class SelectCategoryScreen(ModalScreen):
         if option_list.option_count == 1:
             # Auto-select the single match
             highlighted_option = option_list.get_option_at_index(0)
-            self.dismiss(str(highlighted_option.id))
+            selected_cat_id = str(highlighted_option.id)
+            # Don't queue no-op edit if selecting current category
+            if selected_cat_id == self.current_category_id:
+                self.dismiss(None)
+            else:
+                self.dismiss(selected_cat_id)
         elif option_list.option_count > 1 and option_list.highlighted is not None:
             # If there are multiple matches but one is highlighted, select it
             highlighted_option = option_list.get_option_at_index(option_list.highlighted)
-            self.dismiss(str(highlighted_option.id))
+            selected_cat_id = str(highlighted_option.id)
+            # Don't queue no-op edit if selecting current category
+            if selected_cat_id == self.current_category_id:
+                self.dismiss(None)
+            else:
+                self.dismiss(selected_cat_id)
 
     def on_key(self, event: Key) -> None:
         """Handle keyboard shortcuts."""
