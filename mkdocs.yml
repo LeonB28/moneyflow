@@ -110,7 +110,6 @@ nav:
     - Quick Start: getting-started/quickstart.md
   - User Guide:
     - Navigation & Search: guide/navigation.md
-    - Drill-Down & Sub-Grouping: guide/drill-down.md
     - Editing Transactions: guide/editing.md
     - Filters: guide/filters.md
     - Keyboard Shortcuts: guide/keyboard-shortcuts.md
