@@ -448,6 +448,15 @@ class DataManager:
                     break
 
                 batch_transactions.extend(batch_results)
+
+                # Show incremental progress after each batch
+                if progress_callback and total_count:
+                    downloaded = len(batch_transactions)
+                    hide_label = "hidden" if hide_value else "visible"
+                    progress_callback(
+                        f"Downloaded {downloaded:,}/{total_count:,} {hide_label} transactions..."
+                    )
+
                 offset += batch_size
                 batch_num += 1
 
