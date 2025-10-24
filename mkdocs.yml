@@ -118,7 +118,6 @@ nav:
     - Monarch Money: guide/monarch.md
     - Amazon Mode: guide/amazon-mode.md
   - Configuration:
-    - Credentials: config/credentials.md
     - Caching: config/caching.md
     - Advanced Options: config/advanced.md
   - Reference:
@@ -129,4 +128,3 @@ nav:
     - Developing moneyflow: development/developing.md
     - Contributing: development/contributing.md
     - Architecture: development/architecture.md
-    - Testing: development/testing.md

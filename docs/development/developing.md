@@ -63,13 +63,17 @@ uv run pytest -v  # Ensure clean starting point
 ```bash
 # Make your changes
 
-# Run tests
-uv run pytest -v
+# Run all code quality checks
+uv run pytest -v                          # Tests must pass
+uv run pyright moneyflow/                 # Type checking
+uv run ruff format --check moneyflow/ tests/  # Code formatting
+uv run ruff check moneyflow/ tests/       # Linting
 
-# Check types (for new code)
-uv run pyright moneyflow/
+# Auto-fix formatting and linting issues
+uv run ruff format moneyflow/ tests/
+uv run ruff check --fix moneyflow/ tests/
 
-# Commit
+# Commit (only if all checks pass)
 git add -A
 git commit -m "your message"
 ```
@@ -103,30 +107,51 @@ See `.github/workflows/test.yml` for details.
 ## Release Process
 
 ```bash
-# 1. Bump version in pyproject.toml
+# 1. Bump version (runs all quality checks automatically)
+./scripts/bump-version.sh 0.x.y
 
-# 2. Test build
-uv build
+# 2. Review the version bump commit
+git show
 
-# 3. Publish to PyPI
-uv publish
-
-# 4. Push to GitHub
+# 3. Push to GitHub
 git push && git push --tags
+
+# 4. Publish to PyPI (if authorized)
+./scripts/publish-pypi.sh
 ```
+
+The bump-version.sh script automatically:
+- Runs all tests
+- Runs type checking (pyright)
+- Checks code formatting (ruff format)
+- Runs linter (ruff check)
+- Updates version in pyproject.toml and mkdocs.yml
+- Updates uv.lock
+- Creates commit and git tag
+
+This ensures releases never have failing tests or code quality issues.
 
 ## Troubleshooting
 
 **Tests fail after `git pull`:**
 ```bash
-uv sync
-uv pip install -e .
+uv sync  # Sync dependencies
 ```
 
-**Import errors:**
+**Import errors or stale cache:**
 ```bash
+# Clear Python cache
 find . -type d -name __pycache__ -exec rm -rf {} +
+
+# Reinstall dependencies
 uv sync --reinstall
+```
+
+**Module not found errors:**
+```bash
+# Ensure you're using uv run
+uv run pytest -v  # Correct
+pytest -v         # Wrong - won't find modules
 ```
 
 ## Getting Help
