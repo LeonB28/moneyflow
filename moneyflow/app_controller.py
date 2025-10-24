@@ -126,6 +126,10 @@ class AppController:
             # COUNT sort is invalid for detail views - reset to DATE descending
             self.state.sort_by = SortMode.DATE
             self.state.sort_direction = SortDirection.DESC
+        elif (is_aggregate_view or is_sub_grouped) and self.state.sort_by == SortMode.DATE:
+            # DATE sort is invalid for aggregate views - reset to AMOUNT descending
+            self.state.sort_by = SortMode.AMOUNT
+            self.state.sort_direction = SortDirection.DESC
 
         # Prepare view data based on current state
         if self.state.view_mode in [

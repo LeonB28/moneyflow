@@ -1358,6 +1358,40 @@ class TestSortFieldValidation:
         assert controller.state.sort_by == SortMode.MERCHANT
         assert controller.state.sort_direction == SortDirection.ASC
 
+    async def test_date_sort_reset_in_aggregate_view(self, controller, mock_view):
+        """DATE sort should be reset to AMOUNT in aggregate views."""
+        # Setup: Merchant view with DATE sort (invalid)
+        controller.state.view_mode = ViewMode.MERCHANT
+        controller.state.sort_by = SortMode.DATE
+        controller.state.sort_direction = SortDirection.ASC
+
+        # Refresh view - should auto-reset sort
+        controller.refresh_view()
+
+        # Verify: Sort reset to AMOUNT DESC
+        assert controller.state.sort_by == SortMode.AMOUNT
+        assert controller.state.sort_direction == SortDirection.DESC
+
+    async def test_date_sort_reset_when_going_back_to_aggregate(self, controller, mock_view):
+        """DATE sort should reset when going back from detail to aggregate view."""
+        # Simulate: Press 'd' for detail view (DATE sort), then Escape to go back
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.state.sort_by = SortMode.DATE
+
+        # User presses 'd' -> switches to detail view with DATE sort
+        # Then user presses Escape -> should go back to aggregate view
+
+        # Simulate go_back() restoring aggregate view with DATE sort
+        controller.state.view_mode = ViewMode.MERCHANT
+        # sort_by is still DATE from detail view
+
+        # Refresh view - should reset DATE to AMOUNT
+        controller.refresh_view()
+
+        # Verify: DATE reset to AMOUNT in aggregate view
+        assert controller.state.sort_by == SortMode.AMOUNT
+        assert controller.state.sort_direction == SortDirection.DESC
+
 
 class TestMultiSelectGroups:
     """Tests for multi-selecting groups in aggregate views."""
@@ -1419,3 +1453,4 @@ class TestMultiSelectGroups:
 
         assert len(controller.state.selected_group_keys) == 0
         assert len(controller.state.selected_ids) == 0
+
