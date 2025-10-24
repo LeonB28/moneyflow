@@ -80,7 +80,7 @@ Select multiple transactions to edit them all at once:
 
 ### Single Group Edit
 
-From any aggregate view (Merchants, Categories, Groups, Accounts), press ++m++ or ++c++ to edit ALL transactions in that group:
+From any aggregate view (Merchants, Categories, Groups, Accounts), press ++m++, ++c++, or ++h++ to edit ALL transactions in that group:
 
 ![Bulk edit merchant modal](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-bulk-edit-merchant.png)
 
@@ -109,13 +109,18 @@ You can now select **multiple groups** and bulk edit all their transactions at o
 
 <!-- TODO: Add screenshot of multiple selected merchants with ✓ marks -->
 
+**Available bulk operations:**
+- ++m++ - Rename merchant for all transactions in selected groups
+- ++c++ - Change category for all transactions in selected groups
+- ++h++ - Hide/unhide all transactions in selected groups from reports
+
 This works in **all aggregate views**:
 
-- **Merchants view** - Select multiple merchants, bulk edit all their transactions
-- **Categories view** - Select multiple categories, bulk recategorize or rename merchants
-- **Groups view** - Select multiple groups, bulk edit
-- **Accounts view** - Select multiple accounts, bulk edit
-- **Sub-grouped views** - Select multiple sub-groups within drill-down
+- **Merchants view** - Select multiple merchants, edit all their transactions
+- **Categories view** - Select multiple categories, edit all their transactions
+- **Groups view** - Select multiple groups, edit all their transactions
+- **Accounts view** - Select multiple accounts, edit all their transactions
+- **Sub-grouped views** - Select multiple sub-groups, edit all their transactions
 
 **Visual indicators:**
 
@@ -168,20 +173,24 @@ This works in **all aggregate views**:
 
 Made a mistake while queueing edits? Press `u` to undo the most recent pending edit.
 
-**How undo works:**
-- Removes the last edit from your pending changes queue
-- Press `u` multiple times to undo edits in reverse order (last in, first out)
-- Preserves your cursor position and scroll state
-- Shows notification: "Undone {Field} edit (N remaining)"
-- Only affects pending edits - committed changes cannot be undone
+**How it works:**
+
+- **Removes last edit** - Edits are undone in reverse order (last in, first out)
+- **Press multiple times** - Each `u` press removes one more edit
+- **Preserves position** - Cursor and scroll stay where they are
+- **Shows feedback** - Notification displays: "Undone {Field} edit (N remaining)"
+- **Pending only** - Committed changes cannot be undone
 
 **Example workflow:**
-1. Edit merchant on transaction 1 → queued
-2. Edit merchant on transaction 2 → queued
-3. Edit category on transaction 3 → queued
-4. Press `u` → undoes category edit (most recent)
-5. Press `u` → undoes merchant edit on transaction 2
-6. Press `u` → undoes merchant edit on transaction 1
+
+1. **Edit merchant** - Change transaction 1 merchant → queued
+2. **Edit merchant** - Change transaction 2 merchant → queued
+3. **Edit category** - Change transaction 3 category → queued
+4. **Press `u`** - Undoes category edit (most recent)
+5. **Press `u`** - Undoes merchant edit on transaction 2
+6. **Press `u`** - Undoes merchant edit on transaction 1
+
+**When to use:**
 
 This is useful when you've queued multiple edits and realize one was a mistake, without having to discard all your pending changes.
 
