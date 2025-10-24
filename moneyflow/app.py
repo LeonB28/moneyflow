@@ -1359,41 +1359,22 @@ class MoneyflowApp(App):
             self.notify("No transactions to toggle", timeout=2)
             return
 
-        # Check if all transactions in this selection already have pending hide toggles
-        # If so, this is an undo operation (remove the pending edits)
-        pending_hide_txn_ids = {
-            edit.transaction_id
-            for edit in self.data_manager.pending_edits
-            if edit.field == "hide_from_reports"
-        }
-        current_txn_ids = set(context.transactions["id"].to_list())
-        all_have_pending = current_txn_ids.issubset(pending_hide_txn_ids)
+        # Execute hide toggle via controller (includes undo detection)
+        count, was_undo = self.controller.toggle_hide_current_selection(cursor_row=cursor_row)
 
-        if all_have_pending:
-            # Undo: Remove all pending hide toggles for these transactions
-            edits_to_remove = [
-                edit
-                for edit in self.data_manager.pending_edits
-                if edit.field == "hide_from_reports" and edit.transaction_id in current_txn_ids
-            ]
+        # Clear selection if multi-select
+        if context.is_multi_select:
+            self.state.clear_selection()
 
-            for edit in edits_to_remove:
-                self.data_manager.pending_edits.remove(edit)
-
-            count = len(edits_to_remove)
+        # Display appropriate message
+        if was_undo:
             self.notify(
                 f"Reverted hide/unhide for {count} transactions",
                 severity="information",
                 timeout=2,
             )
         else:
-            # Normal toggle: Execute hide toggle via controller
-            count = self.controller.toggle_hide_current_selection(cursor_row=cursor_row)
             self.notify(f"Toggled hide/unhide for {count} transactions. Press w to commit.", timeout=3)
-
-        # Clear selection if multi-select
-        if context.is_multi_select:
-            self.state.clear_selection()
 
         self.refresh_view()
         self._restore_table_position(saved_position)

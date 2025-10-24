@@ -1130,29 +1130,57 @@ class AppController:
 
         return count
 
-    def toggle_hide_current_selection(self, cursor_row: int = 0) -> int:
+    def toggle_hide_current_selection(self, cursor_row: int = 0) -> tuple[int, bool]:
         """
-        Toggle hide/unhide for current selection (context-aware).
+        Toggle hide/unhide for current selection (context-aware with undo detection).
 
-        Handles all hide/unhide scenarios using the same orchestration pattern.
+        Handles all hide/unhide scenarios:
+        - If all transactions already have pending hide toggles → undo (remove edits)
+        - Otherwise → queue new hide toggle edits
+
+        This allows pressing 'h' twice on the same group to undo the first operation,
+        which is better UX than requiring 50 'u' presses for a 50-transaction group.
 
         Args:
             cursor_row: Current cursor row (for single-item edits)
 
         Returns:
-            Number of edits queued
+            Tuple of (count: int, was_undo: bool)
+            - count: Number of edits queued or undone
+            - was_undo: True if this was an undo operation, False if new toggles
         """
         # Determine what to edit (use "merchant" as placeholder - hide works on any context)
         context = self.determine_edit_context("merchant", cursor_row=cursor_row)
 
         # No transactions to edit
         if context.transactions.is_empty():
-            return 0
+            return (0, False)
 
-        # Queue hide toggle edits using existing helper
-        count = self.queue_hide_toggle_edits(context.transactions)
+        # Check if all transactions in this selection already have pending hide toggles
+        pending_hide_txn_ids = {
+            edit.transaction_id
+            for edit in self.data_manager.pending_edits
+            if edit.field == "hide_from_reports"
+        }
+        current_txn_ids = set(context.transactions["id"].to_list())
+        all_have_pending = current_txn_ids.issubset(pending_hide_txn_ids)
 
-        return count
+        if all_have_pending:
+            # Undo: Remove all pending hide toggles for these transactions
+            edits_to_remove = [
+                edit
+                for edit in self.data_manager.pending_edits
+                if edit.field == "hide_from_reports" and edit.transaction_id in current_txn_ids
+            ]
+
+            for edit in edits_to_remove:
+                self.data_manager.pending_edits.remove(edit)
+
+            return (len(edits_to_remove), True)
+        else:
+            # Normal toggle: Queue new hide toggle edits
+            count = self.queue_hide_toggle_edits(context.transactions)
+            return (count, False)
 
     def queue_category_edits(self, transactions_df, new_category_id: str) -> int:
         """
