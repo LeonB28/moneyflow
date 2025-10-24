@@ -141,100 +141,17 @@ moneyflow amazon --db-path ~/custom.db status
 
 ## UI Navigation
 
-Amazon mode uses the same keyboard shortcuts as Monarch mode:
+Amazon mode uses the same keyboard shortcuts as Monarch mode. See [Keyboard Shortcuts](keyboard-shortcuts.md) for the complete reference.
 
-### View Modes
-- `g` - Cycle between Item and Category views
-- `d` - View all transactions (detail view)
+**View name mappings:**
 
-### Time Navigation
-- `y` - Current year
-- `t` - Current month
-- `a` - All time
-- `←/→` - Previous/next period
+In Amazon mode, views reflect Amazon purchase data:
+- **Item** (instead of Merchant) - Product names
+- **Category** - Product categories
+- **Order ID** (instead of Group) - Group by Amazon order
+- Account view is not available
 
-### Editing
-- `m` - Edit item name
-- `c` - Edit category
-- `h` - Hide/unhide from reports
-- `Space` - Multi-select for bulk operations
-- `u` - Undo most recent pending edit
-- `w` - Review and commit changes
-
-### Other
-- `?` - Show help
-- `q` - Quit
-
-See [Keyboard Shortcuts](keyboard-shortcuts.md) for the complete list.
-
-## Data Model
-
-### Transactions
-
-Each Amazon purchase is stored as a transaction with:
-
-- **ID**: Generated from ASIN + Order ID (for deduplication)
-- **Date**: Order date
-- **Merchant**: Product name (displayed as "Merchant" in UI)
-- **Category**: Automatically assigned from category mappings (editable)
-- **Amount**: Total Owed (negative, like expenses)
-- **Quantity**: Number of items ordered
-- **ASIN**: Amazon product identifier
-- **Order ID**: Amazon order number
-- **Order Status**: Order state (Closed, New, etc.)
-- **Shipment Status**: Shipping state (Shipped, Delivered, etc.)
-- **Notes**: Additional info (e.g., order details)
-- **Hide from Reports**: Toggle visibility
-
-### Categories
-
-Categories are assigned automatically using moneyflow's centralized category module (shared with Monarch mode). You can:
-- Edit category assignments in the UI
-- View spending by category
-- Categories are NOT stored in the database - they come from `categories.py`
-
-## Database
-
-Amazon data is stored in a local SQLite database (default: `~/.moneyflow/amazon.db`).
-
-**Tables:**
-- `transactions` - Order records (one row per item)
-- `import_history` - Audit trail of imports
-
-**To inspect directly:**
-```bash
-sqlite3 ~/.moneyflow/amazon.db
-.tables
-SELECT * FROM import_history;
-SELECT COUNT(*) FROM transactions WHERE order_status = 'Closed';
-.quit
-```
-
-**To start fresh:**
-```bash
-# Delete database
-rm ~/.moneyflow/amazon.db
-
-# Re-import
-moneyflow amazon import ~/Downloads/"Your Orders"
-```
-
-## Limitations
-
-- **Read-only**: No sync back to Amazon (local edits only)
-- **Manual data export**: Requires requesting "Your Orders" export from Amazon
-- **No live updates**: Must re-request data from Amazon to get new orders
-- **Item-level only**: Each item in an order is a separate transaction (no order grouping)
-
-## Future Enhancements
-
-Planned improvements:
-- Order-level grouping (link items from same order)
-- Seller name extraction and filtering
-- Returns and refunds tracking
-- Subscription detection
-- Amazon category to moneyflow category mapping improvements
-- Custom category rules
+All other navigation, editing, and search shortcuts work the same as in Monarch mode.
 
 ## Troubleshooting
 
