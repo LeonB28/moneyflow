@@ -33,35 +33,22 @@ Press `g` to cycle through aggregate views. Aggregate views group your transacti
 </tr>
 </table>
 
-**Merchant View**
-- Groups all transactions by merchant name
-- Displays: Merchant name, transaction count, total amount
-- Use this to see your spending patterns by store or service
-- Example: See total spent at Amazon across all time
+| View | What It Shows | Use For |
+|------|---------------|---------|
+| **Merchant** | Spending by store/service | See patterns by merchant (e.g., total spent at Amazon) |
+| **Category** | Spending by category | Identify which categories consume your budget |
+| **Group** | Spending by category group | Monthly budget reviews, broad spending patterns |
+| **Account** | Spending by payment method | Reconciliation, per-account spending analysis |
 
-**Category View**
-- Groups transactions by spending category
-- Displays: Category name, transaction count, total amount
-- Quickly identify which spending categories are consuming your budget
-- Example: See total spent on "Groceries" or "Dining"
+Each view displays: Name, Count (# of transactions), Total (amount spent)
 
-**Group View**
-- Groups transactions by high-level category groups
-- Displays: Group name, transaction count, total amount
-- Best for monthly budget reviews and understanding broad spending patterns
-- Examples: Food & Dining, Travel, Housing, Income
+**Amazon Mode note:**
 
-**Account View**
-- Groups transactions by bank account or credit card
-- Displays: Account name, transaction count, total amount
-- Useful for reconciliation and tracking spending patterns by payment method
-- Example: See which credit card you use most often
-
-**Amazon Mode**: View names reflect Amazon purchase data rather than financial transactions:
-- Merchant → Item (individual product names)
-- Category → Category (Amazon product categories)
-- Group → Order ID (group purchases by Amazon order)
-- Account view is not available in Amazon mode
+In Amazon mode, view names are different:
+- **Merchant → Item** (product names)
+- **Category → Category** (product categories)
+- **Group → Order ID** (group by Amazon order)
+- **Account** view not available
 
 ### Detail View
 
