@@ -1809,6 +1809,9 @@ class MoneyflowApp(App):
             self.notify("Hide/unhide only works in transaction or aggregate views", timeout=2)
             return
 
+        # Save cursor and scroll position before any changes
+        saved_position = self._save_table_position()
+
         # Check if multi-select is active
         if len(self.state.selected_ids) > 0:
             # Use controller helper to queue toggle edits for all selected
@@ -1823,6 +1826,8 @@ class MoneyflowApp(App):
                 timeout=3,
             )
             self.refresh_view()
+            # Restore cursor and scroll position
+            self._restore_table_position(saved_position)
         else:
             # Toggle single transaction
             row_data = self.state.current_data.row(table.cursor_row, named=True)
@@ -1834,9 +1839,6 @@ class MoneyflowApp(App):
                 if edit.transaction_id == txn_id and edit.field == "hide_from_reports":
                     existing_edit = edit
                     break
-
-            # Save cursor position before refresh
-            saved_cursor_row = table.cursor_row
 
             if existing_edit:
                 # Remove the pending edit (undo the toggle)
@@ -1852,9 +1854,8 @@ class MoneyflowApp(App):
                 self.notify(f"{action} from reports. Press w to commit.", timeout=2)
 
             self.refresh_view()
-            # Restore cursor position
-            if saved_cursor_row < table.row_count:
-                table.move_cursor(row=saved_cursor_row)
+            # Restore cursor and scroll position
+            self._restore_table_position(saved_position)
 
     def action_show_transaction_details(self) -> None:
         """Show detailed information about current transaction."""
