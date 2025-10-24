@@ -17,8 +17,10 @@ The controller does NOT:
 - Manage keyboard bindings (that's UI layer)
 """
 
+from dataclasses import dataclass
 from datetime import date as date_type
 from datetime import datetime
+from enum import Enum
 from typing import List, Optional
 
 import polars as pl
@@ -32,6 +34,62 @@ from .time_navigator import TimeNavigator
 from .view_interface import IViewPresenter
 
 logger = get_logger(__name__)
+
+
+class EditMode(Enum):
+    """
+    Edit operation modes based on current view and selection state.
+
+    Determines how an edit operation should be executed:
+    - Which transactions to edit
+    - What the current value is
+    - How to display the operation to the user
+    """
+
+    AGGREGATE_SINGLE = (
+        "aggregate_single"  # Press m on one merchant/category/group in aggregate view
+    )
+    AGGREGATE_MULTI = "aggregate_multi"  # Multi-select groups, then press m
+    DETAIL_SINGLE = "detail_single"  # Press m on one transaction in detail view
+    DETAIL_MULTI = "detail_multi"  # Multi-select transactions, then press m
+    SUBGROUP_SINGLE = "subgroup_single"  # Press m in sub-grouped view (one row)
+    SUBGROUP_MULTI = "subgroup_multi"  # Multi-select in sub-grouped view
+
+
+@dataclass
+class EditContext:
+    """
+    Context for an edit operation - encapsulates all information needed to execute an edit.
+
+    This separates business logic (what to edit) from UI logic (how to show the modal).
+    Makes edit operations testable without requiring the TUI.
+
+    Attributes:
+        mode: Type of edit operation (aggregate single/multi, detail single/multi, etc.)
+        transactions: DataFrame of transactions to edit
+        current_value: Current value of the field being edited (for display/validation)
+        field_name: Name of field being edited ("merchant", "category", etc.)
+        is_multi_select: Whether multiple items are selected
+        transaction_count: Number of transactions affected
+        group_field: For aggregate edits, which field groups transactions (merchant/category/group/account)
+    """
+
+    mode: EditMode
+    transactions: pl.DataFrame
+    current_value: Optional[str]
+    field_name: str
+    is_multi_select: bool
+    transaction_count: int
+    group_field: Optional[str] = None
+
+    def get_display_summary(self) -> str:
+        """Get human-readable summary of edit operation."""
+        if self.is_multi_select:
+            return f"Editing {self.transaction_count} transactions from multiple selections"
+        elif self.mode in [EditMode.AGGREGATE_SINGLE, EditMode.SUBGROUP_SINGLE]:
+            return f"Editing all {self.transaction_count} transactions"
+        else:
+            return f"Editing {self.transaction_count} transaction(s)"
 
 
 class AppController:
@@ -716,6 +774,385 @@ class AppController:
                 return "Esc/g=Back | m=✏️ Merchant | c=✏️ Category | h=Hide | x=Delete | Space=Select | Ctrl-A=SelectAll"
             else:
                 return "g=Group | m=✏️ Merchant | c=✏️ Category | h=Hide | x=Delete | Space=Select | Ctrl-A=SelectAll"
+
+    # Edit Orchestration Methods (Phase 1 Refactoring)
+
+    def determine_edit_context(self, field_name: str, cursor_row: int = 0) -> EditContext:
+        """
+        Determine edit context based on current view and selection state.
+
+        This method encapsulates the complex logic for determining what to edit
+        based on the current view (aggregate vs detail), selection state (single vs multi),
+        and drill-down context (sub-grouped vs ungrouped).
+
+        Args:
+            field_name: Field to edit ("merchant" or "category")
+            cursor_row: Current cursor row position (for single-item edits)
+
+        Returns:
+            EditContext with all information needed to execute the edit
+
+        Examples:
+            >>> # Merchant view, press m on Amazon
+            >>> context = controller.determine_edit_context("merchant", cursor_row=5)
+            >>> context.mode
+            EditMode.AGGREGATE_SINGLE
+            >>> len(context.transactions)  # All Amazon transactions
+            50
+        """
+        # Determine view type
+        is_aggregate = self.state.view_mode in [
+            ViewMode.MERCHANT,
+            ViewMode.CATEGORY,
+            ViewMode.GROUP,
+            ViewMode.ACCOUNT,
+        ]
+        is_detail = self.state.view_mode == ViewMode.DETAIL
+        is_subgrouped = self.state.is_drilled_down() and self.state.sub_grouping_mode is not None
+
+        # Determine selection state
+        has_selected_ids = len(self.state.selected_ids) > 0
+        has_selected_groups = len(self.state.selected_group_keys) > 0
+
+        # Get filtered data
+        filtered_df = self.state.get_filtered_df()
+        if filtered_df is None or filtered_df.is_empty():
+            # Return empty context
+            return EditContext(
+                mode=EditMode.DETAIL_SINGLE,
+                transactions=pl.DataFrame(),
+                current_value=None,
+                field_name=field_name,
+                is_multi_select=False,
+                transaction_count=0,
+                group_field=None,
+            )
+
+        # Handle aggregate views (Merchant, Category, Group, Account)
+        if is_aggregate:
+            return self._determine_aggregate_edit_context(
+                field_name, cursor_row, filtered_df, has_selected_groups
+            )
+
+        # Handle sub-grouped views (drilled down with sub-grouping)
+        if is_subgrouped:
+            return self._determine_subgroup_edit_context(
+                field_name, cursor_row, filtered_df, has_selected_groups
+            )
+
+        # Handle detail views
+        if is_detail:
+            return self._determine_detail_edit_context(
+                field_name, cursor_row, filtered_df, has_selected_ids
+            )
+
+        # Fallback (shouldn't reach here)
+        return EditContext(
+            mode=EditMode.DETAIL_SINGLE,
+            transactions=pl.DataFrame(),
+            current_value=None,
+            field_name=field_name,
+            is_multi_select=False,
+            transaction_count=0,
+            group_field=None,
+        )
+
+    def _determine_aggregate_edit_context(
+        self, field_name: str, cursor_row: int, filtered_df: pl.DataFrame, has_selected_groups: bool
+    ) -> EditContext:
+        """Determine edit context for aggregate views."""
+        # Map view mode to field name
+        field_map = {
+            ViewMode.MERCHANT: "merchant",
+            ViewMode.CATEGORY: "category",
+            ViewMode.GROUP: "group",
+            ViewMode.ACCOUNT: "account",
+        }
+        group_field = field_map[self.state.view_mode]
+
+        if has_selected_groups:
+            # Multi-select: get transactions from all selected groups
+            transactions = self.get_transactions_from_selected_groups(group_field)
+            return EditContext(
+                mode=EditMode.AGGREGATE_MULTI,
+                transactions=transactions,
+                current_value="multiple",  # Special marker for multi-select
+                field_name=field_name,
+                is_multi_select=True,
+                transaction_count=len(transactions),
+                group_field=group_field,
+            )
+        else:
+            # Single selection: get transactions from current row
+            if self.state.current_data is None or cursor_row >= len(self.state.current_data):
+                return EditContext(
+                    mode=EditMode.AGGREGATE_SINGLE,
+                    transactions=pl.DataFrame(),
+                    current_value=None,
+                    field_name=field_name,
+                    is_multi_select=False,
+                    transaction_count=0,
+                    group_field=group_field,
+                )
+
+            current_row = self.state.current_data.row(cursor_row, named=True)
+            group_name = str(current_row.get(self.state.current_data.columns[0]))
+
+            # Get all transactions for this group
+            if group_field == "merchant":
+                transactions = self.data_manager.filter_by_merchant(filtered_df, group_name)
+            elif group_field == "category":
+                transactions = self.data_manager.filter_by_category(filtered_df, group_name)
+            elif group_field == "group":
+                transactions = self.data_manager.filter_by_group(filtered_df, group_name)
+            elif group_field == "account":
+                transactions = self.data_manager.filter_by_account(filtered_df, group_name)
+            else:
+                transactions = pl.DataFrame()
+
+            # For merchant edits, current_value is the merchant name
+            # For category edits in merchant view, current_value is the first category or None
+            if field_name == group_field:
+                current_value = group_name
+            else:
+                current_value = None
+
+            return EditContext(
+                mode=EditMode.AGGREGATE_SINGLE,
+                transactions=transactions,
+                current_value=current_value,
+                field_name=field_name,
+                is_multi_select=False,
+                transaction_count=len(transactions),
+                group_field=group_field,
+            )
+
+    def _determine_subgroup_edit_context(
+        self, field_name: str, cursor_row: int, filtered_df: pl.DataFrame, has_selected_groups: bool
+    ) -> EditContext:
+        """Determine edit context for sub-grouped views (drilled down with sub-grouping)."""
+        # Determine the field based on sub-grouping mode
+        field_map = {
+            ViewMode.MERCHANT: "merchant",
+            ViewMode.CATEGORY: "category",
+            ViewMode.GROUP: "group",
+            ViewMode.ACCOUNT: "account",
+        }
+        group_field = (
+            field_map[self.state.sub_grouping_mode]
+            if self.state.sub_grouping_mode in field_map
+            else "merchant"
+        )
+
+        if has_selected_groups:
+            # Multi-select in sub-grouped view
+            transactions = self.get_transactions_from_selected_groups(group_field)
+            return EditContext(
+                mode=EditMode.SUBGROUP_MULTI,
+                transactions=transactions,
+                current_value="multiple",
+                field_name=field_name,
+                is_multi_select=True,
+                transaction_count=len(transactions),
+                group_field=group_field,
+            )
+        else:
+            # Single selection in sub-grouped view
+            if self.state.current_data is None or cursor_row >= len(self.state.current_data):
+                return EditContext(
+                    mode=EditMode.SUBGROUP_SINGLE,
+                    transactions=pl.DataFrame(),
+                    current_value=None,
+                    field_name=field_name,
+                    is_multi_select=False,
+                    transaction_count=0,
+                    group_field=group_field,
+                )
+
+            current_row = self.state.current_data.row(cursor_row, named=True)
+            group_name = str(current_row.get(self.state.current_data.columns[0]))
+
+            # Get transactions for this sub-group
+            if group_field == "merchant":
+                transactions = self.data_manager.filter_by_merchant(filtered_df, group_name)
+            elif group_field == "category":
+                transactions = self.data_manager.filter_by_category(filtered_df, group_name)
+            elif group_field == "group":
+                transactions = self.data_manager.filter_by_group(filtered_df, group_name)
+            elif group_field == "account":
+                transactions = self.data_manager.filter_by_account(filtered_df, group_name)
+            else:
+                transactions = pl.DataFrame()
+
+            return EditContext(
+                mode=EditMode.SUBGROUP_SINGLE,
+                transactions=transactions,
+                current_value=group_name if field_name == group_field else None,
+                field_name=field_name,
+                is_multi_select=False,
+                transaction_count=len(transactions),
+                group_field=group_field,
+            )
+
+    def _determine_detail_edit_context(
+        self, field_name: str, cursor_row: int, filtered_df: pl.DataFrame, has_selected_ids: bool
+    ) -> EditContext:
+        """Determine edit context for detail views (transaction list)."""
+        if has_selected_ids:
+            # Multi-select: get all selected transactions
+            transactions = self.state.current_data.filter(
+                pl.col("id").is_in(list(self.state.selected_ids))
+            )
+            # For multi-select, current_value is from first transaction or None
+            if not transactions.is_empty():
+                first_row = transactions.row(0, named=True)
+                current_value = first_row.get(field_name)
+            else:
+                current_value = None
+
+            return EditContext(
+                mode=EditMode.DETAIL_MULTI,
+                transactions=transactions,
+                current_value=current_value,
+                field_name=field_name,
+                is_multi_select=True,
+                transaction_count=len(transactions),
+                group_field=None,
+            )
+        else:
+            # Single transaction
+            if self.state.current_data is None or cursor_row >= len(self.state.current_data):
+                return EditContext(
+                    mode=EditMode.DETAIL_SINGLE,
+                    transactions=pl.DataFrame(),
+                    current_value=None,
+                    field_name=field_name,
+                    is_multi_select=False,
+                    transaction_count=0,
+                    group_field=None,
+                )
+
+            # Get single transaction
+            single_txn_row = self.state.current_data.row(cursor_row, named=True)
+            txn_id = single_txn_row["id"]
+            transactions = self.state.current_data.filter(pl.col("id") == txn_id)
+            current_value = single_txn_row.get(field_name)
+
+            return EditContext(
+                mode=EditMode.DETAIL_SINGLE,
+                transactions=transactions,
+                current_value=current_value,
+                field_name=field_name,
+                is_multi_select=False,
+                transaction_count=1,
+                group_field=None,
+            )
+
+    def edit_merchant_current_selection(self, new_merchant: str, cursor_row: int = 0) -> int:
+        """
+        Edit merchant for current selection (context-aware).
+
+        This method handles all merchant edit scenarios:
+        - Aggregate view: Edit all transactions for selected merchant(s)
+        - Detail view: Edit selected transaction(s)
+        - Sub-grouped view: Edit transactions in selected sub-group(s)
+
+        Uses determine_edit_context() to figure out what to edit, then queues the edits.
+
+        Args:
+            new_merchant: New merchant name to apply
+            cursor_row: Current cursor row (for single-item edits)
+
+        Returns:
+            Number of edits queued (0 if validation failed or no-op)
+
+        Examples:
+            >>> # Merchant view, press m on Amazon, type "Amazon.com"
+            >>> count = controller.edit_merchant_current_selection("Amazon.com", cursor_row=5)
+            >>> count  # All Amazon transactions edited
+            50
+        """
+        # Validate input
+        if not new_merchant or not new_merchant.strip():
+            return 0
+
+        new_merchant = new_merchant.strip()
+
+        # Determine what to edit
+        context = self.determine_edit_context("merchant", cursor_row=cursor_row)
+
+        # No transactions to edit
+        if context.transactions.is_empty():
+            return 0
+
+        # Check for no-op: editing to same value
+        # For multi-select, we still queue edits (user explicitly selected multiple items)
+        # For single item, skip if value unchanged
+        if not context.is_multi_select and context.current_value == new_merchant:
+            return 0
+
+        # Determine old_merchant value for queue_merchant_edits
+        # For aggregate edits where we're renaming a merchant, old value is current_value
+        # For other cases (bulk edit from different contexts), use current_value or "multiple"
+        old_merchant = context.current_value if context.current_value else "multiple"
+
+        # Queue the edits using existing helper
+        count = self.queue_merchant_edits(context.transactions, old_merchant, new_merchant)
+
+        return count
+
+    def edit_category_current_selection(self, new_category_id: str, cursor_row: int = 0) -> int:
+        """
+        Edit category for current selection (context-aware).
+
+        Handles all category edit scenarios using the same orchestration pattern as merchant edits.
+
+        Args:
+            new_category_id: New category ID to apply
+            cursor_row: Current cursor row (for single-item edits)
+
+        Returns:
+            Number of edits queued (0 if validation failed or no transactions)
+        """
+        # Validate input
+        if not new_category_id or not new_category_id.strip():
+            return 0
+
+        # Determine what to edit
+        context = self.determine_edit_context("category", cursor_row=cursor_row)
+
+        # No transactions to edit
+        if context.transactions.is_empty():
+            return 0
+
+        # Queue the edits using existing helper
+        count = self.queue_category_edits(context.transactions, new_category_id)
+
+        return count
+
+    def toggle_hide_current_selection(self, cursor_row: int = 0) -> int:
+        """
+        Toggle hide/unhide for current selection (context-aware).
+
+        Handles all hide/unhide scenarios using the same orchestration pattern.
+
+        Args:
+            cursor_row: Current cursor row (for single-item edits)
+
+        Returns:
+            Number of edits queued
+        """
+        # Determine what to edit (use "merchant" as placeholder - hide works on any context)
+        context = self.determine_edit_context("merchant", cursor_row=cursor_row)
+
+        # No transactions to edit
+        if context.transactions.is_empty():
+            return 0
+
+        # Queue hide toggle edits using existing helper
+        count = self.queue_hide_toggle_edits(context.transactions)
+
+        return count
 
     def queue_category_edits(self, transactions_df, new_category_id: str) -> int:
         """

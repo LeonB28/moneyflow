@@ -371,20 +371,32 @@ class SelectCategoryScreen(ModalScreen):
     """
 
     def __init__(
-        self, categories: dict, current_category_id: str = None, transaction_details: dict = None
+        self,
+        categories: dict,
+        current_category_id: str = None,
+        transaction_details: dict = None,
+        transaction_count: int = 1,
     ):
         super().__init__()
         self.categories = categories
         self.current_category_id = current_category_id
         self.category_map = {}  # Maps option index to category ID
         self.transaction_details = transaction_details
+        self.transaction_count = transaction_count
 
     def compose(self) -> ComposeResult:
         with Container(id="category-dialog"):
-            yield Label(
-                "📋 Select Category - Type to filter | ↑/↓=Navigate | Enter=Select",
-                id="category-title",
-            )
+            # Show transaction count in title for bulk operations
+            if self.transaction_count > 1:
+                yield Label(
+                    f"📋 Select Category ({self.transaction_count} transactions) - Type to filter | ↑/↓=Navigate | Enter=Select",
+                    id="category-title",
+                )
+            else:
+                yield Label(
+                    "📋 Select Category - Type to filter | ↑/↓=Navigate | Enter=Select",
+                    id="category-title",
+                )
 
             # Show transaction details if available
             if self.transaction_details:

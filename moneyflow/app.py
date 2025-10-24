@@ -1179,523 +1179,138 @@ class MoneyflowApp(App):
                 self.notify(f"Selected all {count} transaction(s)", timeout=2)
 
     def action_edit_merchant(self) -> None:
-        """Edit merchant name for current selection."""
+        """
+        Edit merchant name for current selection.
+
+        NEW IMPLEMENTATION (Phase 1 Refactoring):
+        Uses controller.edit_merchant_current_selection() which handles all edit modes.
+        """
         if self.data_manager is None:
             return
 
-        # Check if in aggregate view, sub-grouped view, or detail view
-        if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP]:
-            # Aggregate view - edit all transactions for this merchant
-            self.run_worker(self._bulk_edit_merchant_from_aggregate(), exclusive=False)
-        elif self.state.view_mode == ViewMode.DETAIL and self.state.sub_grouping_mode:
-            # Sub-grouped view - treat like aggregate edit
-            self.run_worker(self._bulk_edit_merchant_from_aggregate(), exclusive=False)
-        else:
-            # Detail view - edit selected transaction(s)
-            self.run_worker(self._edit_merchant_detail(), exclusive=False)
+        self.run_worker(self._edit_merchant(), exclusive=False)
 
-    async def _bulk_edit_merchant_from_aggregate(self) -> None:
-        """Edit merchant for all transactions in selected aggregate row(s)."""
-        if self.state.current_data is None:
-            return
+    async def _edit_merchant(self) -> None:
+        """
+        NEW: Simplified merchant edit using controller orchestration.
 
-        # Check if multi-select is active
-        if len(self.state.selected_group_keys) > 0:
-            # Multi-select: edit all transactions from all selected groups
-            await self._bulk_edit_merchant_from_selected_groups()
-            return
+        This replaces ~200 lines of complex branching logic with a simple flow:
+        1. Get merchant suggestions (for autocomplete)
+        2. Get edit context from controller (what to edit)
+        3. Show modal with current value
+        4. Call controller to execute edit
+        5. Display result
 
+        If this works well, will replace old _bulk_edit_merchant_from_aggregate(),
+        _bulk_edit_merchant_from_selected_groups(), and _edit_merchant_detail().
+        """
+        # Get cursor position
         table = self.query_one("#data-table", DataTable)
-        if table.cursor_row < 0:
+        cursor_row = table.cursor_row if table.cursor_row >= 0 else 0
+
+        # Get edit context from controller (determines what to edit)
+        context = self.controller.determine_edit_context("merchant", cursor_row=cursor_row)
+
+        if context.transactions.is_empty():
+            self.notify("No transactions to edit", timeout=2)
             return
 
-        # Get the merchant/category/group from current row
-        row_data = self.state.current_data.row(table.cursor_row, named=True)
-
-        # Determine what field we're grouping by
-        # If in sub-grouping mode, use that instead of view_mode
-        grouping_mode = (
-            self.state.sub_grouping_mode if self.state.sub_grouping_mode else self.state.view_mode
-        )
-
-        if grouping_mode == ViewMode.MERCHANT:
-            merchant_name = row_data["merchant"]
-            transaction_count = row_data["count"]
-            total_amount = row_data["total"]
-
-            # Get list of all merchants for suggestions (includes cached + current)
-            all_merchants = self.controller.get_merchant_suggestions()
-
-            # Pass aggregate summary for bulk edit
-            bulk_summary = {
-                "total_amount": total_amount,
-            }
-
-            # Show edit modal
-            new_merchant = await self.push_screen(
-                EditMerchantScreen(merchant_name, transaction_count, all_merchants, bulk_summary),
-                wait_for_dismiss=True,
-            )
-
-            if new_merchant:
-                # Save cursor and scroll position before refresh
-                saved_position = self._save_table_position()
-
-                # Get all transactions for this merchant
-                filtered_df = self.state.get_filtered_df()
-                merchant_txns = self.data_manager.filter_by_merchant(filtered_df, merchant_name)
-
-                # Use controller helper to queue edits
-                count = self.controller.queue_merchant_edits(
-                    merchant_txns, merchant_name, new_merchant
-                )
-
-                self._notify(NotificationHelper.edit_queued(count))
-                self.refresh_view()
-
-                # Restore cursor and scroll position
-                self._restore_table_position(saved_position)
-        elif grouping_mode in [ViewMode.CATEGORY, ViewMode.GROUP, ViewMode.ACCOUNT]:
-            # Grouped by category/group/account - edit merchant for all in this group
-            if grouping_mode == ViewMode.CATEGORY:
-                field_name = row_data["category"]
-                filter_func = self.data_manager.filter_by_category
-            elif grouping_mode == ViewMode.GROUP:
-                field_name = row_data["group"]
-                filter_func = self.data_manager.filter_by_group
-            elif grouping_mode == ViewMode.ACCOUNT:
-                field_name = row_data["account"]
-                filter_func = self.data_manager.filter_by_account
-            else:
-                return
-
-            transaction_count = row_data["count"]
-            total_amount = row_data["total"]
-
-            # Determine current merchant name for display
-            # If drilled into a specific merchant, show that
-            # Otherwise show "Multiple merchants" since we're editing across merchants
-            if self.state.selected_merchant:
-                display_merchant = self.state.selected_merchant
-            elif self.state.selected_category:
-                display_merchant = f"Multiple merchants in {self.state.selected_category}"
-            elif self.state.selected_group:
-                display_merchant = f"Multiple merchants in {self.state.selected_group}"
-            elif self.state.selected_account:
-                display_merchant = f"Multiple merchants in {self.state.selected_account}"
-            else:
-                display_merchant = "Multiple merchants"
-
-            # Get merchant suggestions
-            all_merchants = self.controller.get_merchant_suggestions()
-
-            # Pass aggregate summary
-            bulk_summary = {"total_amount": total_amount}
-
-            # Show edit modal
-            new_merchant = await self.push_screen(
-                EditMerchantScreen(
-                    display_merchant, transaction_count, all_merchants, bulk_summary
-                ),
-                wait_for_dismiss=True,
-            )
-
-            if new_merchant:
-                # Save cursor and scroll position before refresh
-                saved_position = self._save_table_position()
-
-                # Get all transactions in this group
-                filtered_df = self.state.get_filtered_df()
-                matching_txns = filter_func(filtered_df, field_name)
-
-                # Use controller helper to queue edits
-                count = self.controller.queue_merchant_edits(
-                    matching_txns, field_name, new_merchant
-                )
-
-                self._notify(NotificationHelper.edit_queued(count))
-                self.refresh_view()
-
-                # Restore cursor and scroll position
-                self._restore_table_position(saved_position)
-        else:
-            self.notify("Edit merchant only works from Merchant view", timeout=2)
-
-    async def _bulk_edit_merchant_from_selected_groups(self) -> None:
-        """Edit merchant for all transactions in all selected groups."""
-        # Determine which field we're grouping by
-        field_map = {
-            ViewMode.MERCHANT: "merchant",
-            ViewMode.CATEGORY: "category",
-            ViewMode.GROUP: "group",
-            ViewMode.ACCOUNT: "account",
-        }
-
-        # Check if we're in sub-grouped view
-        if self.state.is_drilled_down() and self.state.sub_grouping_mode:
-            group_field = field_map.get(self.state.sub_grouping_mode, "merchant")
-        else:
-            group_field = field_map.get(self.state.view_mode, "merchant")
-
-        # Get all transactions from selected groups
-        all_txns = self.controller.get_transactions_from_selected_groups(group_field)
-
-        if all_txns.is_empty():
-            self.notify("No transactions in selected groups", timeout=2)
-            return
-
-        total_count = len(all_txns)
-
-        # Get merchant suggestions
+        # Get merchant suggestions for autocomplete
         all_merchants = self.controller.get_merchant_suggestions()
 
         # Show edit modal
         new_merchant = await self.push_screen(
             EditMerchantScreen(
-                f"{len(self.state.selected_group_keys)} groups",
-                total_count,
-                all_merchants,
+                current_merchant=context.current_value or "",
+                transaction_count=context.transaction_count,
+                all_merchants=all_merchants,
+                transaction_details=None,  # Could add summary from context if needed
             ),
             wait_for_dismiss=True,
         )
 
         if new_merchant:
-            # Save cursor and scroll position before refresh
+            # Save position before refresh
             saved_position = self._save_table_position()
 
-            # Queue edits for all transactions
-            count = self.controller.queue_merchant_edits(all_txns, "multiple", new_merchant)
+            # Execute edit via controller (business logic)
+            count = self.controller.edit_merchant_current_selection(
+                new_merchant, cursor_row=cursor_row
+            )
 
-            self.state.clear_selection()
+            # Clear selection if multi-select
+            if context.is_multi_select:
+                self.state.clear_selection()
+
+            # Display result
             self._notify(NotificationHelper.edit_queued(count))
             self.refresh_view()
-
-            # Restore cursor and scroll position
             self._restore_table_position(saved_position)
 
-    async def _edit_merchant_detail(self) -> None:
-        """Edit merchant in detail view."""
-        if self.state.current_data is None:
-            return
-
-        table = self.query_one("#data-table", DataTable)
-        if table.cursor_row < 0:
-            return
-
-        # Get current transaction
-        row_data = self.state.current_data.row(table.cursor_row, named=True)
-        current_merchant = row_data["merchant"]
-
-        # Get list of all merchants for suggestions (includes cached + current)
-        all_merchants = self.controller.get_merchant_suggestions()
-
-        # Check if we have selected transactions for bulk edit
-        if len(self.state.selected_ids) > 0:
-            # Bulk edit selected transactions
-            new_merchant = await self.push_screen(
-                EditMerchantScreen(current_merchant, len(self.state.selected_ids), all_merchants),
-                wait_for_dismiss=True,
-            )
-
-            if new_merchant:
-                # Save cursor and scroll position before refresh
-                saved_position = self._save_table_position()
-
-                # Use controller helper to queue edits for all selected transactions
-                selected_txns = self.state.current_data.filter(
-                    pl.col("id").is_in(list(self.state.selected_ids))
-                )
-                count = self.controller.queue_merchant_edits(
-                    selected_txns, current_merchant, new_merchant
-                )
-
-                self.state.clear_selection()
-                self.notify(f"Queued {count} edits. Press w to review and commit.", timeout=3)
-                # Refresh to update the * markers but stay in current view
-                self.refresh_view()
-
-                # Restore cursor and scroll position
-                self._restore_table_position(saved_position)
-        else:
-            # Edit single transaction - pass details for context
-            txn_details = {
-                "date": row_data.get("date"),
-                "amount": row_data.get("amount"),
-                "category": row_data.get("category"),
-            }
-
-            new_merchant = await self.push_screen(
-                EditMerchantScreen(current_merchant, 1, all_merchants, txn_details),
-                wait_for_dismiss=True,
-            )
-
-            if new_merchant:
-                # Save cursor and scroll position before refresh
-                saved_position = self._save_table_position()
-
-                # Use controller helper for consistency
-                txn_id = row_data["id"]
-                single_txn = self.state.current_data.filter(pl.col("id") == txn_id)
-                self.controller.queue_merchant_edits(single_txn, current_merchant, new_merchant)
-
-                self._notify(NotificationHelper.merchant_changed())
-                # Refresh to show * marker, stays in detail view since view_mode unchanged
-                self.refresh_view()
-
-                # Restore cursor and scroll position
-                self._restore_table_position(saved_position)
-
     def action_edit_category(self) -> None:
-        """Change category for current selection (works in aggregate and detail views)."""
+        """
+        Change category for current selection.
 
-        logger = get_logger(__name__)
-
+        NEW IMPLEMENTATION: Uses controller.edit_category_current_selection().
+        """
         if self.data_manager is None:
             return
 
-        logger.debug(f"action_edit_category called, view_mode={self.state.view_mode}")
-
-        # Check if in aggregate view (MERCHANT, CATEGORY or GROUP) or detail view
-        if self.state.view_mode in [ViewMode.MERCHANT, ViewMode.CATEGORY, ViewMode.GROUP]:
-            logger.debug("Calling _bulk_edit_category_from_aggregate()")
-            # Aggregate view - edit_category all transactions for this merchant/category/group
-            self.run_worker(self._bulk_edit_category_from_aggregate(), exclusive=False)
-        else:
-            logger.debug(
-                f"Calling _edit_category() - view_mode {self.state.view_mode} not in aggregate views"
-            )
-            # Detail view - edit_category selected transaction(s)
-            self.run_worker(self._edit_category(), exclusive=False)
-
-    async def _bulk_edit_category_from_aggregate(self) -> None:
-        """Edit Category all transactions in selected merchant/category/group."""
-        logger = get_logger(__name__)
-
-        logger.debug(
-            f"_bulk_edit_category_from_aggregate called, view_mode={self.state.view_mode}, sub_grouping_mode={self.state.sub_grouping_mode}"
-        )
-
-        # Check if multi-select is active
-        if len(self.state.selected_group_keys) > 0:
-            # Multi-select: edit all transactions from all selected groups
-            await self._bulk_edit_category_from_selected_groups()
-            return
-
-        if self.state.current_data is None:
-            logger.warning("current_data is None, returning")
-            return
-
-        table = self.query_one("#data-table", DataTable)
-        if table.cursor_row < 0:
-            logger.warning(f"cursor_row < 0 ({table.cursor_row}), returning")
-            return
-
-        # Get the merchant/category/group from current row
-        row_data = self.state.current_data.row(table.cursor_row, named=True)
-        logger.debug(f"row_data keys: {list(row_data.keys())}")
-
-        # Determine what field we're grouping by
-        # If in sub-grouping mode, use that instead of view_mode
-        grouping_mode = (
-            self.state.sub_grouping_mode if self.state.sub_grouping_mode else self.state.view_mode
-        )
-
-        # Determine what field we're grouping by and get transactions
-        if grouping_mode == ViewMode.MERCHANT:
-            field_name = row_data["merchant"]
-            current_category_id = None  # Merchants can have mixed categories
-            filter_func = self.data_manager.filter_by_merchant
-        elif grouping_mode == ViewMode.CATEGORY:
-            field_name = row_data["category"]
-            current_category_id = row_data["category_id"]
-            filter_func = self.data_manager.filter_by_category
-        elif grouping_mode == ViewMode.GROUP:
-            field_name = row_data["group"]
-            current_category_id = None  # Groups can have mixed categories
-            filter_func = self.data_manager.filter_by_group
-        elif grouping_mode == ViewMode.ACCOUNT:
-            field_name = row_data["account"]
-            current_category_id = None  # Accounts can have mixed categories
-            filter_func = self.data_manager.filter_by_account
-        else:
-            return
-
-        # Show category selection modal
-        new_category_id = await self.push_screen(
-            SelectCategoryScreen(
-                self.data_manager.categories,
-                current_category_id,
-                None,  # No transaction details for bulk operations
-            ),
-            wait_for_dismiss=True,
-        )
-
-        # If user cancelled or selected same category, do nothing
-        if not new_category_id or (current_category_id and new_category_id == current_category_id):
-            return
-
-        # Save cursor and scroll position before refresh
-        saved_position = self._save_table_position()
-
-        # Get all transactions for this merchant/category/group
-        filtered_df = self.state.get_filtered_df()
-        matching_txns = filter_func(filtered_df, field_name)
-
-        # Use controller helper to queue edits
-        count = self.controller.queue_category_edits(matching_txns, new_category_id)
-
-        # Show success notification
-        new_cat_name = self.data_manager.categories.get(new_category_id, {}).get("name", "Unknown")
-        self.notify(
-            f"Queued {count} transactions from {field_name} to edit_category to {new_cat_name}. Press w to commit.",
-            timeout=3,
-        )
-        self.refresh_view()
-
-        # Restore cursor and scroll position
-        self._restore_table_position(saved_position)
-
-    async def _bulk_edit_category_from_selected_groups(self) -> None:
-        """Edit category for all transactions in all selected groups."""
-        # Determine which field we're grouping by
-        field_map = {
-            ViewMode.MERCHANT: "merchant",
-            ViewMode.CATEGORY: "category",
-            ViewMode.GROUP: "group",
-            ViewMode.ACCOUNT: "account",
-        }
-
-        # Check if we're in sub-grouped view
-        if self.state.is_drilled_down() and self.state.sub_grouping_mode:
-            group_field = field_map.get(self.state.sub_grouping_mode, "merchant")
-        else:
-            group_field = field_map.get(self.state.view_mode, "merchant")
-
-        # Get all transactions from selected groups
-        all_txns = self.controller.get_transactions_from_selected_groups(group_field)
-
-        if all_txns.is_empty():
-            self.notify("No transactions in selected groups", timeout=2)
-            return
-
-        # Show category selection modal
-        new_category_id = await self.push_screen(
-            SelectCategoryScreen(
-                self.data_manager.categories,
-                None,  # No single category (multiple groups)
-                None,  # No transaction details for bulk
-            ),
-            wait_for_dismiss=True,
-        )
-
-        if not new_category_id:
-            return
-
-        # Save cursor and scroll position before refresh
-        saved_position = self._save_table_position()
-
-        # Queue edits for all transactions
-        count = self.controller.queue_category_edits(all_txns, new_category_id)
-
-        self.state.clear_selection()
-        new_cat_name = self.data_manager.categories.get(new_category_id, {}).get("name", "Unknown")
-        self.notify(
-            f"Queued {count} transactions from {len(self.state.selected_group_keys)} groups to {new_cat_name}. Press w to commit.",
-            timeout=3,
-        )
-        self.refresh_view()
-
-        # Restore cursor and scroll position
-        self._restore_table_position(saved_position)
+        self.run_worker(self._edit_category(), exclusive=False)
 
     async def _edit_category(self) -> None:
-        """Show category selection and apply (for detail view)."""
-        if self.state.current_data is None:
-            return
-
+        """Simplified category edit using controller orchestration."""
+        # Get cursor position
         table = self.query_one("#data-table", DataTable)
-        if table.cursor_row < 0:
+        cursor_row = table.cursor_row if table.cursor_row >= 0 else 0
+
+        # Get edit context from controller
+        context = self.controller.determine_edit_context("category", cursor_row=cursor_row)
+
+        if context.transactions.is_empty():
+            self.notify("No transactions to edit", timeout=2)
             return
 
-        # Check if we're in a sub-grouped view (aggregate view while drilled down)
-        if self.state.view_mode == ViewMode.DETAIL and self.state.sub_grouping_mode:
-            # Sub-grouped view - treat like aggregate edit
-            await self._bulk_edit_category_from_aggregate()
-            return
+        # Show category selection modal
+        new_category_id = await self.push_screen(
+            SelectCategoryScreen(
+                self.data_manager.categories,
+                current_category_id=None,
+                transaction_details=None,
+                transaction_count=context.transaction_count,
+            ),
+            wait_for_dismiss=True,
+        )
 
-        # In detail view, categorize current transaction or selected transactions
-        if self.state.view_mode == ViewMode.DETAIL:
-            row_data = self.state.current_data.row(table.cursor_row, named=True)
+        if new_category_id:
+            # Save position before refresh
+            saved_position = self._save_table_position()
 
-            # Check if multi-select is active
-            if len(self.state.selected_ids) > 0:
-                # Multi-select edit_category
-                # Show category selection (no transaction details for bulk)
-                new_category_id = await self.push_screen(
-                    SelectCategoryScreen(
-                        self.data_manager.categories,
-                        row_data["category_id"],
-                        None,  # No single transaction details for bulk operation
-                    ),
-                    wait_for_dismiss=True,
-                )
+            # Execute edit via controller
+            count = self.controller.edit_category_current_selection(
+                new_category_id, cursor_row=cursor_row
+            )
 
-                if new_category_id:
-                    # Save cursor and scroll position before refresh
-                    saved_position = self._save_table_position()
+            # Clear selection if multi-select
+            if context.is_multi_select:
+                self.state.clear_selection()
 
-                    # Use controller helper to queue edits for all selected transactions
-                    selected_txns = self.state.current_data.filter(
-                        pl.col("id").is_in(list(self.state.selected_ids))
-                    )
-                    count = self.controller.queue_category_edits(selected_txns, new_category_id)
-
-                    self.state.clear_selection()
-                    self.notify(
-                        f"Queued {count} category changes. Press w to review and commit.",
-                        timeout=3,
-                    )
-                    self.refresh_view()
-
-                    # Restore cursor and scroll position
-                    self._restore_table_position(saved_position)
-            else:
-                # Single transaction edit_category
-                # Pass transaction details for context
-                txn_details = {
-                    "date": row_data.get("date"),
-                    "amount": row_data.get("amount"),
-                    "merchant": row_data.get("merchant"),
-                }
-
-                # Show category selection
-                new_category_id = await self.push_screen(
-                    SelectCategoryScreen(
-                        self.data_manager.categories, row_data["category_id"], txn_details
-                    ),
-                    wait_for_dismiss=True,
-                )
-
-                if new_category_id:
-                    # Save cursor and scroll position before refresh
-                    saved_position = self._save_table_position()
-
-                    # Use controller helper to queue edit for single transaction
-                    txn_id = row_data["id"]
-                    single_txn = self.state.current_data.filter(pl.col("id") == txn_id)
-                    self.controller.queue_category_edits(single_txn, new_category_id)
-
-                    self.notify("Category changed. Press w to review and commit.", timeout=2)
-                    # Refresh to show * marker, stays in detail view since view_mode unchanged
-                    self.refresh_view()
-
-                    # Restore cursor and scroll position
-                    self._restore_table_position(saved_position)
-        else:
-            self.notify("Edit Category only works in transaction detail view", timeout=2)
+            # Display result
+            new_cat_name = self.data_manager.categories.get(new_category_id, {}).get(
+                "name", "Unknown"
+            )
+            self.notify(
+                f"Queued {count} category changes to {new_cat_name}. Press w to commit.", timeout=3
+            )
+            self.refresh_view()
+            self._restore_table_position(saved_position)
 
     def action_toggle_hide_from_reports(self) -> None:
-        """Toggle hide from reports flag for current transaction(s) or selected groups."""
+        """
+        Toggle hide from reports flag for current transaction(s) or selected groups.
+
+        NEW IMPLEMENTATION: Uses controller.toggle_hide_current_selection().
+        """
         if self.data_manager is None or self.state.current_data is None:
             return
 
@@ -1703,162 +1318,14 @@ class MoneyflowApp(App):
         if table.cursor_row < 0:
             return
 
-        # Handle aggregate/subgroup views (bulk hide for groups)
-        if self.state.view_mode in [
-            ViewMode.MERCHANT,
-            ViewMode.CATEGORY,
-            ViewMode.GROUP,
-            ViewMode.ACCOUNT,
-        ]:
-            # Save cursor and scroll position before refresh
-            saved_position = self._save_table_position()
+        cursor_row = table.cursor_row
 
-            # Determine the field to filter by based on view mode
-            field_map = {
-                ViewMode.MERCHANT: "merchant",
-                ViewMode.CATEGORY: "category",
-                ViewMode.GROUP: "group",
-                ViewMode.ACCOUNT: "account",
-            }
-            group_by_field = field_map[self.state.view_mode]
-
-            # Check if multi-select is active
-            if len(self.state.selected_group_keys) > 0:
-                # Multi-select: get transactions from all selected groups
-                transactions_to_toggle = self.controller.get_transactions_from_selected_groups(
-                    group_by_field
-                )
-                self.state.clear_selection()
-            else:
-                # Single selection: get transactions from current row
-                row_data = self.state.current_data.row(table.cursor_row, named=True)
-                group_name = str(row_data.get(self.state.current_data.columns[0]))
-
-                # Get all transactions for this group
-                filtered_df = self.state.get_filtered_df()
-                if filtered_df is None:
-                    return
-
-                if group_by_field == "merchant":
-                    transactions_to_toggle = self.data_manager.filter_by_merchant(
-                        filtered_df, group_name
-                    )
-                elif group_by_field == "category":
-                    transactions_to_toggle = self.data_manager.filter_by_category(
-                        filtered_df, group_name
-                    )
-                elif group_by_field == "group":
-                    transactions_to_toggle = self.data_manager.filter_by_group(
-                        filtered_df, group_name
-                    )
-                elif group_by_field == "account":
-                    transactions_to_toggle = self.data_manager.filter_by_account(
-                        filtered_df, group_name
-                    )
-
-            # Queue hide toggle for all transactions
-            count = self.controller.queue_hide_toggle_edits(transactions_to_toggle)
-            self.notify(
-                f"Toggled hide/unhide for {count} transactions. Press w to commit.",
-                timeout=3,
-            )
-            self.refresh_view()
-            # Restore cursor and scroll position
-            self._restore_table_position(saved_position)
-            return
-
-        # Handle subgrouped detail view (when drilled down with sub-grouping)
-        if (
-            self.state.view_mode == ViewMode.DETAIL
-            and self.state.is_drilled_down()
-            and self.state.sub_grouping_mode
-        ):
-            # Save cursor and scroll position before refresh
-            saved_position = self._save_table_position()
-
-            # Determine field based on sub-grouping mode
-            field_map = {
-                ViewMode.MERCHANT: "merchant",
-                ViewMode.CATEGORY: "category",
-                ViewMode.GROUP: "group",
-                ViewMode.ACCOUNT: "account",
-            }
-            group_by_field = field_map[self.state.sub_grouping_mode]
-
-            # Check if multi-select is active
-            if len(self.state.selected_group_keys) > 0:
-                # Multi-select: get transactions from all selected sub-groups
-                transactions_to_toggle = self.controller.get_transactions_from_selected_groups(
-                    group_by_field
-                )
-                self.state.clear_selection()
-            else:
-                # Single selection: get transactions from current row
-                row_data = self.state.current_data.row(table.cursor_row, named=True)
-                group_name = str(row_data.get(self.state.current_data.columns[0]))
-
-                # Get all transactions for this sub-group
-                filtered_df = self.state.get_filtered_df()
-                if filtered_df is None:
-                    return
-
-                if group_by_field == "merchant":
-                    transactions_to_toggle = self.data_manager.filter_by_merchant(
-                        filtered_df, group_name
-                    )
-                elif group_by_field == "category":
-                    transactions_to_toggle = self.data_manager.filter_by_category(
-                        filtered_df, group_name
-                    )
-                elif group_by_field == "group":
-                    transactions_to_toggle = self.data_manager.filter_by_group(
-                        filtered_df, group_name
-                    )
-                elif group_by_field == "account":
-                    transactions_to_toggle = self.data_manager.filter_by_account(
-                        filtered_df, group_name
-                    )
-
-            count = self.controller.queue_hide_toggle_edits(transactions_to_toggle)
-            self.notify(
-                f"Toggled hide/unhide for {count} transactions. Press w to commit.",
-                timeout=3,
-            )
-            self.refresh_view()
-            # Restore cursor and scroll position
-            self._restore_table_position(saved_position)
-            return
-
-        # Detail view - handle individual or multi-selected transactions
-        if self.state.view_mode != ViewMode.DETAIL:
-            self.notify("Hide/unhide only works in transaction or aggregate views", timeout=2)
-            return
-
-        # Save cursor and scroll position before any changes
-        saved_position = self._save_table_position()
-
-        # Check if multi-select is active
-        if len(self.state.selected_ids) > 0:
-            # Use controller helper to queue toggle edits for all selected
-            selected_txns = self.state.current_data.filter(
-                pl.col("id").is_in(list(self.state.selected_ids))
-            )
-            count = self.controller.queue_hide_toggle_edits(selected_txns)
-
-            self.state.clear_selection()
-            self.notify(
-                f"Toggled hide/unhide for {count} transactions. Press w to commit.",
-                timeout=3,
-            )
-            self.refresh_view()
-            # Restore cursor and scroll position
-            self._restore_table_position(saved_position)
-        else:
-            # Toggle single transaction
-            row_data = self.state.current_data.row(table.cursor_row, named=True)
+        # Check for existing pending hide toggle on current transaction (for undo in detail view)
+        if self.state.view_mode == ViewMode.DETAIL and len(self.state.selected_ids) == 0:
+            # Single transaction in detail view - check for existing edit to undo
+            row_data = self.state.current_data.row(cursor_row, named=True)
             txn_id = row_data["id"]
 
-            # Check if there's already a pending hide toggle for this transaction
             existing_edit = None
             for edit in self.data_manager.pending_edits:
                 if edit.transaction_id == txn_id and edit.field == "hide_from_reports":
@@ -1866,21 +1333,31 @@ class MoneyflowApp(App):
                     break
 
             if existing_edit:
-                # Remove the pending edit (undo the toggle)
+                # Undo the pending toggle
+                saved_position = self._save_table_position()
                 self.data_manager.pending_edits.remove(existing_edit)
                 self.notify("Reverted hide/unhide change", timeout=2)
-            else:
-                # Queue a new toggle edit
-                current_hidden = row_data.get("hideFromReports", False)
-                single_txn = self.state.current_data.filter(pl.col("id") == txn_id)
-                self.controller.queue_hide_toggle_edits(single_txn)
+                self.refresh_view()
+                self._restore_table_position(saved_position)
+                return
 
-                action = "Unhidden" if current_hidden else "Hidden"
-                self.notify(f"{action} from reports. Press w to commit.", timeout=2)
+        # Save position before refresh
+        saved_position = self._save_table_position()
 
-            self.refresh_view()
-            # Restore cursor and scroll position
-            self._restore_table_position(saved_position)
+        # Get edit context from controller
+        context = self.controller.determine_edit_context("merchant", cursor_row=cursor_row)
+
+        # Execute hide toggle via controller
+        count = self.controller.toggle_hide_current_selection(cursor_row=cursor_row)
+
+        # Clear selection if multi-select
+        if context.is_multi_select:
+            self.state.clear_selection()
+
+        # Display result
+        self.notify(f"Toggled hide/unhide for {count} transactions. Press w to commit.", timeout=3)
+        self.refresh_view()
+        self._restore_table_position(saved_position)
 
     def action_show_transaction_details(self) -> None:
         """Show detailed information about current transaction."""
