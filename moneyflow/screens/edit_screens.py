@@ -589,3 +589,6 @@ class DeleteConfirmationScreen(ModalScreen):
         if event.key == "escape":
             event.stop()  # Prevent propagation to parent
             self.dismiss(False)
+        elif event.key == "enter":
+            event.stop()  # Prevent propagation to parent
+            self.dismiss(True)
