@@ -148,8 +148,8 @@ Amazon mode uses the same keyboard shortcuts as Monarch mode. See [Keyboard Shor
 In Amazon mode, views reflect Amazon purchase data:
 - **Item** (instead of Merchant) - Product names
 - **Category** - Product categories
-- **Order ID** (instead of Group) - Group by Amazon order
-- Account view is not available
+- **Order ID** (instead of Account) - Group by Amazon order
+- Group view is not available
 
 All other navigation, editing, and search shortcuts work the same as in Monarch mode.
 

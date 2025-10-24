@@ -48,8 +48,8 @@ Each view displays: Name, Count (# of transactions), Total (amount spent)
 |--------------|-------------|-------|
 | Merchant | Item | Product names |
 | Category | Category | Product categories |
-| Group | Order ID | Orders |
-| Account | (not available) | - |
+| Group | (not available) | - |
+| Account | Order ID | Amazon orders |
 
 ### Detail View
 
