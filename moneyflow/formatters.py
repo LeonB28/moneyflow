@@ -140,7 +140,7 @@ class ViewPresenter:
         """
         # Use defaults if not provided
         if column_config is None:
-            column_config = {"merchant_width_pct": 25, "account_width_pct": 15}
+            column_config = {"merchant_width_pct": 25, "account_width_pct": 30}
         if display_labels is None:
             display_labels = {"merchant": "Merchant", "account": "Account", "accounts": "Accounts"}
 
@@ -157,7 +157,7 @@ class ViewPresenter:
         if group_by_field == "merchant":
             name_width = column_config.get("merchant_width_pct", 25)
         elif group_by_field == "account":
-            name_width = column_config.get("account_width_pct", 15)
+            name_width = column_config.get("account_width_pct", 30)
         else:
             name_width = 40  # Default for category/group
 
@@ -325,7 +325,7 @@ class ViewPresenter:
         """
         # Use defaults if not provided
         if column_config is None:
-            column_config = {"merchant_width_pct": 25, "account_width_pct": 15}
+            column_config = {"merchant_width_pct": 25, "account_width_pct": 30}
         if display_labels is None:
             display_labels = {"merchant": "Merchant", "account": "Account", "accounts": "Accounts"}
 
@@ -342,7 +342,7 @@ class ViewPresenter:
 
         # Get custom widths
         merchant_width = column_config.get("merchant_width_pct", 25)
-        account_width = column_config.get("account_width_pct", 15)
+        account_width = column_config.get("account_width_pct", 30)
 
         columns: list[ColumnSpec] = [
             {"label": f"Date {date_arrow}".strip(), "key": "date", "width": 12},

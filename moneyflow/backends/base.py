@@ -205,16 +205,16 @@ class FinanceBackend(ABC):
         Returns:
             Dictionary with column configuration:
             - merchant_width_pct: Percentage width for merchant column (default: 25)
-            - account_width_pct: Percentage width for account column (default: 15)
+            - account_width_pct: Percentage width for account column (default: 30)
             - Other columns auto-size based on remaining space
 
         Example:
             >>> backend.get_column_config()
-            {'merchant_width_pct': 25, 'account_width_pct': 15}
+            {'merchant_width_pct': 25, 'account_width_pct': 30}
         """
         return {
             "merchant_width_pct": 25,  # Default 25% width
-            "account_width_pct": 15,  # Default 15% width
+            "account_width_pct": 30,  # Default 30% width (wider for long account names)
         }
 
     def delete_session(self) -> None:

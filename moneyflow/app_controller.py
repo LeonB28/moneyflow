@@ -83,7 +83,7 @@ class AppController:
             # Fallback to default widths if backend doesn't support it
             return {
                 "merchant_width_pct": 25,
-                "account_width_pct": 15,
+                "account_width_pct": 30,
             }
 
     def refresh_view(self, force_rebuild: bool = True) -> None:
