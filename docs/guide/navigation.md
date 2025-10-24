@@ -42,13 +42,14 @@ Press `g` to cycle through aggregate views. Aggregate views group your transacti
 
 Each view displays: Name, Count (# of transactions), Total (amount spent)
 
-**Amazon Mode note:**
+**Amazon Mode:** View names reflect purchase data instead of financial transactions.
 
-In Amazon mode, view names are different:
-- **Merchant → Item** (product names)
-- **Category → Category** (product categories)
-- **Group → Order ID** (group by Amazon order)
-- **Account** view not available
+| Monarch Mode | Amazon Mode | Shows |
+|--------------|-------------|-------|
+| Merchant | Item | Product names |
+| Category | Category | Product categories |
+| Group | Order ID | Orders |
+| Account | (not available) | - |
 
 ### Detail View
 
