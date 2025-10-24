@@ -542,6 +542,13 @@ class DeleteConfirmationScreen(ModalScreen):
         margin-bottom: 2;
     }
 
+    #delete-instructions {
+        text-align: center;
+        color: $accent;
+        margin-bottom: 2;
+        text-style: bold;
+    }
+
     #button-container {
         layout: horizontal;
         width: 100%;
@@ -563,18 +570,18 @@ class DeleteConfirmationScreen(ModalScreen):
 
             if self.transaction_count > 1:
                 yield Static(
-                    f"Are you sure you want to delete {self.transaction_count} transactions?\n\n"
+                    f"Are you sure you want to delete {self.transaction_count} transactions?\n"
                     "This action CANNOT be undone!",
                     id="delete-message",
                 )
             else:
                 yield Static(
-                    "Are you sure you want to delete this transaction?\n\n"
+                    "Are you sure you want to delete this transaction?\n"
                     "This action CANNOT be undone!",
                     id="delete-message",
                 )
 
-            yield Static("Enter=Confirm | Escape=Cancel", classes="edit-label")
+            yield Static("Enter=Delete | Esc=Cancel", id="delete-instructions")
 
             with Container(id="button-container"):
                 yield Button("Cancel", variant="primary", id="cancel-button")
