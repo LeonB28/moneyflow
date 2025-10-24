@@ -114,11 +114,16 @@ Press `Escape` to return to Merchant view with your cursor position and scroll r
 Once you've drilled down into a specific item, press `g` to sub-group the filtered data by a different field. This allows you to analyze the same transactions from multiple perspectives without losing your filter context.
 
 **Example - Analyzing Amazon purchases:**
-1. Drill into Amazon (from Merchant view, press `Enter` on Amazon)
-2. Press `g` → view changes to `Merchants > Amazon (by Category)` - see your Amazon spending grouped by category
-3. Press `g` → view changes to `Merchants > Amazon (by Group)` - see Amazon spending by category group
-4. Press `g` → view changes to `Merchants > Amazon (by Account)` - see which payment methods you use at Amazon
-5. Press `g` → returns to detail view showing all Amazon transactions
+
+1. **Drill into Amazon** - From Merchant view, press `Enter` on Amazon row
+2. **Press `g`** - View changes to `Merchants > Amazon (by Category)`
+   - Shows Amazon spending grouped by category
+3. **Press `g` again** - View changes to `Merchants > Amazon (by Group)`
+   - Shows Amazon spending grouped by category group
+4. **Press `g` again** - View changes to `Merchants > Amazon (by Account)`
+   - Shows which payment methods you use at Amazon
+5. **Press `g` again** - Returns to detail view
+   - Shows all Amazon transactions ungrouped
 
 ![Drilled into Merchant, grouped by Category](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/merchants-drill-by-category.png)
 
@@ -136,11 +141,12 @@ When you're in a drilled-down view, pressing `g` cycles through the available su
 You can drill down from sub-grouped views to add another level of filtering, creating a multi-level filter hierarchy.
 
 **Example - Finding Amazon grocery transactions:**
-1. Start in Merchant view and press `Enter` on "Amazon"
-2. Press `g` repeatedly until you see "(by Category)" in the breadcrumb
-3. Press `Enter` on the "Groceries" row
-4. Breadcrumb now shows: `Merchants > Amazon > Groceries`
-5. You're now viewing only Amazon transactions that are categorized as groceries
+
+1. **Drill into Amazon** - From Merchant view, press `Enter` on "Amazon"
+2. **Sub-group by Category** - Press `g` repeatedly until breadcrumb shows "(by Category)"
+3. **Drill into Groceries** - Press `Enter` on the "Groceries" row
+4. **View results** - Breadcrumb shows: `Merchants > Amazon > Groceries`
+   - Now viewing only Amazon grocery transactions
 
 ![Multi-level drill-down breadcrumb](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-multi-level.png)
 
@@ -211,10 +217,11 @@ Press `/` to search and filter transactions by text matching across merchant nam
 ![Search modal](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/search-modal.png)
 
 **Using search:**
-1. Press `/` to open the search modal
-2. Type your search query (searches as you type with case-insensitive partial matching)
-3. Press `Enter` to apply the search filter
-4. Press `Escape` to clear the search and return to your previous view
+
+1. **Press `/`** - Opens the search modal
+2. **Type your query** - Filters as you type (case-insensitive, partial matching)
+3. **Press `Enter`** - Applies the search filter
+4. **Press `Escape`** - Clears search and returns to previous view
 
 ![Search results for "coffee"](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/merchants-search.png)
 
@@ -239,22 +246,25 @@ Select multiple transactions or aggregate groups to perform bulk operations.
 Here are some practical examples of using moneyflow's navigation features to answer real questions about your spending:
 
 **"What do I buy at Costco?"**
-1. Press `g` to navigate to Merchant view
-2. Navigate cursor to "Costco" and press `Enter` to drill down
-3. Press `g` repeatedly until you see "(by Category)" in the breadcrumb
-4. View the breakdown: Groceries $450, Gas $120, etc.
+
+1. **Navigate to Merchant view** - Press `g` until you see Merchants
+2. **Drill into Costco** - Move cursor to "Costco", press `Enter`
+3. **Sub-group by Category** - Press `g` until breadcrumb shows "(by Category)"
+4. **View breakdown** - See Groceries $450, Gas $120, etc.
 
 **"Where am I buying groceries?"**
-1. Press `g` to navigate to Category view
-2. Navigate cursor to "Groceries" and press `Enter` to drill down
-3. Press `g` repeatedly until you see "(by Merchant)" in the breadcrumb
-4. View the breakdown showing all merchants: Whole Foods $890, Safeway $650, Amazon $234
+
+1. **Navigate to Category view** - Press `g` until you see Categories
+2. **Drill into Groceries** - Move cursor to "Groceries", press `Enter`
+3. **Sub-group by Merchant** - Press `g` until breadcrumb shows "(by Merchant)"
+4. **View breakdown** - See Whole Foods $890, Safeway $650, Amazon $234
 
 **"How do I use my Chase Sapphire card?"**
-1. Press `g` to navigate to Account view
-2. Navigate cursor to "Chase Sapphire" and press `Enter` to drill down
-3. Press `g` repeatedly until you see "(by Category)" in the breadcrumb
-4. View your spending breakdown by category for that specific card
+
+1. **Navigate to Account view** - Press `g` until you see Accounts
+2. **Drill into Chase Sapphire** - Move cursor to "Chase Sapphire", press `Enter`
+3. **Sub-group by Category** - Press `g` until breadcrumb shows "(by Category)"
+4. **View breakdown** - See spending by category for this card
 
 **Quick Analysis Tip:**
 - When drilled down, `g` becomes your pivot tool for viewing the same filtered data from different perspectives
