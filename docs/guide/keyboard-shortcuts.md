@@ -252,13 +252,13 @@ When in a modal dialog (edit merchant, select category, etc.):
 Print this for reference:
 
 ```
-Views:       g (cycle)  u (all)  D (duplicates)
+Views:       g (cycle)  d (detail)  D (duplicates)
 Time:        y (year)   t (month)  a (all)  ←/→ (navigate)
-Edit:        m (merchant)  c (category)  h (hide)  d (delete)
-Select:      Space (multi-select)
+Edit:        m (merchant)  c (category)  h (hide)  u (undo)
+Select:      Space (multi-select)  Ctrl+A (select all)
 Sort:        s (toggle field)  v (reverse)
-Other:       / (search)  f (filter)  w (review)  ? (help)  q (quit)
-Commit:      w (review) then Enter (confirm)
+Navigate:    Enter (drill down)  Escape (go back)
+Other:       / (search)  f (filter)  w (commit)  ? (help)  q (quit)
 ```
 
 ---
