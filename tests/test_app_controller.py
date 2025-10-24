@@ -1453,3 +1453,47 @@ class TestMultiSelectGroups:
 
         assert len(controller.state.selected_group_keys) == 0
         assert len(controller.state.selected_ids) == 0
+
+
+class TestBulkEditTimestamps:
+    """Test that bulk edit operations use the same timestamp for all edits."""
+
+    async def test_queue_category_edits_same_timestamp(self, controller):
+        """All edits in a bulk category change should have the same timestamp."""
+        # Get a few transactions
+        transactions_df = controller.state.transactions_df.head(5)
+
+        # Queue bulk category edits
+        controller.queue_category_edits(transactions_df, "new_cat_id")
+
+        # All edits should have the exact same timestamp
+        edits = controller.data_manager.pending_edits
+        assert len(edits) == 5
+
+        # Get all unique timestamps
+        timestamps = set(edit.timestamp for edit in edits)
+        assert len(timestamps) == 1, f"Expected 1 unique timestamp, got {len(timestamps)}"
+
+    async def test_queue_merchant_edits_same_timestamp(self, controller):
+        """All edits in a bulk merchant change should have the same timestamp."""
+        transactions_df = controller.state.transactions_df.head(5)
+
+        controller.queue_merchant_edits(transactions_df, "Old Merchant", "New Merchant")
+
+        edits = controller.data_manager.pending_edits
+        assert len(edits) == 5
+
+        timestamps = set(edit.timestamp for edit in edits)
+        assert len(timestamps) == 1, f"Expected 1 unique timestamp, got {len(timestamps)}"
+
+    async def test_queue_hide_toggle_edits_same_timestamp(self, controller):
+        """All edits in a bulk hide toggle should have the same timestamp."""
+        transactions_df = controller.state.transactions_df.head(5)
+
+        controller.queue_hide_toggle_edits(transactions_df)
+
+        edits = controller.data_manager.pending_edits
+        assert len(edits) == 5
+
+        timestamps = set(edit.timestamp for edit in edits)
+        assert len(timestamps) == 1, f"Expected 1 unique timestamp, got {len(timestamps)}"

@@ -730,6 +730,8 @@ class AppController:
         Returns:
             int: Number of edits queued
         """
+        # Create single timestamp for entire batch so undo recognizes them as a group
+        batch_timestamp = datetime.now()
         count = 0
         for txn in transactions_df.iter_rows(named=True):
             self.data_manager.pending_edits.append(
@@ -738,7 +740,7 @@ class AppController:
                     field="category",
                     old_value=txn["category_id"],
                     new_value=new_category_id,
-                    timestamp=datetime.now(),
+                    timestamp=batch_timestamp,
                 )
             )
             count += 1
@@ -758,6 +760,8 @@ class AppController:
         Returns:
             int: Number of edits queued
         """
+        # Create single timestamp for entire batch so undo recognizes them as a group
+        batch_timestamp = datetime.now()
         count = 0
         for txn in transactions_df.iter_rows(named=True):
             self.data_manager.pending_edits.append(
@@ -766,7 +770,7 @@ class AppController:
                     field="merchant",
                     old_value=txn["merchant"],  # Use actual current value from transaction
                     new_value=new_merchant,
-                    timestamp=datetime.now(),
+                    timestamp=batch_timestamp,
                 )
             )
             count += 1
@@ -785,6 +789,8 @@ class AppController:
         Returns:
             int: Number of edits queued
         """
+        # Create single timestamp for entire batch so undo recognizes them as a group
+        batch_timestamp = datetime.now()
         count = 0
         for txn in transactions_df.iter_rows(named=True):
             current_hidden = txn.get("hideFromReports", False)
@@ -794,7 +800,7 @@ class AppController:
                     field="hide_from_reports",
                     old_value=current_hidden,
                     new_value=not current_hidden,
-                    timestamp=datetime.now(),
+                    timestamp=batch_timestamp,
                 )
             )
             count += 1

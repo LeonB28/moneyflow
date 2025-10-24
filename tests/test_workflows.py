@@ -484,8 +484,7 @@ class TestBulkUndo:
         # Simulate bulk edit: 5 merchant edits queued at same timestamp
         timestamp = datetime.now()
         bulk_edits = [
-            TransactionEdit(f"txn_{i}", "merchant", f"Old{i}", "New", timestamp)
-            for i in range(5)
+            TransactionEdit(f"txn_{i}", "merchant", f"Old{i}", "New", timestamp) for i in range(5)
         ]
         data_manager.pending_edits = bulk_edits.copy()
 
