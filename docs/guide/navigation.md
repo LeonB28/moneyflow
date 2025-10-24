@@ -48,7 +48,7 @@ Each view displays: Name, Count (# of transactions), Total (amount spent)
 |--------------|-------------|-------|
 | Merchant | Item | Product names |
 | Category | Category | Product categories |
-| Group | (not available) | - |
+| Group | Group | Category groups (same as Monarch) |
 | Account | Order ID | Amazon orders |
 
 ### Detail View
