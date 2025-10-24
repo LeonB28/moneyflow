@@ -1685,6 +1685,9 @@ class MoneyflowApp(App):
             ViewMode.GROUP,
             ViewMode.ACCOUNT,
         ]:
+            # Save cursor and scroll position before refresh
+            saved_position = self._save_table_position()
+
             # Determine the field to filter by based on view mode
             field_map = {
                 ViewMode.MERCHANT: "merchant",
@@ -1735,6 +1738,8 @@ class MoneyflowApp(App):
                 timeout=3,
             )
             self.refresh_view()
+            # Restore cursor and scroll position
+            self._restore_table_position(saved_position)
             return
 
         # Handle subgrouped detail view (when drilled down with sub-grouping)
@@ -1743,6 +1748,9 @@ class MoneyflowApp(App):
             and self.state.is_drilled_down()
             and self.state.sub_grouping_mode
         ):
+            # Save cursor and scroll position before refresh
+            saved_position = self._save_table_position()
+
             # Determine field based on sub-grouping mode
             field_map = {
                 ViewMode.MERCHANT: "merchant",
@@ -1792,6 +1800,8 @@ class MoneyflowApp(App):
                 timeout=3,
             )
             self.refresh_view()
+            # Restore cursor and scroll position
+            self._restore_table_position(saved_position)
             return
 
         # Detail view - handle individual or multi-selected transactions
