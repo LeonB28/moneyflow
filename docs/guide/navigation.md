@@ -65,15 +65,27 @@ Press `g` to cycle through aggregate views. Aggregate views group your transacti
 
 ### Detail View
 
-Press `d` to view all transactions ungrouped in chronological order (detail view), or press `Enter` from any aggregate row to see the transactions for that specific item.
+Press `d` to view all transactions ungrouped in chronological order, or press `Enter` from any aggregate row to see the transactions for that specific item.
 
-The detail view shows individual transactions with all fields:
-- Columns: Date, Merchant, Category, Account, Amount
-- Visual indicators for transaction status:
-  - ✓ (checkmark) - Transaction selected for bulk operations
-  - H - Transaction hidden from reports
-  - * (asterisk) - Transaction has pending edits
-- Full editing capabilities available
+**Columns displayed:**
+- Date
+- Merchant
+- Category
+- Account
+- Amount
+
+**Visual indicators:**
+
+| Indicator | Meaning |
+|-----------|---------|
+| ✓ | Transaction selected for bulk operations |
+| H | Transaction hidden from reports |
+| * | Transaction has pending edits |
+
+**Capabilities:**
+- Edit merchant names, categories, and hide status
+- Multi-select for bulk operations
+- View full transaction details
 
 ![Detail view with indicators](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/detail-view-flags.png)
 
