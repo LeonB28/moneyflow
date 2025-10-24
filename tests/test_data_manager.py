@@ -232,9 +232,9 @@ class TestCategoryGroupMapping:
         """Test that Groceries maps to Food & Dining."""
         assert data_manager.category_to_group.get("Groceries") == "Food & Dining"
 
-    def test_gas_mapped_to_automotive(self, data_manager):
-        """Test that Gas maps to Automotive."""
-        assert data_manager.category_to_group.get("Gas") == "Automotive"
+    def test_gas_mapped_to_auto_transport(self, data_manager):
+        """Test that Gas maps to Auto & Transport."""
+        assert data_manager.category_to_group.get("Gas") == "Auto & Transport"
 
     async def test_transactions_have_groups(self, loaded_data_manager):
         """Test that loaded transactions have group field."""

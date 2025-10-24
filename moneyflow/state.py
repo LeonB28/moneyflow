@@ -61,8 +61,8 @@ class NavigationState:
     Represents saved navigation state for back navigation.
 
     When drilling down into a view, we save the current state so we can restore
-    it when the user presses Escape. This includes view mode, cursor/scroll position,
-    and sort preferences.
+    it when the user presses Escape. This includes view mode, drill-down selections,
+    sub-grouping mode, cursor/scroll position, and sort preferences.
     """
 
     view_mode: ViewMode
@@ -70,6 +70,12 @@ class NavigationState:
     scroll_y: float = 0.0
     sort_by: SortMode = SortMode.AMOUNT
     sort_direction: SortDirection = SortDirection.DESC
+    # Drill-down context
+    selected_merchant: Optional[str] = None
+    selected_category: Optional[str] = None
+    selected_group: Optional[str] = None
+    selected_account: Optional[str] = None
+    sub_grouping_mode: Optional[ViewMode] = None
 
 
 @dataclass
@@ -541,7 +547,7 @@ class AppState:
             >>> nav.view_mode  # doctest: +SKIP
             <ViewMode.MERCHANT: 'merchant'>
         """
-        # Save current state to history (view mode + cursor + scroll + sort preferences)
+        # Save current state to history (full context for proper restoration)
         self.navigation_history.append(
             NavigationState(
                 view_mode=self.view_mode,
@@ -549,22 +555,35 @@ class AppState:
                 scroll_y=scroll_y,
                 sort_by=self.sort_by,
                 sort_direction=self.sort_direction,
+                selected_merchant=self.selected_merchant,
+                selected_category=self.selected_category,
+                selected_group=self.selected_group,
+                selected_account=self.selected_account,
+                sub_grouping_mode=self.sub_grouping_mode,
             )
         )
 
-        # Set the selected item based on current view
-        if self.view_mode == ViewMode.MERCHANT:
+        # Determine which field to set based on current view
+        # If in sub-grouped view, use sub_grouping_mode to determine the field
+        effective_view_mode = self.sub_grouping_mode if self.sub_grouping_mode else self.view_mode
+
+        # Set the selected item and clear sub-grouping
+        if effective_view_mode == ViewMode.MERCHANT:
             self.selected_merchant = item_name
             self.view_mode = ViewMode.DETAIL
-        elif self.view_mode == ViewMode.CATEGORY:
+            self.sub_grouping_mode = None
+        elif effective_view_mode == ViewMode.CATEGORY:
             self.selected_category = item_name
             self.view_mode = ViewMode.DETAIL
-        elif self.view_mode == ViewMode.GROUP:
+            self.sub_grouping_mode = None
+        elif effective_view_mode == ViewMode.GROUP:
             self.selected_group = item_name
             self.view_mode = ViewMode.DETAIL
-        elif self.view_mode == ViewMode.ACCOUNT:
+            self.sub_grouping_mode = None
+        elif effective_view_mode == ViewMode.ACCOUNT:
             self.selected_account = item_name
             self.view_mode = ViewMode.DETAIL
+            self.sub_grouping_mode = None
 
         # Reset sort to valid field for detail view if needed
         # Detail views don't have 'count' column, so switch to date-based sorting
@@ -603,73 +622,45 @@ class AppState:
             self.sub_grouping_mode = None
             return True, 0, 0.0
 
+        # If we have navigation history, restore from it
+        if self.navigation_history:
+            nav_state = self.navigation_history.pop()
+            # Restore full state from history
+            self.view_mode = nav_state.view_mode
+            self.sort_by = nav_state.sort_by
+            self.sort_direction = nav_state.sort_direction
+            self.selected_merchant = nav_state.selected_merchant
+            self.selected_category = nav_state.selected_category
+            self.selected_group = nav_state.selected_group
+            self.selected_account = nav_state.selected_account
+            self.sub_grouping_mode = nav_state.sub_grouping_mode
+            return True, nav_state.cursor_position, nav_state.scroll_y
+
+        # No navigation history - we're at top level or not drilled down
+        # Fallback: clear filters one at a time
         if self.view_mode == ViewMode.DETAIL:
-            # Check if we have multiple levels of drill-down
-            # Clear the deepest level first (in reverse order: Account → Group → Category → Merchant)
-            if (
-                self.selected_account
-                and not self.selected_category
-                and not self.selected_group
-                and not self.selected_merchant
-            ):
-                # At Account level only - go back to parent
+            # Clear deepest level first
+            if self.selected_account:
                 self.selected_account = None
-            elif self.selected_group and not self.selected_category and not self.selected_merchant:
-                # At Group level only - go back to parent
-                self.selected_group = None
-            elif self.selected_category and not self.selected_merchant:
-                # At Category level only - go back to parent
-                self.selected_category = None
-            elif self.selected_account:
-                # Multi-level: clear deepest (Account)
-                self.selected_account = None
-                return True, 0, 0.0
             elif self.selected_group:
-                # Multi-level: clear deepest (Group)
                 self.selected_group = None
-                return True, 0, 0.0
             elif self.selected_category:
-                # Multi-level: clear deepest (Category)
                 self.selected_category = None
-                return True, 0, 0.0
             elif self.selected_merchant:
-                # Only Merchant selected - clear it
                 self.selected_merchant = None
             else:
-                # Nothing selected, shouldn't get here
-                pass
-
-            self.sub_grouping_mode = None  # Clear sub-grouping too
-
-            # Pop from history if available and restore state
-            cursor_position = 0
-            scroll_y = 0.0
-            if self.navigation_history:
-                nav_state = self.navigation_history.pop()
-                self.view_mode = nav_state.view_mode
-                # Restore the sort preferences from when we drilled down
-                self.sort_by = nav_state.sort_by
-                self.sort_direction = nav_state.sort_direction
-                cursor_position = nav_state.cursor_position
-                scroll_y = nav_state.scroll_y
-            else:
-                # Default back to MERCHANT view with default sort
+                # No selections to clear, go to default view
                 self.view_mode = ViewMode.MERCHANT
-                # Only reset sort if it's invalid for aggregate views
-                if self.sort_by not in [
-                    SortMode.COUNT,
-                    SortMode.AMOUNT,
-                    SortMode.MERCHANT,
-                    SortMode.CATEGORY,
-                    SortMode.GROUP,
-                    SortMode.ACCOUNT,
-                ]:
-                    self.sort_by = SortMode.AMOUNT
-                    self.sort_direction = SortDirection.DESC
+                return True, 0, 0.0
 
-            return True, cursor_position, scroll_y
+            # If no more selections after clearing, return to aggregate view
+            if not self.is_drilled_down():
+                # Determine which aggregate view to return to based on what was cleared
+                self.view_mode = ViewMode.MERCHANT  # Default to merchant view
 
-        # Already at a top-level view
+            return True, 0, 0.0
+
+        # Already at top-level view
         return False, 0, 0.0
 
     def save_view_state(self) -> dict:

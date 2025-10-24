@@ -20,14 +20,20 @@ STANDARD_CATEGORIES: List[Tuple[str, str, str]] = [
     ("cat_office_rent", "Office Rent", "Business"),
     ("cat_business_electronics", "Business Electronics", "Business"),
     ("cat_business_software", "Business Software", "Business"),
+    ("cat_business_travel_meals", "Business Travel & Meals", "Business"),
     ("cat_business_utilities", "Business Utilities & Communication", "Business"),
     ("cat_office_supplies", "Office Supplies", "Business"),
     ("cat_office_expenses", "Office Supplies & Expenses", "Business"),
     ("cat_postage", "Postage & Shipping", "Business"),
+    ("cat_contracting", "Employee Wages & Contract Labor", "Business"),
+    ("cat_business_auto", "Business Auto Expenses", "Business"),
+    ("cat_advertising", "Advertising & Promotion", "Business"),
     # Cash & ATM
     ("cat_cash", "Cash & ATM", "Cash & ATM"),
     ("cat_atm", "ATM", "Cash & ATM"),
+    ("cat_check", "Check", "Cash & ATM"),
     # Food & Dining
+    ("cat_food_dining", "Food & Dining", "Food & Dining"),
     ("cat_restaurants", "Restaurants & Bars", "Food & Dining"),
     ("cat_coffee", "Coffee Shops", "Food & Dining"),
     ("cat_groceries", "Groceries", "Food & Dining"),
@@ -45,12 +51,13 @@ STANDARD_CATEGORIES: List[Tuple[str, str, str]] = [
     ("cat_luggage", "Luggage", "Travel"),
     ("cat_travel_services", "Travel Services", "Travel"),
     ("cat_travel_vacation", "Travel & Vacation", "Travel"),
-    # Automotive
-    ("cat_gas", "Gas", "Automotive"),
-    ("cat_parking_tolls", "Parking & Tolls", "Automotive"),
-    ("cat_auto_insurance", "Auto Insurance", "Automotive"),
-    ("cat_auto_payment", "Auto Payment", "Automotive"),
-    ("cat_auto_maintenance", "Auto Maintenance", "Automotive"),
+    # Auto & Transport
+    ("cat_auto_transport", "Auto & Transport", "Auto & Transport"),
+    ("cat_gas", "Gas", "Auto & Transport"),
+    ("cat_parking_tolls", "Parking & Tolls", "Auto & Transport"),
+    ("cat_auto_insurance", "Auto Insurance", "Auto & Transport"),
+    ("cat_auto_payment", "Auto Payment", "Auto & Transport"),
+    ("cat_auto_maintenance", "Auto Maintenance", "Auto & Transport"),
     # Services
     ("cat_internet_cable", "Internet & Cable", "Services"),
     ("cat_streaming", "Streaming", "Services"),
@@ -59,6 +66,7 @@ STANDARD_CATEGORIES: List[Tuple[str, str, str]] = [
     ("cat_software", "Software", "Services"),
     ("cat_childcare", "Child Care", "Services"),
     # Housing
+    ("cat_housing", "Housing", "Housing"),
     ("cat_gas_electric", "Gas & Electric", "Housing"),
     ("cat_mortgage", "Mortgage", "Housing"),
     ("cat_rent", "Rent", "Housing"),
@@ -67,6 +75,7 @@ STANDARD_CATEGORIES: List[Tuple[str, str, str]] = [
     ("cat_garbage", "Garbage", "Housing"),
     # Shopping
     ("cat_shopping", "Shopping", "Shopping"),
+    ("cat_child_stuff", "Child Stuff", "Shopping"),
     ("cat_clothing", "Clothing", "Shopping"),
     ("cat_electronics", "Electronics", "Shopping"),
     ("cat_home_supplies", "Home Supplies", "Shopping"),
@@ -78,7 +87,8 @@ STANDARD_CATEGORIES: List[Tuple[str, str, str]] = [
     ("cat_books", "Books", "Shopping"),
     ("cat_membership", "Membership", "Shopping"),
     # Entertainment
-    ("cat_entertainment", "Entertainment & Recreation", "Entertainment"),
+    ("cat_entertainment_rec", "Entertainment & Recreation", "Entertainment"),
+    ("cat_entertainment", "Entertainment", "Entertainment"),
     # Education
     ("cat_education", "Education", "Education"),
     # Health & Fitness
@@ -93,6 +103,7 @@ STANDARD_CATEGORIES: List[Tuple[str, str, str]] = [
     ("cat_workout_classes", "Workout Classes", "Health & Fitness"),
     ("cat_health_wellness", "Health & Wellness", "Health & Fitness"),
     # Gifts & Charity
+    ("cat_gifts_charity", "Gifts & Charity", "Gifts & Charity"),
     ("cat_gifts", "Gifts", "Gifts & Charity"),
     ("cat_charity", "Charity", "Gifts & Charity"),
     # Bills & Utilities

@@ -1489,3 +1489,184 @@ class TestSmartSearchEscape:
         state2 = state.get_navigation_state()
         assert state2 == (1, ViewMode.CATEGORY)
         assert state1 != state2
+
+
+class TestMultiLevelDrillDownNavigation:
+    """Test complex multi-level drill-down and go_back scenarios."""
+
+    def test_drill_into_category_subgroup_by_account_drill_into_account_go_back(self):
+        """
+        Test the reported bug: Drill into category, sub-group by account,
+        drill into account, then go back should restore sub-grouped view.
+
+        Steps:
+        1. Category view → drill into "Groceries"
+        2. Press g → sub-group by Account
+        3. Press Enter on account → drill into that account
+        4. Press Escape → should go back to Groceries > (by Account), not Category view
+        """
+        state = AppState()
+
+        # Step 1: Start in Category view, drill into Groceries
+        state.view_mode = ViewMode.CATEGORY
+        state.drill_down("Groceries", cursor_position=5, scroll_y=100.0)
+
+        assert state.view_mode == ViewMode.DETAIL
+        assert state.selected_category == "Groceries"
+        assert state.sub_grouping_mode is None
+        assert len(state.navigation_history) == 1
+
+        # Step 2: Sub-group by Account
+        state.sub_grouping_mode = ViewMode.ACCOUNT
+
+        # Step 3: Drill into a specific account from sub-grouped view
+        # This should save the current state (Groceries + sub_grouping_mode=ACCOUNT)
+        state.drill_down("Chase Checking", cursor_position=3, scroll_y=50.0)
+
+        assert state.view_mode == ViewMode.DETAIL
+        assert state.selected_category == "Groceries"  # Still filtered to Groceries
+        assert state.selected_account == "Chase Checking"  # Now also filtered to account
+        assert state.sub_grouping_mode is None  # Cleared when drilling into account
+        assert len(state.navigation_history) == 2  # Two drill-downs saved
+
+        # Step 4: Go back - should restore Groceries > (by Account)
+        success, cursor, scroll = state.go_back()
+
+        assert success is True
+        assert state.view_mode == ViewMode.DETAIL
+        assert state.selected_category == "Groceries"  # Still Groceries
+        assert state.selected_account is None  # Account filter cleared
+        assert state.sub_grouping_mode == ViewMode.ACCOUNT  # Sub-grouping restored!
+        assert cursor == 3  # Cursor restored
+        assert scroll == 50.0  # Scroll restored
+        assert len(state.navigation_history) == 1  # One drill-down remains
+
+        # Step 5: Go back again - should clear sub-grouping, stay in Groceries detail
+        success, cursor, scroll = state.go_back()
+
+        assert success is True
+        assert state.view_mode == ViewMode.DETAIL
+        assert state.selected_category == "Groceries"  # Still in Groceries
+        assert state.sub_grouping_mode is None  # Sub-grouping cleared
+        assert len(state.navigation_history) == 1  # One entry remains
+
+        # Step 6: Go back a third time - now should return to Category view
+        success, cursor, scroll = state.go_back()
+
+        assert success is True
+        assert state.view_mode == ViewMode.CATEGORY
+        assert state.selected_category is None  # Category filter cleared
+        assert state.sub_grouping_mode is None
+        assert cursor == 5  # Original cursor restored
+        assert scroll == 100.0  # Original scroll restored
+        assert len(state.navigation_history) == 0  # Back to root
+
+    def test_drill_into_merchant_subgroup_by_category_drill_into_category(self):
+        """Test multi-level navigation: Merchant → sub-group by Category → drill into category."""
+        state = AppState()
+
+        # Step 1: Drill into Amazon from Merchant view
+        state.view_mode = ViewMode.MERCHANT
+        state.drill_down("Amazon", cursor_position=10, scroll_y=200.0)
+
+        assert state.selected_merchant == "Amazon"
+        assert state.sub_grouping_mode is None
+
+        # Step 2: Sub-group by Category
+        state.sub_grouping_mode = ViewMode.CATEGORY
+
+        # Step 3: Drill into Shopping category
+        state.drill_down("Shopping", cursor_position=2, scroll_y=25.0)
+
+        assert state.selected_merchant == "Amazon"
+        assert state.selected_category == "Shopping"
+        assert state.sub_grouping_mode is None  # Cleared on drill-down
+
+        # Go back should restore Amazon > (by Category)
+        success, cursor, scroll = state.go_back()
+
+        assert success is True
+        assert state.selected_merchant == "Amazon"
+        assert state.selected_category is None
+        assert state.sub_grouping_mode == ViewMode.CATEGORY
+        assert cursor == 2
+        assert scroll == 25.0
+
+    def test_navigation_history_saves_all_selections(self):
+        """Test that navigation history saves all drill-down selections."""
+        state = AppState()
+
+        # Drill down with multiple selections active
+        state.view_mode = ViewMode.CATEGORY
+        state.selected_merchant = "Amazon"  # Already filtered by merchant
+        state.selected_category = None
+        state.sub_grouping_mode = ViewMode.CATEGORY
+
+        state.drill_down("Groceries", cursor_position=7, scroll_y=140.0)
+
+        # Check saved state preserves everything
+        saved_nav = state.navigation_history[-1]
+        assert saved_nav.view_mode == ViewMode.CATEGORY
+        assert saved_nav.selected_merchant == "Amazon"  # Merchant filter saved
+        assert saved_nav.sub_grouping_mode == ViewMode.CATEGORY  # Sub-grouping saved
+
+        # Now state should have both filters
+        assert state.selected_merchant == "Amazon"  # Preserved
+        assert state.selected_category == "Groceries"  # Added
+
+    def test_go_back_restores_subgrouping_mode(self):
+        """Test that go_back specifically restores sub_grouping_mode."""
+        state = AppState()
+
+        # Set up: Drilled into merchant with sub-grouping
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Starbucks"
+        state.sub_grouping_mode = ViewMode.CATEGORY
+
+        # Drill down into a category
+        state.drill_down("Coffee Shops", cursor_position=1, scroll_y=10.0)
+
+        # Verify sub-grouping was cleared
+        assert state.sub_grouping_mode is None
+
+        # Go back
+        state.go_back()
+
+        # Sub-grouping should be restored
+        assert state.sub_grouping_mode == ViewMode.CATEGORY
+        assert state.selected_merchant == "Starbucks"
+        assert state.selected_category is None  # Cleared by go_back
+
+    def test_three_level_drill_down_and_back(self):
+        """Test three levels deep: Category → sub-group → drill → drill."""
+        state = AppState()
+
+        # Level 1: Drill into Travel from Group view
+        state.view_mode = ViewMode.GROUP
+        state.drill_down("Travel", cursor_position=2, scroll_y=20.0)
+
+        # Level 2: Sub-group by Merchant
+        state.sub_grouping_mode = ViewMode.MERCHANT
+
+        # Level 3: Drill into United Airlines
+        state.drill_down("United Airlines", cursor_position=0, scroll_y=0.0)
+
+        assert len(state.navigation_history) == 2
+
+        # First go_back: Restore Travel > (by Merchant)
+        state.go_back()
+        assert state.selected_group == "Travel"
+        assert state.selected_merchant is None
+        assert state.sub_grouping_mode == ViewMode.MERCHANT
+
+        # Second go_back: Clear sub-grouping, stay in Travel detail
+        state.go_back()
+        assert state.view_mode == ViewMode.DETAIL
+        assert state.selected_group == "Travel"
+        assert state.sub_grouping_mode is None
+
+        # Third go_back: Return to Group view
+        state.go_back()
+        assert state.view_mode == ViewMode.GROUP
+        assert state.selected_group is None
+        assert state.sub_grouping_mode is None

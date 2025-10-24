@@ -33,20 +33,24 @@ CATEGORY_GROUPS = {
         "Accounting",
         "Business",
         "Office Rent",
+        "Business Auto Expenses",
         "Business Electronics",
         "Business Software",
+        "Business Travel & Meals",
         "Business Utilities & Communication",
         "Office Supplies",
         "Office Supplies & Expenses",
         "Postage & Shipping",
+        "Employee Wages & Contract Labor",
+        "Advertising & Promotion"
     ],
-    "Cash & ATM": ["Cash & ATM", "ATM"],
+    "Cash & ATM": ["Cash & ATM", "ATM", "Check"],
     "Food & Dining": [
         "Restaurants & Bars",
         "Coffee Shops",
         "Groceries",
         "Fast Food",
-        "Food & Drink",
+        "Food & Dining",
         "Alcohol",
         "Quick Eats",
     ],
@@ -62,11 +66,12 @@ CATEGORY_GROUPS = {
         "Travel Services",
         "Travel & Vacation",
     ],
-    "Automotive": [
+    "Auto & Transport": [
         "Gas",
         "Parking & Tolls",
         "Auto Payment",
         "Auto Maintenance",
+        "Auto & Transport"
     ],
     "Services": [
         "Internet & Cable",
@@ -76,7 +81,7 @@ CATEGORY_GROUPS = {
         "Software",
         "Child Care",
     ],
-    "Housing": ["Gas & Electric", "Mortgage", "Rent", "Home Improvement", "Water", "Garbage"],
+    "Housing": ["Gas & Electric", "Mortgage", "Rent", "Home Improvement", "Water", "Garbage", "Housing"],
     "Shopping": [
         "Shopping",
         "Clothing",
@@ -89,6 +94,7 @@ CATEGORY_GROUPS = {
         "Hobbies",
         "Books",
         "Membership",
+        "Child Stuff"
     ],
     "Entertainment": ["Entertainment & Recreation"],
     "Education": ["Education"],
@@ -117,7 +123,8 @@ CATEGORY_GROUPS = {
         "Life Insurance"
     ],
     "Personal Care": ["Chiropractic & Massage", "Hair", "Personal Care"],
-    "Income": ["Paychecks", "Interest", "Business Income", "Other Income"],
+    "Income": ["Paychecks", "Interest", "Business Income", "Other Income", "Income"],
+    "Miscellaneous": ["Miscellaneous", "Personal"],
     "Transfers": ["Transfer", "Credit Card Payment", "Balance Adjustments"],
     "Uncategorized": ["Uncategorized", "Check", "Miscellaneous"],
 }
