@@ -870,7 +870,7 @@ class MoneyflowApp(App):
             self.push_screen(DuplicatesScreen(duplicates, groups, filtered_df))
 
     def action_undo_pending_edits(self) -> None:
-        """Undo the most recent pending edit."""
+        """Undo the most recent pending edit or bulk edit batch."""
         if self.data_manager is None or not self.data_manager.pending_edits:
             self.notify("No pending edits to undo", timeout=2)
             return
@@ -878,8 +878,24 @@ class MoneyflowApp(App):
         # Save cursor and scroll position
         saved_position = self._save_table_position()
 
-        # Remove the most recent edit (last one in the list)
-        removed_edit = self.data_manager.pending_edits.pop()
+        # Get the timestamp of the most recent edit
+        last_edit = self.data_manager.pending_edits[-1]
+        last_timestamp = last_edit.timestamp
+
+        # Count how many edits from the end have the same timestamp (bulk edit batch)
+        # Bulk edits are queued in a single operation, so they have the same timestamp
+        edits_to_undo = []
+        for i in range(len(self.data_manager.pending_edits) - 1, -1, -1):
+            edit = self.data_manager.pending_edits[i]
+            if edit.timestamp == last_timestamp:
+                edits_to_undo.append(edit)
+            else:
+                # Different timestamp - stop here
+                break
+
+        # Remove all edits from this batch (reverse order since we found them backwards)
+        for edit in edits_to_undo:
+            self.data_manager.pending_edits.remove(edit)
 
         # Refresh view to update indicators
         self.refresh_view(force_rebuild=False)
@@ -888,13 +904,22 @@ class MoneyflowApp(App):
         self._restore_table_position(saved_position)
 
         # Show notification with what was undone
+        count_undone = len(edits_to_undo)
         count_remaining = len(self.data_manager.pending_edits)
-        field_name = removed_edit.field.replace("_", " ").title()
-        self.notify(
-            f"Undone {field_name} edit ({count_remaining} remaining)",
-            severity="information",
-            timeout=2,
-        )
+        field_name = last_edit.field.replace("_", " ").title()
+
+        if count_undone == 1:
+            self.notify(
+                f"Undone {field_name} edit ({count_remaining} remaining)",
+                severity="information",
+                timeout=2,
+            )
+        else:
+            self.notify(
+                f"Undone {count_undone} {field_name} edits ({count_remaining} remaining)",
+                severity="information",
+                timeout=2,
+            )
 
     # Time navigation actions
     def action_this_year(self) -> None:

@@ -470,3 +470,129 @@ class TestUndoPendingEdits:
         data_manager.pending_edits = [hide_edit]
         removed = data_manager.pending_edits.pop()
         assert removed.field == "hide_from_reports"
+
+
+class TestBulkUndo:
+    """Test undoing bulk edit operations."""
+
+    async def test_undo_bulk_edit_removes_all_edits_at_once(self, data_manager):
+        """Test that undoing a bulk edit removes all edits from that batch."""
+        from datetime import datetime
+
+        from moneyflow.state import TransactionEdit
+
+        # Simulate bulk edit: 5 merchant edits queued at same timestamp
+        timestamp = datetime.now()
+        bulk_edits = [
+            TransactionEdit(f"txn_{i}", "merchant", f"Old{i}", "New", timestamp)
+            for i in range(5)
+        ]
+        data_manager.pending_edits = bulk_edits.copy()
+
+        # Simulate undo - should remove all 5 edits (same timestamp)
+        last_timestamp = data_manager.pending_edits[-1].timestamp
+        edits_to_undo = []
+        for i in range(len(data_manager.pending_edits) - 1, -1, -1):
+            edit = data_manager.pending_edits[i]
+            if edit.timestamp == last_timestamp:
+                edits_to_undo.append(edit)
+            else:
+                break
+
+        for edit in edits_to_undo:
+            data_manager.pending_edits.remove(edit)
+
+        # Verify all 5 edits were undone
+        assert len(edits_to_undo) == 5
+        assert len(data_manager.pending_edits) == 0
+
+    async def test_undo_preserves_earlier_bulk_edits(self, data_manager):
+        """Test that undo only removes the most recent bulk edit batch."""
+        from datetime import datetime, timedelta
+
+        from moneyflow.state import TransactionEdit
+
+        # First bulk edit: 3 edits at timestamp T
+        timestamp1 = datetime.now()
+        first_batch = [
+            TransactionEdit(f"txn_{i}", "merchant", f"Old{i}", "Batch1", timestamp1)
+            for i in range(3)
+        ]
+
+        # Second bulk edit: 4 edits at timestamp T+1 second
+        timestamp2 = timestamp1 + timedelta(seconds=1)
+        second_batch = [
+            TransactionEdit(f"txn_{i}", "category", "cat_old", "cat_new", timestamp2)
+            for i in range(3, 7)
+        ]
+
+        data_manager.pending_edits = first_batch + second_batch
+
+        # Undo should remove only second_batch (most recent timestamp)
+        last_timestamp = data_manager.pending_edits[-1].timestamp
+        edits_to_undo = []
+        for i in range(len(data_manager.pending_edits) - 1, -1, -1):
+            edit = data_manager.pending_edits[i]
+            if edit.timestamp == last_timestamp:
+                edits_to_undo.append(edit)
+            else:
+                break
+
+        for edit in edits_to_undo:
+            data_manager.pending_edits.remove(edit)
+
+        # Verify only second batch was undone
+        assert len(edits_to_undo) == 4
+        assert len(data_manager.pending_edits) == 3
+        # First batch should remain
+        assert all(e.timestamp == timestamp1 for e in data_manager.pending_edits)
+
+    async def test_undo_single_edit_after_bulk_edit(self, data_manager):
+        """Test that single edit after bulk edit is undone separately."""
+        from datetime import datetime, timedelta
+
+        from moneyflow.state import TransactionEdit
+
+        # Bulk edit: 5 edits
+        timestamp1 = datetime.now()
+        bulk_edits = [
+            TransactionEdit(f"txn_{i}", "merchant", "Old", "New", timestamp1) for i in range(5)
+        ]
+
+        # Single edit later
+        timestamp2 = timestamp1 + timedelta(seconds=1)
+        single_edit = TransactionEdit("txn_10", "category", "cat_1", "cat_2", timestamp2)
+
+        data_manager.pending_edits = bulk_edits + [single_edit]
+
+        # First undo: should remove only the single edit
+        last_timestamp = data_manager.pending_edits[-1].timestamp
+        edits_to_undo = []
+        for i in range(len(data_manager.pending_edits) - 1, -1, -1):
+            edit = data_manager.pending_edits[i]
+            if edit.timestamp == last_timestamp:
+                edits_to_undo.append(edit)
+            else:
+                break
+
+        for edit in edits_to_undo:
+            data_manager.pending_edits.remove(edit)
+
+        assert len(edits_to_undo) == 1
+        assert len(data_manager.pending_edits) == 5
+
+        # Second undo: should remove all 5 bulk edits
+        last_timestamp = data_manager.pending_edits[-1].timestamp
+        edits_to_undo = []
+        for i in range(len(data_manager.pending_edits) - 1, -1, -1):
+            edit = data_manager.pending_edits[i]
+            if edit.timestamp == last_timestamp:
+                edits_to_undo.append(edit)
+            else:
+                break
+
+        for edit in edits_to_undo:
+            data_manager.pending_edits.remove(edit)
+
+        assert len(edits_to_undo) == 5
+        assert len(data_manager.pending_edits) == 0
