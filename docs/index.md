@@ -89,7 +89,7 @@ See exactly what changes you're making before saving. All edits are queued and r
 - ++c++ - Edit category
 - ++h++ - Hide/unhide from aggregate totals and reports
 - ++space++ - Select multiple (for bulk operations)
-- ++Ctrl-A++ - Select all in view (for bulk operations)
+- ++ctrl++-++a++ - Select all in view (for bulk operations)
 
 **Review and save:**
 
