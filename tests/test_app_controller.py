@@ -1453,4 +1453,3 @@ class TestMultiSelectGroups:
 
         assert len(controller.state.selected_group_keys) == 0
         assert len(controller.state.selected_ids) == 0
-
