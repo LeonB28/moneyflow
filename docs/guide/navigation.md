@@ -273,6 +273,8 @@ Here are some practical examples of using moneyflow's navigation features to ans
 | `f` | Filters |
 | `Space` | Select row |
 | `Ctrl+A` | Select all |
+| `m` / `c` / `h` | Edit selected transaction(s) |
+| `x` | Delete selected transaction(s) |
 | `u` | Undo pending edit |
 | `w` | Commit pending edits |
 | `t` / `y` / `a` | Time filters |

@@ -11,10 +11,13 @@ In detail view, edit individual transactions:
 | ++m++ | Edit merchant name |
 | ++c++ | Edit category |
 | ++h++ | Hide/unhide from reports |
+| ++x++ | Delete transaction (with confirmation) |
 
 The cursor stays in place after editing, so you can quickly edit multiple transactions by pressing the same key repeatedly.
 
 All edits are queued (not committed immediately) so you can review them before saving.
+
+**Note:** Delete is different - it executes immediately after confirmation (not queued). This is because deletion is irreversible and should be done carefully.
 
 ### Edit Merchant Modal
 
@@ -66,6 +69,7 @@ Select multiple transactions to edit them all at once:
 2. Press ++m++ to rename merchant for all selected
 3. Or press ++c++ to recategorize all selected
 4. Or press ++h++ to hide/unhide all selected
+5. Or press ++x++ to delete all selected (with confirmation)
 
 **Example: Recategorize 3 transactions**
 
@@ -237,6 +241,7 @@ The `*` indicator shows which transactions/groups have pending edits before you 
 |---------|-----|--------|
 | Any view | ++space++ | Select current row |
 | Detail view | ++m++ / ++c++ / ++h++ | Edit selected transaction(s) |
+| Detail view | ++x++ | Delete selected transaction(s) |
 | Aggregate view | ++m++ / ++c++ | Edit transactions in current group |
 | Aggregate view (multi-select) | ++m++ / ++c++ | Edit transactions in ALL selected groups |
 | Any view | ++u++ | Undo most recent pending edit |

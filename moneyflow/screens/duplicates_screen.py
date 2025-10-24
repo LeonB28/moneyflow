@@ -18,8 +18,8 @@ class DuplicatesScreen(Screen):
 
     BINDINGS = [
         Binding("i", "show_details", "Details", show=True, key_display="i"),
-        Binding("d", "delete_transaction", "Delete", show=True, key_display="d"),
         Binding("h", "toggle_hide", "Hide/Unhide", show=True, key_display="h"),
+        Binding("x", "delete_transaction", "Delete", show=True, key_display="x"),
         Binding("space", "toggle_select", "Select", show=True, key_display="Space"),
         Binding("escape", "close", "Close", show=True, key_display="Esc"),
     ]

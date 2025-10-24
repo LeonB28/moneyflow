@@ -70,6 +70,7 @@ moneyflow is designed to be used entirely with the keyboard. Here's your complet
 | ++m++ | Edit merchant name |
 | ++c++ | Edit category |
 | ++h++ | Hide/unhide from reports |
+| ++x++ | Delete transaction (with confirmation) |
 | ++i++ | View full transaction details |
 
 ### Multi-Select
@@ -80,6 +81,7 @@ moneyflow is designed to be used entirely with the keyboard. Here's your complet
 | ++m++ | Edit merchant for all selected |
 | ++c++ | Edit category for all selected |
 | ++h++ | Hide/unhide all selected |
+| ++x++ | Delete all selected (with confirmation) |
 
 !!! example "Bulk Workflow"
     1. Press ++space++ on multiple transactions (shows ✓)
@@ -254,7 +256,7 @@ Print this for reference:
 ```
 Views:       g (cycle)  d (detail)  D (duplicates)
 Time:        y (year)   t (month)  a (all)  ←/→ (navigate)
-Edit:        m (merchant)  c (category)  h (hide)  u (undo)
+Edit:        m (merchant)  c (category)  h (hide)  x (delete)  u (undo)
 Select:      Space (multi-select)  Ctrl+A (select all)
 Sort:        s (toggle field)  v (reverse)
 Navigate:    Enter (drill down)  Escape (go back)

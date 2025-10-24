@@ -132,6 +132,7 @@ class MoneyflowApp(App):
         Binding("m", "edit_merchant", "Edit Merchant", show=False),
         Binding("c", "edit_category", "Edit Category", show=False),
         Binding("h", "toggle_hide_from_reports", "Hide/Unhide", show=False),
+        Binding("x", "delete_transaction", "Delete", show=False),
         Binding("i", "show_transaction_details", "Info", show=False),
         Binding("space", "toggle_select", "Select", show=False),
         Binding("ctrl+a", "select_all", "Select All", show=False),
@@ -1881,24 +1882,66 @@ class MoneyflowApp(App):
         if table.cursor_row < 0:
             return
 
-        # Get current transaction
-        row_data = self.state.current_data.row(table.cursor_row, named=True)
-        txn_id = row_data["id"]
+        # Check if multi-select is active
+        if len(self.state.selected_ids) > 0:
+            # Multi-select delete
+            transaction_ids = list(self.state.selected_ids)
+            count = len(transaction_ids)
+        else:
+            # Single transaction delete
+            row_data = self.state.current_data.row(table.cursor_row, named=True)
+            transaction_ids = [row_data["id"]]
+            count = 1
 
         # Show confirmation
         confirmed = await self.push_screen(
-            DeleteConfirmationScreen(transaction_count=1), wait_for_dismiss=True
+            DeleteConfirmationScreen(transaction_count=count), wait_for_dismiss=True
         )
 
         if confirmed:
-            try:
-                # Delete via API
-                await self.backend.delete_transaction(txn_id)
-                self.notify("Transaction deleted", severity="information", timeout=2)
+            # Save position for refresh
+            saved_position = self._save_table_position()
 
-                # Refresh data - need to re-fetch
-                # For now, just notify user to refresh
-                self.notify("Press Ctrl+L to refresh data from backend", timeout=3)
+            success_count = 0
+            failure_count = 0
+
+            try:
+                # Delete each transaction via API
+                for txn_id in transaction_ids:
+                    try:
+                        await self.backend.delete_transaction(txn_id)
+                        success_count += 1
+                    except Exception as e:
+                        logger = get_logger(__name__)
+                        logger.error(f"Failed to delete transaction {txn_id}: {e}")
+                        failure_count += 1
+
+                # Update local DataFrame to remove deleted transactions
+                if success_count > 0 and self.data_manager.df is not None:
+                    # Remove deleted transactions from DataFrame
+                    deleted_ids = transaction_ids[:success_count]
+                    self.data_manager.df = self.data_manager.df.filter(
+                        ~pl.col("id").is_in(deleted_ids)
+                    )
+                    self.state.transactions_df = self.data_manager.df
+
+                # Clear selection
+                self.state.clear_selection()
+
+                # Show result notification
+                if failure_count == 0:
+                    self.notify(
+                        f"Deleted {success_count} transaction(s)", severity="information", timeout=2
+                    )
+                else:
+                    self.notify(
+                        f"Deleted {success_count}, failed {failure_count}", severity="warning", timeout=3
+                    )
+
+                # Refresh view to show updated data
+                self.refresh_view()
+                self._restore_table_position(saved_position)
+
             except Exception as e:
                 self.notify(f"Error deleting: {e}", severity="error", timeout=5)
 

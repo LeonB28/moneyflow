@@ -709,9 +709,9 @@ class AppController:
                 or self.state.selected_group
                 or self.state.selected_account
             ):
-                return "Esc/g=Back | m=✏️ Merchant | c=✏️ Category | h=Hide | Space=Select | Ctrl-A=SelectAll"
+                return "Esc/g=Back | m=✏️ Merchant | c=✏️ Category | h=Hide | x=Delete | Space=Select | Ctrl-A=SelectAll"
             else:
-                return "g=Group | m=✏️ Merchant | c=✏️ Category | h=Hide | Space=Select | Ctrl-A=SelectAll"
+                return "g=Group | m=✏️ Merchant | c=✏️ Category | h=Hide | x=Delete | Space=Select | Ctrl-A=SelectAll"
 
     def queue_category_edits(self, transactions_df, new_category_id: str) -> int:
         """
