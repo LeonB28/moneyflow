@@ -12,14 +12,13 @@ All screens follow a consistent pattern:
 3. Dismiss with new value or None (if cancelled)
 """
 
+import polars as pl
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.events import Key
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, OptionList, Static
 from textual.widgets.option_list import Option
-
-import polars as pl
 
 
 class EditMerchantScreen(ModalScreen):
@@ -153,7 +152,9 @@ class EditMerchantScreen(ModalScreen):
             )
 
             if self.all_merchants is not None:
-                yield Static("Existing merchants - ↑/↓=Navigate | Enter=Select", id="suggestions-count")
+                yield Static(
+                    "Existing merchants - ↑/↓=Navigate | Enter=Select", id="suggestions-count"
+                )
                 yield OptionList(id="suggestions")
 
             with Container(id="button-container"):

@@ -108,7 +108,7 @@ STANDARD_CATEGORIES: List[Tuple[str, str, str]] = [
     ("cat_charity", "Charity", "Gifts & Charity"),
     # Bills & Utilities
     ("cat_phone", "Phone", "Bills & Utilities"),
-    # Financial 
+    # Financial
     ("cat_bank_fees", "Bank Fees", "Financial"),
     ("cat_financial_legal", "Financial & Legal Services", "Financial"),
     ("cat_financial_fees", "Financial Fees", "Financial"),

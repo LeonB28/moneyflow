@@ -42,7 +42,7 @@ CATEGORY_GROUPS = {
         "Office Supplies & Expenses",
         "Postage & Shipping",
         "Employee Wages & Contract Labor",
-        "Advertising & Promotion"
+        "Advertising & Promotion",
     ],
     "Cash & ATM": ["Cash & ATM", "ATM", "Check"],
     "Food & Dining": [
@@ -71,7 +71,7 @@ CATEGORY_GROUPS = {
         "Parking & Tolls",
         "Auto Payment",
         "Auto Maintenance",
-        "Auto & Transport"
+        "Auto & Transport",
     ],
     "Services": [
         "Internet & Cable",
@@ -81,7 +81,15 @@ CATEGORY_GROUPS = {
         "Software",
         "Child Care",
     ],
-    "Housing": ["Gas & Electric", "Mortgage", "Rent", "Home Improvement", "Water", "Garbage", "Housing"],
+    "Housing": [
+        "Gas & Electric",
+        "Mortgage",
+        "Rent",
+        "Home Improvement",
+        "Water",
+        "Garbage",
+        "Housing",
+    ],
     "Shopping": [
         "Shopping",
         "Clothing",
@@ -94,7 +102,7 @@ CATEGORY_GROUPS = {
         "Hobbies",
         "Books",
         "Membership",
-        "Child Stuff"
+        "Child Stuff",
     ],
     "Entertainment": ["Entertainment & Recreation"],
     "Education": ["Education"],
@@ -120,7 +128,7 @@ CATEGORY_GROUPS = {
         "Student Loans",
         "Taxes",
         "Insurance",
-        "Life Insurance"
+        "Life Insurance",
     ],
     "Personal Care": ["Chiropractic & Massage", "Hair", "Personal Care"],
     "Income": ["Paychecks", "Interest", "Business Income", "Other Income", "Income"],

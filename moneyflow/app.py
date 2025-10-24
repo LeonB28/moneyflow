@@ -1945,7 +1945,9 @@ class MoneyflowApp(App):
                     )
                 else:
                     self.notify(
-                        f"Deleted {success_count}, failed {failure_count}", severity="warning", timeout=3
+                        f"Deleted {success_count}, failed {failure_count}",
+                        severity="warning",
+                        timeout=3,
                     )
 
                 # Refresh view to show updated data
@@ -2038,7 +2040,7 @@ class MoneyflowApp(App):
             # Check if it's an auth error (session expired)
             error_msg = str(e).lower()
             if "401" in error_msg or "unauthorized" in error_msg or "token" in error_msg:
-                logger.debug(f"Delete failed with auth error, attempting session refresh")
+                logger.debug("Delete failed with auth error, attempting session refresh")
                 # Try to refresh session once
                 if await self._refresh_session():
                     logger.debug("Session refreshed, retrying delete immediately")
