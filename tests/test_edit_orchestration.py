@@ -425,3 +425,167 @@ class TestEditMerchantExecution:
         # Should just queue edit, not touch state beyond pending_edits
         assert count == 1
         # No side effects on cursor (UI layer handles that)
+
+
+class TestToggleHideExecution:
+    """Test toggle hide/unhide with undo detection."""
+
+    async def test_toggle_hide_single_transaction(self, edit_controller):
+        """Test hiding single transaction in detail view."""
+        controller = edit_controller
+
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.refresh_view()
+
+        initial_pending = len(controller.data_manager.pending_edits)
+
+        # Toggle hide
+        count, was_undo = controller.toggle_hide_current_selection(cursor_row=0)
+
+        assert count == 1
+        assert was_undo is False
+        assert len(controller.data_manager.pending_edits) == initial_pending + 1
+        # Should be hide_from_reports edit
+        assert controller.data_manager.pending_edits[-1].field == "hide_from_reports"
+
+    async def test_toggle_hide_multi_select(self, edit_controller):
+        """Test hiding multiple selected transactions."""
+        controller = edit_controller
+
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.refresh_view()
+
+        # Select 3 transactions
+        txn_ids = controller.state.current_data["id"].head(3).to_list()
+        controller.state.selected_ids = set(txn_ids)
+
+        # Toggle hide
+        count, was_undo = controller.toggle_hide_current_selection(cursor_row=0)
+
+        assert count == 3
+        assert was_undo is False
+        # Should have 3 hide toggles
+        last_3 = controller.data_manager.pending_edits[-3:]
+        assert all(e.field == "hide_from_reports" for e in last_3)
+
+    async def test_toggle_hide_aggregate_view(self, edit_controller):
+        """Test hiding all transactions in a merchant group."""
+        controller = edit_controller
+
+        controller.state.view_mode = ViewMode.MERCHANT
+        controller.refresh_view()
+
+        # Toggle hide on first merchant
+        count, was_undo = controller.toggle_hide_current_selection(cursor_row=0)
+
+        assert count > 0
+        assert was_undo is False
+
+    async def test_toggle_hide_twice_detects_undo(self, edit_controller):
+        """Test that toggling hide twice on same transaction undoes the first."""
+        controller = edit_controller
+
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.refresh_view()
+
+        # First toggle: queue hide edit
+        count1, was_undo1 = controller.toggle_hide_current_selection(cursor_row=0)
+
+        assert count1 == 1
+        assert was_undo1 is False
+        pending_after_first = len(controller.data_manager.pending_edits)
+
+        # Second toggle: should undo the first (remove the pending edit)
+        count2, was_undo2 = controller.toggle_hide_current_selection(cursor_row=0)
+
+        assert count2 == 1
+        assert was_undo2 is True  # Detected as undo!
+        # Should have removed the pending edit
+        assert len(controller.data_manager.pending_edits) == pending_after_first - 1
+
+    async def test_toggle_hide_group_twice_undoes_batch(self, edit_controller):
+        """Test that hiding a group twice undoes all edits in that group."""
+        controller = edit_controller
+
+        controller.state.view_mode = ViewMode.MERCHANT
+        controller.refresh_view()
+
+        initial_pending = len(controller.data_manager.pending_edits)
+
+        # First toggle: hide all transactions in first merchant
+        count1, was_undo1 = controller.toggle_hide_current_selection(cursor_row=0)
+
+        assert count1 > 0
+        assert was_undo1 is False
+        assert len(controller.data_manager.pending_edits) == initial_pending + count1
+
+        # Second toggle on same merchant: should undo ALL hide edits from that merchant
+        count2, was_undo2 = controller.toggle_hide_current_selection(cursor_row=0)
+
+        assert count2 == count1  # Same number undone
+        assert was_undo2 is True  # Detected as undo!
+        # All edits from first toggle should be removed
+        assert len(controller.data_manager.pending_edits) == initial_pending
+
+    async def test_toggle_hide_different_groups_no_undo(self, edit_controller):
+        """Test that hiding different groups doesn't trigger undo."""
+        controller = edit_controller
+
+        controller.state.view_mode = ViewMode.MERCHANT
+        controller.refresh_view()
+
+        initial_pending = len(controller.data_manager.pending_edits)
+
+        # Hide first merchant
+        count1, was_undo1 = controller.toggle_hide_current_selection(cursor_row=0)
+
+        assert was_undo1 is False
+
+        # Hide second merchant (different group)
+        count2, was_undo2 = controller.toggle_hide_current_selection(cursor_row=1)
+
+        assert was_undo2 is False  # Not an undo (different group)
+        # Both sets of edits should be queued
+        assert len(controller.data_manager.pending_edits) == initial_pending + count1 + count2
+
+    async def test_toggle_hide_partial_pending_no_undo(self, edit_controller):
+        """Test that partial pending edits don't trigger undo."""
+        controller = edit_controller
+
+        controller.state.view_mode = ViewMode.DETAIL
+        controller.refresh_view()
+
+        # Manually add pending edit for first transaction
+        txn_id = controller.state.current_data["id"][0]
+        from moneyflow.state import TransactionEdit
+        from datetime import datetime
+
+        controller.data_manager.pending_edits.append(
+            TransactionEdit(txn_id, "hide_from_reports", False, True, datetime.now())
+        )
+
+        # Select 2 transactions (first one has pending, second doesn't)
+        txn_ids = controller.state.current_data["id"].head(2).to_list()
+        controller.state.selected_ids = set(txn_ids)
+
+        # Toggle: should NOT be undo (not all have pending)
+        count, was_undo = controller.toggle_hide_current_selection(cursor_row=0)
+
+        assert was_undo is False  # Not all had pending, so not an undo
+        # Should queue toggles for both
+        assert count == 2
+
+    async def test_toggle_hide_empty_transactions_returns_zero(self, edit_controller):
+        """Test graceful handling of empty transaction set."""
+        controller = edit_controller
+
+        controller.state.view_mode = ViewMode.MERCHANT
+        controller.refresh_view()
+
+        # Select non-existent merchants
+        controller.state.selected_group_keys = {"NonExistent"}
+
+        count, was_undo = controller.toggle_hide_current_selection(cursor_row=0)
+
+        assert count == 0
+        assert was_undo is False
