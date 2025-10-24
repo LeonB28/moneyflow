@@ -1320,42 +1320,81 @@ class MoneyflowApp(App):
 
         cursor_row = table.cursor_row
 
-        # Check for existing pending hide toggle on current transaction (for undo in detail view)
-        if self.state.view_mode == ViewMode.DETAIL and len(self.state.selected_ids) == 0:
+        # Check for existing pending hide toggle on current transaction (for undo in detail view ONLY)
+        # Only applies to actual transaction detail view, not aggregate or sub-grouped views
+        is_transaction_detail_view = (
+            self.state.view_mode == ViewMode.DETAIL
+            and not self.state.sub_grouping_mode  # Not sub-grouped (showing transactions, not aggregates)
+            and len(self.state.selected_ids) == 0  # Single transaction (not multi-select)
+        )
+
+        if is_transaction_detail_view:
             # Single transaction in detail view - check for existing edit to undo
             row_data = self.state.current_data.row(cursor_row, named=True)
-            txn_id = row_data["id"]
+            txn_id = row_data.get("id")
 
-            existing_edit = None
-            for edit in self.data_manager.pending_edits:
-                if edit.transaction_id == txn_id and edit.field == "hide_from_reports":
-                    existing_edit = edit
-                    break
+            if txn_id:  # Ensure this is actually a transaction row
+                existing_edit = None
+                for edit in self.data_manager.pending_edits:
+                    if edit.transaction_id == txn_id and edit.field == "hide_from_reports":
+                        existing_edit = edit
+                        break
 
-            if existing_edit:
-                # Undo the pending toggle
-                saved_position = self._save_table_position()
-                self.data_manager.pending_edits.remove(existing_edit)
-                self.notify("Reverted hide/unhide change", timeout=2)
-                self.refresh_view()
-                self._restore_table_position(saved_position)
-                return
+                if existing_edit:
+                    # Undo the pending toggle
+                    saved_position = self._save_table_position()
+                    self.data_manager.pending_edits.remove(existing_edit)
+                    self.notify("Reverted hide/unhide change", timeout=2)
+                    self.refresh_view()
+                    self._restore_table_position(saved_position)
+                    return
 
         # Save position before refresh
         saved_position = self._save_table_position()
 
-        # Get edit context from controller
+        # Get edit context from controller (what transactions are we toggling?)
         context = self.controller.determine_edit_context("merchant", cursor_row=cursor_row)
 
-        # Execute hide toggle via controller
-        count = self.controller.toggle_hide_current_selection(cursor_row=cursor_row)
+        if context.transactions.is_empty():
+            self.notify("No transactions to toggle", timeout=2)
+            return
+
+        # Check if all transactions in this selection already have pending hide toggles
+        # If so, this is an undo operation (remove the pending edits)
+        pending_hide_txn_ids = {
+            edit.transaction_id
+            for edit in self.data_manager.pending_edits
+            if edit.field == "hide_from_reports"
+        }
+        current_txn_ids = set(context.transactions["id"].to_list())
+        all_have_pending = current_txn_ids.issubset(pending_hide_txn_ids)
+
+        if all_have_pending:
+            # Undo: Remove all pending hide toggles for these transactions
+            edits_to_remove = [
+                edit
+                for edit in self.data_manager.pending_edits
+                if edit.field == "hide_from_reports" and edit.transaction_id in current_txn_ids
+            ]
+
+            for edit in edits_to_remove:
+                self.data_manager.pending_edits.remove(edit)
+
+            count = len(edits_to_remove)
+            self.notify(
+                f"Reverted hide/unhide for {count} transactions",
+                severity="information",
+                timeout=2,
+            )
+        else:
+            # Normal toggle: Execute hide toggle via controller
+            count = self.controller.toggle_hide_current_selection(cursor_row=cursor_row)
+            self.notify(f"Toggled hide/unhide for {count} transactions. Press w to commit.", timeout=3)
 
         # Clear selection if multi-select
         if context.is_multi_select:
             self.state.clear_selection()
 
-        # Display result
-        self.notify(f"Toggled hide/unhide for {count} transactions. Press w to commit.", timeout=3)
         self.refresh_view()
         self._restore_table_position(saved_position)
 
