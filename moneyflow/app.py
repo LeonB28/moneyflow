@@ -2290,7 +2290,7 @@ def launch_monarch_mode(
         year: Only load transactions from this year onwards
         since: Only load transactions from this date onwards (overrides year)
         mtd: Load month-to-date transactions only
-        cache: Cache directory path (enables caching if provided)
+        cache: Cache directory path (enables caching if provided, None to disable)
         refresh: Force refresh from API, skip cache
         demo: Run in demo mode with sample data
     """

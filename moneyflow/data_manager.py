@@ -105,13 +105,16 @@ CATEGORY_GROUPS = {
         "Health & Wellness",
     ],
     "Gifts & Charity": ["Gifts", "Charity"],
-    "Bills & Utilities": ["Phone", "Insurance"],
+    "Bills & Utilities": ["Phone"],
     "Financial": [
+        "Bank Fees",
         "Financial & Legal Services",
         "Financial Fees",
         "Loan Repayment",
         "Student Loans",
         "Taxes",
+        "Insurance",
+        "Life Insurance"
     ],
     "Personal Care": ["Chiropractic & Massage", "Hair", "Personal Care"],
     "Income": ["Paychecks", "Interest", "Business Income", "Other Income"],

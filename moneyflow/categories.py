@@ -48,6 +48,7 @@ STANDARD_CATEGORIES: List[Tuple[str, str, str]] = [
     # Automotive
     ("cat_gas", "Gas", "Automotive"),
     ("cat_parking_tolls", "Parking & Tolls", "Automotive"),
+    ("cat_auto_insurance", "Auto Insurance", "Automotive"),
     ("cat_auto_payment", "Auto Payment", "Automotive"),
     ("cat_auto_maintenance", "Auto Maintenance", "Automotive"),
     # Services
@@ -96,10 +97,12 @@ STANDARD_CATEGORIES: List[Tuple[str, str, str]] = [
     ("cat_charity", "Charity", "Gifts & Charity"),
     # Bills & Utilities
     ("cat_phone", "Phone", "Bills & Utilities"),
-    ("cat_insurance", "Insurance", "Bills & Utilities"),
-    # Financial
+    # Financial 
+    ("cat_bank_fees", "Bank Fees", "Financial"),
     ("cat_financial_legal", "Financial & Legal Services", "Financial"),
     ("cat_financial_fees", "Financial Fees", "Financial"),
+    ("cat_insurance", "Insurance", "Financial"),
+    ("cat_life_insurance", "Life Insurance", "Financial"),
     ("cat_loan_repayment", "Loan Repayment", "Financial"),
     ("cat_student_loans", "Student Loans", "Financial"),
     ("cat_taxes", "Taxes", "Financial"),

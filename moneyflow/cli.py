@@ -25,7 +25,9 @@ import click
     "--mtd", is_flag=True, help="Load month-to-date transactions (from 1st of current month)"
 )
 @click.option(
-    "--cache", type=str, metavar="PATH", help="Enable caching. Optionally specify cache directory"
+    "--cache",
+    is_flag=True,
+    help="Enable caching (uses ~/.moneyflow/cache by default)",
 )
 @click.option("--refresh", is_flag=True, help="Force refresh from API, skip cache even if valid")
 @click.option(
@@ -45,11 +47,14 @@ def cli(ctx, year, since, mtd, cache, refresh, demo):
     # Launch Monarch Money mode (default)
     from moneyflow.app import launch_monarch_mode
 
+    # Convert cache flag to path (None if not enabled, default path if enabled)
+    cache_path = "~/.moneyflow/cache" if cache else None
+
     launch_monarch_mode(
         year=year,
         since=since,
         mtd=mtd,
-        cache=cache,
+        cache=cache_path,
         refresh=refresh,
         demo=demo,
     )
