@@ -96,16 +96,18 @@ From any aggregate view, press `Enter` on a row to drill into it and see the ind
 ![Merchant view with Amazon highlighted](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/merchants-view.png)
 
 **Example workflow:**
-1. Start in Merchant view (press `g` if needed)
-2. Navigate cursor to "Amazon" row
-3. Press `Enter` to drill down
-4. See all Amazon transactions in detail view
+
+1. **Start in Merchant view** - Press `g` if needed to cycle to Merchants
+2. **Navigate to "Amazon"** - Use arrow keys to move cursor
+3. **Press `Enter`** - Drill down to see transactions
+4. **View results** - All Amazon transactions displayed
 
 ![Drilled down into Amazon - transaction detail view](https://raw.githubusercontent.com/wesm/moneyflow-assets/main/drill-down-detail.png)
 
-The breadcrumb at the top shows your current path: `Merchants > Amazon`
+The breadcrumb shows your current path: `Merchants > Amazon`
 
-Press `Escape` to return to the Merchant view with your cursor position restored.
+**Going back:**
+Press `Escape` to return to Merchant view with your cursor position and scroll restored.
 
 ## Sub-Grouping
 
