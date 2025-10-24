@@ -1916,10 +1916,10 @@ class MoneyflowApp(App):
             failure_count = 0
 
             try:
-                # Delete each transaction via API
+                # Delete each transaction via API (with session renewal if needed)
                 for txn_id in transaction_ids:
                     try:
-                        await self.backend.delete_transaction(txn_id)
+                        await self._delete_with_retry(txn_id)
                         success_count += 1
                     except Exception as e:
                         logger = get_logger(__name__)
@@ -2019,6 +2019,37 @@ class MoneyflowApp(App):
             logger.error(f"Session refresh failed: {e}", exc_info=True)
             self._notify(NotificationHelper.session_refresh_failed(str(e)))
             return False
+
+    async def _delete_with_retry(self, transaction_id: str) -> None:
+        """
+        Delete transaction with automatic retry on session expiration.
+
+        Args:
+            transaction_id: ID of transaction to delete
+
+        Raises:
+            Exception: If delete fails after session refresh attempt
+        """
+        logger = get_logger(__name__)
+
+        try:
+            await self.backend.delete_transaction(transaction_id)
+        except Exception as e:
+            # Check if it's an auth error (session expired)
+            error_msg = str(e).lower()
+            if "401" in error_msg or "unauthorized" in error_msg or "token" in error_msg:
+                logger.debug(f"Delete failed with auth error, attempting session refresh")
+                # Try to refresh session once
+                if await self._refresh_session():
+                    logger.debug("Session refreshed, retrying delete immediately")
+                    # Session refreshed - try delete again immediately
+                    await self.backend.delete_transaction(transaction_id)
+                else:
+                    logger.error("Session refresh failed during delete")
+                    raise Exception("Session refresh failed - cannot delete transaction")
+            else:
+                # Re-raise other errors
+                raise
 
     async def _commit_with_retry(self, edits):
         """
