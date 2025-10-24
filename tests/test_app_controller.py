@@ -1455,6 +1455,157 @@ class TestMultiSelectGroups:
         assert len(controller.state.selected_ids) == 0
 
 
+class TestMultiSelectOperations:
+    """Tests for multi-select controller operations (Phase 2 refactoring)."""
+
+    async def test_toggle_selection_at_row_in_merchant_view(self, controller, mock_view):
+        """Should toggle group selection in merchant view."""
+        # Switch to merchant view (this will set current_data via refresh_view)
+        controller.switch_to_merchant_view()
+
+        # Toggle selection on first row (row 0)
+        count, item_type = controller.toggle_selection_at_row(0)
+
+        assert item_type == "group"
+        assert count == 1
+        assert len(controller.state.selected_group_keys) == 1
+
+        # Toggle again to deselect
+        count, item_type = controller.toggle_selection_at_row(0)
+
+        assert item_type == "group"
+        assert count == 0
+        assert len(controller.state.selected_group_keys) == 0
+
+    async def test_toggle_selection_at_row_in_detail_view(self, controller, mock_view):
+        """Should toggle transaction selection in detail view."""
+        # Switch to detail view
+        controller.switch_to_detail_view()
+        controller.state.current_data = controller.state.get_filtered_df()
+
+        # Get a transaction ID from the first row
+        row_data = controller.state.current_data.row(0, named=True)
+        txn_id = row_data.get("id")
+
+        # Toggle selection on first row
+        count, item_type = controller.toggle_selection_at_row(0)
+
+        assert item_type == "transaction"
+        assert count == 1
+        assert txn_id in controller.state.selected_ids
+
+        # Toggle again to deselect
+        count, item_type = controller.toggle_selection_at_row(0)
+
+        assert item_type == "transaction"
+        assert count == 0
+        assert txn_id not in controller.state.selected_ids
+
+    async def test_toggle_selection_at_row_with_invalid_row(self, controller, mock_view):
+        """Should handle invalid row index gracefully."""
+        controller.switch_to_detail_view()
+        controller.state.current_data = controller.state.get_filtered_df()
+
+        # Try to toggle selection with invalid row index
+        count, item_type = controller.toggle_selection_at_row(-1)
+
+        assert count == 0
+        assert item_type == "transaction"
+
+    async def test_toggle_selection_at_row_in_sub_grouped_view(self, controller, mock_view):
+        """Should toggle group selection in sub-grouped detail view."""
+        # Switch to merchant view, drill down, then enable sub-grouping
+        controller.switch_to_merchant_view()
+
+        # Get first merchant name from current data
+        first_merchant = controller.state.current_data.row(0, named=True).get("merchant")
+        controller.drill_down(first_merchant, 0)
+
+        # Enable sub-grouping by setting it to a ViewMode (not a string)
+        from moneyflow.state import ViewMode
+
+        controller.state.sub_grouping_mode = ViewMode.CATEGORY
+        controller.refresh_view()
+
+        # Should now be in sub-grouped view
+        count, item_type = controller.toggle_selection_at_row(0)
+
+        assert item_type == "group"
+        assert count == 1
+
+    async def test_toggle_select_all_visible_in_merchant_view(self, controller, mock_view):
+        """Should select all groups in merchant view."""
+        # Switch to merchant view (this will set current_data via refresh_view)
+        controller.switch_to_merchant_view()
+        total_merchants = len(controller.state.current_data)
+
+        # Select all
+        count, all_selected, item_type = controller.toggle_select_all_visible()
+
+        assert item_type == "group"
+        assert all_selected is True
+        assert count == total_merchants
+        assert len(controller.state.selected_group_keys) == total_merchants
+
+        # Deselect all
+        count, all_selected, item_type = controller.toggle_select_all_visible()
+
+        assert item_type == "group"
+        assert all_selected is False
+        assert count == 0
+        assert len(controller.state.selected_group_keys) == 0
+
+    async def test_toggle_select_all_visible_in_detail_view(self, controller, mock_view):
+        """Should select all transactions in detail view."""
+        # Switch to detail view
+        controller.switch_to_detail_view()
+        controller.state.current_data = controller.state.get_filtered_df()
+        total_transactions = len(controller.state.current_data)
+
+        # Select all
+        count, all_selected, item_type = controller.toggle_select_all_visible()
+
+        assert item_type == "transaction"
+        assert all_selected is True
+        assert count == total_transactions
+        assert len(controller.state.selected_ids) == total_transactions
+
+        # Deselect all
+        count, all_selected, item_type = controller.toggle_select_all_visible()
+
+        assert item_type == "transaction"
+        assert all_selected is False
+        assert count == 0
+        assert len(controller.state.selected_ids) == 0
+
+    async def test_toggle_select_all_with_some_selected(self, controller, mock_view):
+        """Should select all even when some are already selected."""
+        # Switch to merchant view (this will set current_data via refresh_view)
+        controller.switch_to_merchant_view()
+
+        # Select one merchant manually
+        first_merchant = controller.state.current_data.row(0, named=True).get("merchant")
+        controller.state.toggle_group_selection(first_merchant)
+
+        assert len(controller.state.selected_group_keys) == 1
+
+        # Toggle select all should select remaining
+        count, all_selected, item_type = controller.toggle_select_all_visible()
+
+        assert all_selected is True
+        assert count > 1  # Should now have all selected
+
+    async def test_toggle_select_all_with_no_data(self, controller, mock_view):
+        """Should handle empty data gracefully."""
+        controller.state.current_data = None
+
+        count, all_selected, item_type = controller.toggle_select_all_visible()
+
+        assert count == 0
+        assert all_selected is False
+        assert item_type == "transaction"
+
+
 class TestBulkEditTimestamps:
     """Test that bulk edit operations use the same timestamp for all edits."""
 

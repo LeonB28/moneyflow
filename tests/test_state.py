@@ -93,7 +93,6 @@ class TestChangeTracking:
 
         assert len(app_state.pending_edits) == 1
         assert len(app_state.undo_stack) == 1
-        assert len(app_state.redo_stack) == 0
 
         edit = app_state.pending_edits[0]
         assert edit.transaction_id == "txn_1"
@@ -120,7 +119,6 @@ class TestChangeTracking:
         assert edit.transaction_id == "txn_1"
         assert len(app_state.pending_edits) == 0
         assert len(app_state.undo_stack) == 0
-        assert len(app_state.redo_stack) == 1
 
     def test_undo_multiple_edits(self, app_state):
         """Test undoing multiple edits in sequence."""
@@ -148,36 +146,6 @@ class TestChangeTracking:
         edit = app_state.undo_last_edit()
         assert edit is None
 
-    def test_redo_after_undo(self, app_state):
-        """Test redoing after an undo."""
-        app_state.add_edit("txn_1", "merchant", "Old", "New")
-        app_state.undo_last_edit()
-
-        edit = app_state.redo_last_edit()
-
-        assert edit is not None
-        assert edit.transaction_id == "txn_1"
-        assert len(app_state.pending_edits) == 1
-        assert len(app_state.redo_stack) == 0
-        assert len(app_state.undo_stack) == 1
-
-    def test_redo_clears_after_new_edit(self, app_state):
-        """Test that redo stack clears when a new edit is made."""
-        app_state.add_edit("txn_1", "merchant", "A", "B")
-        app_state.undo_last_edit()
-
-        assert len(app_state.redo_stack) == 1
-
-        # Make a new edit - should clear redo stack
-        app_state.add_edit("txn_2", "merchant", "C", "D")
-
-        assert len(app_state.redo_stack) == 0
-
-    def test_redo_when_empty(self, app_state):
-        """Test redo when there's nothing to redo."""
-        edit = app_state.redo_last_edit()
-        assert edit is None
-
     def test_has_unsaved_changes(self, app_state):
         """Test detecting unsaved changes."""
         assert not app_state.has_unsaved_changes()
@@ -197,7 +165,6 @@ class TestChangeTracking:
 
         assert len(app_state.pending_edits) == 0
         assert len(app_state.undo_stack) == 0
-        assert len(app_state.redo_stack) == 0
 
 
 class TestMultiSelect:

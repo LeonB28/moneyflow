@@ -671,6 +671,110 @@ class AppController:
         """Clear all selections."""
         self.state.clear_selection()
 
+    def toggle_selection_at_row(self, row_idx: int) -> tuple[int, str]:
+        """
+        Toggle selection of the item at the given row index.
+
+        Handles both aggregate views (groups) and detail views (transactions).
+        Automatically determines the selection type based on current view mode.
+
+        Args:
+            row_idx: Row index in current_data to toggle selection for
+
+        Returns:
+            Tuple of (count, item_type) where:
+            - count: Total number of items currently selected
+            - item_type: "group" or "transaction"
+        """
+        if self.state.current_data is None or row_idx < 0:
+            return (0, "transaction")
+
+        row_data = self.state.current_data.row(row_idx, named=True)
+
+        # Check if we're in aggregate view or sub-grouped detail view
+        if self.state.view_mode in [
+            ViewMode.MERCHANT,
+            ViewMode.CATEGORY,
+            ViewMode.GROUP,
+            ViewMode.ACCOUNT,
+        ] or (
+            self.state.view_mode == ViewMode.DETAIL
+            and self.state.is_drilled_down()
+            and self.state.sub_grouping_mode
+        ):
+            # Group selection (aggregate or sub-grouped view)
+            group_name = str(row_data.get(self.state.current_data.columns[0]))
+            self.state.toggle_group_selection(group_name)
+            return (len(self.state.selected_group_keys), "group")
+        else:
+            # Transaction selection (detail view)
+            txn_id = row_data.get("id")
+            if txn_id:
+                self.state.toggle_selection(txn_id)
+            return (len(self.state.selected_ids), "transaction")
+
+    def toggle_select_all_visible(self) -> tuple[int, bool, str]:
+        """
+        Toggle select/deselect all items in the current view.
+
+        If all items are already selected, deselects all.
+        If some or no items are selected, selects all.
+
+        Returns:
+            Tuple of (count, all_selected, item_type) where:
+            - count: Number of items now selected (0 if deselected all)
+            - all_selected: True if all items are now selected, False if deselected
+            - item_type: "group" or "transaction"
+        """
+        if self.state.current_data is None:
+            return (0, False, "transaction")
+
+        total_rows = len(self.state.current_data)
+
+        # Check if we're in aggregate view or sub-grouped detail view
+        if self.state.view_mode in [
+            ViewMode.MERCHANT,
+            ViewMode.CATEGORY,
+            ViewMode.GROUP,
+            ViewMode.ACCOUNT,
+        ] or (
+            self.state.view_mode == ViewMode.DETAIL
+            and self.state.is_drilled_down()
+            and self.state.sub_grouping_mode
+        ):
+            # Group selection
+            all_selected = len(self.state.selected_group_keys) == total_rows
+
+            if all_selected:
+                # Deselect all
+                self.state.selected_group_keys.clear()
+                return (0, False, "group")
+            else:
+                # Select all
+                self.state.selected_group_keys.clear()
+                for row_idx in range(total_rows):
+                    row_data = self.state.current_data.row(row_idx, named=True)
+                    group_name = str(row_data.get(self.state.current_data.columns[0]))
+                    self.state.selected_group_keys.add(group_name)
+                return (len(self.state.selected_group_keys), True, "group")
+        else:
+            # Transaction selection
+            all_selected = len(self.state.selected_ids) == total_rows
+
+            if all_selected:
+                # Deselect all
+                self.state.selected_ids.clear()
+                return (0, False, "transaction")
+            else:
+                # Select all
+                self.state.selected_ids.clear()
+                for row_idx in range(total_rows):
+                    row_data = self.state.current_data.row(row_idx, named=True)
+                    txn_id = row_data.get("id")
+                    if txn_id:
+                        self.state.selected_ids.add(txn_id)
+                return (len(self.state.selected_ids), True, "transaction")
+
     def drill_down(self, item_name: str, cursor_position: int, scroll_y: float = 0.0):
         """
         Drill down into an item (merchant/category/group/account).

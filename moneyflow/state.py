@@ -1,5 +1,5 @@
 """
-App state management with change tracking and undo/redo support.
+App state management with change tracking and undo support.
 
 This module contains the central AppState class that holds all application state
 including view mode, filters, selections, and pending edits. State should be data,
@@ -160,7 +160,6 @@ class AppState:
     # Change tracking
     pending_edits: List[TransactionEdit] = dataclass_field(default_factory=list)
     undo_stack: List[TransactionEdit] = dataclass_field(default_factory=list)
-    redo_stack: List[TransactionEdit] = dataclass_field(default_factory=list)
 
     # UI state
     loading: bool = False
@@ -181,8 +180,6 @@ class AppState:
         )
         self.pending_edits.append(edit)
         self.undo_stack.append(edit)
-        # Clear redo stack when new edit is made
-        self.redo_stack.clear()
 
     def undo_last_edit(self) -> Optional[TransactionEdit]:
         """Undo the last edit."""
@@ -190,7 +187,6 @@ class AppState:
             return None
 
         edit = self.undo_stack.pop()
-        self.redo_stack.append(edit)
 
         # Remove from pending edits
         if edit in self.pending_edits:
@@ -198,22 +194,10 @@ class AppState:
 
         return edit
 
-    def redo_last_edit(self) -> Optional[TransactionEdit]:
-        """Redo the last undone edit."""
-        if not self.redo_stack:
-            return None
-
-        edit = self.redo_stack.pop()
-        self.undo_stack.append(edit)
-        self.pending_edits.append(edit)
-
-        return edit
-
     def clear_pending_edits(self):
         """Clear all pending edits after successful commit."""
         self.pending_edits.clear()
         self.undo_stack.clear()
-        self.redo_stack.clear()
 
     def has_unsaved_changes(self) -> bool:
         """Check if there are unsaved changes."""

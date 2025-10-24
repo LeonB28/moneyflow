@@ -557,8 +557,9 @@ class TestToggleHideExecution:
 
         # Manually add pending edit for first transaction
         txn_id = controller.state.current_data["id"][0]
-        from moneyflow.state import TransactionEdit
         from datetime import datetime
+
+        from moneyflow.state import TransactionEdit
 
         controller.data_manager.pending_edits.append(
             TransactionEdit(txn_id, "hide_from_reports", False, True, datetime.now())
