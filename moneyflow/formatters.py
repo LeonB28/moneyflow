@@ -161,13 +161,28 @@ class ViewPresenter:
         else:
             name_width = 40  # Default for category/group
 
+        # Map aggregation field to sort mode
+        field_to_sort_mode: dict[AggregationField, SortMode] = {
+            "merchant": SortMode.MERCHANT,
+            "category": SortMode.CATEGORY,
+            "group": SortMode.GROUP,
+            "account": SortMode.ACCOUNT,
+        }
+
         # Get arrows
+        name_arrow = ViewPresenter.get_sort_arrow(
+            sort_by, sort_direction, field_to_sort_mode[group_by_field]
+        )
         count_arrow = ViewPresenter.get_sort_arrow(sort_by, sort_direction, SortMode.COUNT)
         amount_arrow = ViewPresenter.get_sort_arrow(sort_by, sort_direction, SortMode.AMOUNT)
 
         # Build column specs
         columns: list[ColumnSpec] = [
-            {"label": name_label, "key": group_by_field, "width": name_width},
+            {
+                "label": f"{name_label} {name_arrow}".strip(),
+                "key": group_by_field,
+                "width": name_width,
+            },
             {"label": f"Count {count_arrow}".strip(), "key": "count", "width": 10},
             {"label": f"Total {amount_arrow}".strip(), "key": "total", "width": 15},
             {"label": "", "key": "flags", "width": 2},  # Flags column for pending edits

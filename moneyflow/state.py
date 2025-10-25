@@ -402,6 +402,13 @@ class AppState:
         If drilled down: Cycle sub-groupings within current filter
         If not drilled down: Cycle top-level aggregation views
 
+        When cycling views, if currently sorting by an aggregate field (MERCHANT,
+        CATEGORY, GROUP, or ACCOUNT), the sort field is updated to match the new
+        view's aggregate field. For example, sorting by MERCHANT in merchant view
+        becomes sorting by CATEGORY when cycling to category view.
+
+        COUNT and AMOUNT sorts are preserved across all aggregate views.
+
         Returns:
             Name of the new view mode for notification
         """
@@ -432,18 +439,35 @@ class AppState:
         ]:
             self.sort_by = SortMode.AMOUNT
 
-        # Cycle through views
+        # Check if currently sorting by an aggregate field (not COUNT/AMOUNT)
+        # If so, we'll update it to match the new view's aggregate field
+        is_sorting_by_aggregate_field = self.sort_by in [
+            SortMode.MERCHANT,
+            SortMode.CATEGORY,
+            SortMode.GROUP,
+            SortMode.ACCOUNT,
+        ]
+
+        # Cycle through views and update sort field if needed
         if self.view_mode == ViewMode.MERCHANT:
             self.view_mode = ViewMode.CATEGORY
+            if is_sorting_by_aggregate_field:
+                self.sort_by = SortMode.CATEGORY
             return "Categories"
         elif self.view_mode == ViewMode.CATEGORY:
             self.view_mode = ViewMode.GROUP
+            if is_sorting_by_aggregate_field:
+                self.sort_by = SortMode.GROUP
             return "Groups"
         elif self.view_mode == ViewMode.GROUP:
             self.view_mode = ViewMode.ACCOUNT
+            if is_sorting_by_aggregate_field:
+                self.sort_by = SortMode.ACCOUNT
             return "Accounts"
         elif self.view_mode == ViewMode.ACCOUNT:
             self.view_mode = ViewMode.MERCHANT
+            if is_sorting_by_aggregate_field:
+                self.sort_by = SortMode.MERCHANT
             return "Merchants"
 
         return ""

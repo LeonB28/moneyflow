@@ -129,6 +129,72 @@ class TestPrepareAggregationColumns:
         assert cols[0]["label"] == "Account"
         assert cols[2]["label"] == "Total ↓"
 
+    def test_merchant_sorted_by_merchant_desc(self):
+        """Should show arrow in merchant column when sorted by merchant descending."""
+        cols = ViewPresenter.prepare_aggregation_columns(
+            "merchant", SortMode.MERCHANT, SortDirection.DESC
+        )
+
+        assert cols[0]["label"] == "Merchant ↓"
+        assert cols[1]["label"] == "Count"
+        assert cols[2]["label"] == "Total"
+
+    def test_merchant_sorted_by_merchant_asc(self):
+        """Should show arrow in merchant column when sorted by merchant ascending."""
+        cols = ViewPresenter.prepare_aggregation_columns(
+            "merchant", SortMode.MERCHANT, SortDirection.ASC
+        )
+
+        assert cols[0]["label"] == "Merchant ↑"
+
+    def test_category_sorted_by_category_desc(self):
+        """Should show arrow in category column when sorted by category descending."""
+        cols = ViewPresenter.prepare_aggregation_columns(
+            "category", SortMode.CATEGORY, SortDirection.DESC
+        )
+
+        assert cols[0]["label"] == "Category ↓"
+        assert cols[1]["label"] == "Count"
+        assert cols[2]["label"] == "Total"
+
+    def test_category_sorted_by_category_asc(self):
+        """Should show arrow in category column when sorted by category ascending."""
+        cols = ViewPresenter.prepare_aggregation_columns(
+            "category", SortMode.CATEGORY, SortDirection.ASC
+        )
+
+        assert cols[0]["label"] == "Category ↑"
+
+    def test_group_sorted_by_group_desc(self):
+        """Should show arrow in group column when sorted by group descending."""
+        cols = ViewPresenter.prepare_aggregation_columns(
+            "group", SortMode.GROUP, SortDirection.DESC
+        )
+
+        assert cols[0]["label"] == "Group ↓"
+
+    def test_group_sorted_by_group_asc(self):
+        """Should show arrow in group column when sorted by group ascending."""
+        cols = ViewPresenter.prepare_aggregation_columns("group", SortMode.GROUP, SortDirection.ASC)
+
+        assert cols[0]["label"] == "Group ↑"
+
+    def test_account_sorted_by_account_desc(self):
+        """Should show arrow in account column when sorted by account descending."""
+        cols = ViewPresenter.prepare_aggregation_columns(
+            "account", SortMode.ACCOUNT, SortDirection.DESC
+        )
+
+        assert cols[0]["label"] == "Account ↓"
+
+    def test_account_sorted_by_account_asc(self):
+        """Should show arrow in account column when sorted by account ascending."""
+        cols = ViewPresenter.prepare_aggregation_columns(
+            "account", SortMode.ACCOUNT, SortDirection.ASC
+        )
+
+        assert cols[0]["label"] == "Account ↑"
+
 
 class TestFormatAggregationRows:
     """Tests for format_aggregation_rows method."""

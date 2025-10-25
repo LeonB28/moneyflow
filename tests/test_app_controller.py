@@ -991,6 +991,79 @@ class TestViewModeSwitching:
         assert view_name is not None  # Should return next view name
         assert len(mock_view.table_updates) == 1  # Should refresh
 
+    async def test_cycle_grouping_updates_aggregate_field_sort(self, controller, mock_view):
+        """Test that cycling grouping updates sort when sorting by aggregate field."""
+        # Start in merchant view, sorting by MERCHANT
+        controller.state.view_mode = ViewMode.MERCHANT
+        controller.state.sort_by = SortMode.MERCHANT
+
+        # Cycle to category view
+        controller.cycle_grouping()
+
+        # Should now be sorting by CATEGORY (not MERCHANT)
+        assert controller.state.view_mode == ViewMode.CATEGORY
+        assert controller.state.sort_by == SortMode.CATEGORY
+
+    async def test_cycle_grouping_merchant_to_category_field_sort(self, controller, mock_view):
+        """Test MERCHANT sort becomes CATEGORY sort when cycling to category view."""
+        controller.state.view_mode = ViewMode.MERCHANT
+        controller.state.sort_by = SortMode.MERCHANT
+
+        controller.cycle_grouping()  # Merchant → Category
+
+        assert controller.state.view_mode == ViewMode.CATEGORY
+        assert controller.state.sort_by == SortMode.CATEGORY
+
+    async def test_cycle_grouping_category_to_group_field_sort(self, controller, mock_view):
+        """Test CATEGORY sort becomes GROUP sort when cycling to group view."""
+        controller.state.view_mode = ViewMode.CATEGORY
+        controller.state.sort_by = SortMode.CATEGORY
+
+        controller.cycle_grouping()  # Category → Group
+
+        assert controller.state.view_mode == ViewMode.GROUP
+        assert controller.state.sort_by == SortMode.GROUP
+
+    async def test_cycle_grouping_group_to_account_field_sort(self, controller, mock_view):
+        """Test GROUP sort becomes ACCOUNT sort when cycling to account view."""
+        controller.state.view_mode = ViewMode.GROUP
+        controller.state.sort_by = SortMode.GROUP
+
+        controller.cycle_grouping()  # Group → Account
+
+        assert controller.state.view_mode == ViewMode.ACCOUNT
+        assert controller.state.sort_by == SortMode.ACCOUNT
+
+    async def test_cycle_grouping_account_to_merchant_field_sort(self, controller, mock_view):
+        """Test ACCOUNT sort becomes MERCHANT sort when cycling back to merchant view."""
+        controller.state.view_mode = ViewMode.ACCOUNT
+        controller.state.sort_by = SortMode.ACCOUNT
+
+        controller.cycle_grouping()  # Account → Merchant (wrap around)
+
+        assert controller.state.view_mode == ViewMode.MERCHANT
+        assert controller.state.sort_by == SortMode.MERCHANT
+
+    async def test_cycle_grouping_preserves_count_sort(self, controller, mock_view):
+        """Test that COUNT sort is preserved when cycling views."""
+        controller.state.view_mode = ViewMode.MERCHANT
+        controller.state.sort_by = SortMode.COUNT
+
+        controller.cycle_grouping()  # Merchant → Category
+
+        assert controller.state.view_mode == ViewMode.CATEGORY
+        assert controller.state.sort_by == SortMode.COUNT  # Unchanged
+
+    async def test_cycle_grouping_preserves_amount_sort(self, controller, mock_view):
+        """Test that AMOUNT sort is preserved when cycling views."""
+        controller.state.view_mode = ViewMode.CATEGORY
+        controller.state.sort_by = SortMode.AMOUNT
+
+        controller.cycle_grouping()  # Category → Group
+
+        assert controller.state.view_mode == ViewMode.GROUP
+        assert controller.state.sort_by == SortMode.AMOUNT  # Unchanged
+
 
 class TestSortingFacade:
     """Test sorting facade methods that encapsulate sort operations."""
