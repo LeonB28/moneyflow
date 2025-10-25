@@ -5,6 +5,8 @@ Provides Click-based CLI for launching moneyflow in different modes
 (Monarch, Amazon, Demo) and managing data imports.
 """
 
+from pathlib import Path
+
 import click
 
 
@@ -209,6 +211,65 @@ def amazon_status(ctx):
 
         if len(history) > 5:
             click.echo(f"  ... and {len(history) - 5} more")
+
+
+@cli.group()
+def categories():
+    """Manage category configuration and view category hierarchy."""
+    pass
+
+
+@categories.command(name="dump")
+@click.option(
+    "--config-dir",
+    type=click.Path(),
+    default=None,
+    help="Config directory (default: ~/.moneyflow)",
+)
+def categories_dump(config_dir):
+    """Display current category hierarchy (defaults + custom from categories.yaml).
+
+    Shows the effective category structure including:
+    - Monarch Money defaults
+    - Custom categories from ~/.moneyflow/categories.yaml
+    - Category renames and moves
+
+    Use this to verify your categories.yaml configuration.
+    """
+    from moneyflow.categories import get_effective_category_groups
+
+    try:
+        category_groups = get_effective_category_groups(config_dir)
+
+        click.echo("Current Category Hierarchy")
+        click.echo("=" * 60)
+
+        # Count total categories
+        total_cats = sum(len(cats) for cats in category_groups.values())
+        click.echo(f"Total: {len(category_groups)} groups, {total_cats} categories\n")
+
+        # Display each group
+        for group_name in sorted(category_groups.keys()):
+            categories_list = category_groups[group_name]
+            click.echo(f"\n{group_name} ({len(categories_list)} categories):")
+            for cat in sorted(categories_list):
+                click.echo(f"  - {cat}")
+
+        # Show config file location
+        if config_dir:
+            config_path = Path(config_dir) / "categories.yaml"
+        else:
+            config_path = Path.home() / ".moneyflow" / "categories.yaml"
+
+        click.echo(f"\n{'=' * 60}")
+        if config_path.exists():
+            click.echo(f"✓ Custom config: {config_path}")
+        else:
+            click.echo(f"Using Monarch defaults (no custom config at {config_path})")
+
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        raise click.Abort()
 
 
 if __name__ == "__main__":

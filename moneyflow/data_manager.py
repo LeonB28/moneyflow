@@ -22,120 +22,10 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import polars as pl
 
 from .backends.base import FinanceBackend
+from .categories import build_category_to_group_mapping, get_effective_category_groups
 from .logging_config import get_logger
 
 logger = get_logger(__name__)
-
-
-# Category group mapping (since not consistently available in API)
-CATEGORY_GROUPS = {
-    "Business": [
-        "Accounting",
-        "Business",
-        "Office Rent",
-        "Business Auto Expenses",
-        "Business Electronics",
-        "Business Software",
-        "Business Travel & Meals",
-        "Business Utilities & Communication",
-        "Office Supplies",
-        "Office Supplies & Expenses",
-        "Postage & Shipping",
-        "Employee Wages & Contract Labor",
-        "Advertising & Promotion",
-    ],
-    "Cash & ATM": ["Cash & ATM", "ATM", "Check"],
-    "Food & Dining": [
-        "Restaurants & Bars",
-        "Coffee Shops",
-        "Groceries",
-        "Fast Food",
-        "Food & Dining",
-        "Alcohol",
-        "Quick Eats",
-    ],
-    "Travel": [
-        "Airfare",
-        "Auto Rental",
-        "Hotel",
-        "Trains",
-        "Public Transit",
-        "Taxi & Ride Shares",
-        "Public Transit",
-        "Luggage",
-        "Travel Services",
-        "Travel & Vacation",
-    ],
-    "Auto & Transport": [
-        "Gas",
-        "Parking & Tolls",
-        "Auto Payment",
-        "Auto Maintenance",
-        "Auto & Transport",
-    ],
-    "Services": [
-        "Internet & Cable",
-        "Streaming",
-        "Laundry & Dry Cleaning",
-        "Home Services",
-        "Software",
-        "Child Care",
-    ],
-    "Housing": [
-        "Gas & Electric",
-        "Mortgage",
-        "Rent",
-        "Home Improvement",
-        "Water",
-        "Garbage",
-        "Housing",
-    ],
-    "Shopping": [
-        "Shopping",
-        "Clothing",
-        "Electronics",
-        "Home Supplies",
-        "Kitchen",
-        "Furniture & Housewares",
-        "Jewelry & Accessories",
-        "Video Games",
-        "Hobbies",
-        "Books",
-        "Membership",
-        "Child Stuff",
-    ],
-    "Entertainment": ["Entertainment & Recreation"],
-    "Education": ["Education"],
-    "Health & Fitness": [
-        "Medical",
-        "Dentist",
-        "Fitness",
-        "Pets",
-        "Pharmacy",
-        "Eyecare",
-        "Hearing",
-        "Supplements",
-        "Workout Classes",
-        "Health & Wellness",
-    ],
-    "Gifts & Charity": ["Gifts", "Charity"],
-    "Bills & Utilities": ["Phone"],
-    "Financial": [
-        "Bank Fees",
-        "Financial & Legal Services",
-        "Financial Fees",
-        "Loan Repayment",
-        "Student Loans",
-        "Taxes",
-        "Insurance",
-        "Life Insurance",
-    ],
-    "Personal Care": ["Chiropractic & Massage", "Hair", "Personal Care"],
-    "Income": ["Paychecks", "Interest", "Business Income", "Other Income", "Income"],
-    "Miscellaneous": ["Miscellaneous", "Personal"],
-    "Transfers": ["Transfer", "Credit Card Payment", "Balance Adjustments"],
-    "Uncategorized": ["Uncategorized", "Check", "Miscellaneous"],
-}
 
 
 class DataManager:
@@ -152,7 +42,7 @@ class DataManager:
     - Cache merchants for fast autocomplete in MTD mode
 
     **Data Transformation**:
-    - Apply category-to-group mappings (uses CATEGORY_GROUPS constant)
+    - Apply category-to-group mappings (from categories module)
     - Aggregate transactions by merchant, category, group, account
     - Filter transactions by various criteria
     - Search transactions by text
@@ -179,17 +69,23 @@ class DataManager:
 
     MERCHANT_CACHE_MAX_AGE_HOURS = 24  # Refresh once per day
 
-    def __init__(self, mm: FinanceBackend, merchant_cache_dir: str = ""):
+    def __init__(
+        self, mm: FinanceBackend, merchant_cache_dir: str = "", config_dir: Optional[str] = None
+    ):
         """
         Initialize DataManager with a finance backend.
 
         Args:
             mm: Backend instance (must implement FinanceBackend interface)
             merchant_cache_dir: Directory for merchant cache (defaults to ~/.moneyflow/)
+            config_dir: Optional config directory for categories.yaml (defaults to ~/.moneyflow/)
         """
         self.mm = mm
-        self.category_to_group: Dict[str, str] = {}
-        self._build_category_group_mapping()
+        self.config_dir = config_dir  # Store for apply_category_groups
+
+        # Load effective category groups (defaults + custom from YAML)
+        self.category_groups_config = get_effective_category_groups(config_dir)
+        self.category_to_group = build_category_to_group_mapping(self.category_groups_config)
 
         # Data storage
         self.df: Optional[pl.DataFrame] = None
@@ -204,12 +100,6 @@ class DataManager:
         self.merchant_cache_dir = Path(merchant_cache_dir)
         self.merchant_cache_dir.mkdir(parents=True, exist_ok=True)
         self.merchant_cache_file = self.merchant_cache_dir / "merchants.json"
-
-    def _build_category_group_mapping(self):
-        """Build reverse mapping from category to group."""
-        for group, categories in CATEGORY_GROUPS.items():
-            for category in categories:
-                self.category_to_group[category] = group
 
     def _is_merchant_cache_stale(self) -> bool:
         """Check if merchant cache needs refresh (older than 24 hours)."""
@@ -499,7 +389,7 @@ class DataManager:
         Convert raw transaction data to Polars DataFrame with enriched fields.
 
         Note: Does NOT include 'group' field - groups are applied dynamically
-        via apply_category_groups() so changes to CATEGORY_GROUPS take effect
+        via apply_category_groups() so changes to categories.yaml take effect
         on cached data.
         """
         if not transactions:
@@ -549,9 +439,10 @@ class DataManager:
         """
         Apply category-to-group mapping to a DataFrame.
 
-        This adds/updates the 'group' column based on CATEGORY_GROUPS mapping.
+        This adds/updates the 'group' column based on category groups from
+        categories module (defaults + custom from ~/.moneyflow/categories.yaml).
         Called after loading data (from API or cache) so that changes to
-        CATEGORY_GROUPS always take effect.
+        categories.yaml always take effect.
 
         Args:
             df: DataFrame with 'category' column

@@ -9,7 +9,7 @@ import hashlib
 import random
 from typing import Any, Dict, List
 
-from moneyflow.data_manager import CATEGORY_GROUPS
+from moneyflow.categories import DEFAULT_CATEGORY_GROUPS
 
 
 class DemoDataGenerator:
@@ -56,14 +56,14 @@ class DemoDataGenerator:
 
     def _create_categories(self) -> List[Dict]:
         """
-        Create comprehensive category list including all categories from CATEGORY_GROUPS.
+        Create comprehensive category list including all categories from DEFAULT_CATEGORY_GROUPS.
 
         This provides the full set of categories available when using Monarch Money,
         making the demo experience realistic. Users can edit_category transactions
         to any category they would have in the real app.
 
         We start with hardcoded IDs for categories used in transaction generation
-        (to keep tests passing), then add all additional categories from CATEGORY_GROUPS.
+        (to keep tests passing), then add all additional categories from DEFAULT_CATEGORY_GROUPS.
         """
         # Start with categories used in transaction generation (must keep these IDs for tests)
         base_categories = [
@@ -168,9 +168,9 @@ class DemoDataGenerator:
             "Uncategorized": "grp_uncategorized",
         }
 
-        # Add all categories from CATEGORY_GROUPS that aren't already in base list
+        # Add all categories from DEFAULT_CATEGORY_GROUPS that aren't already in base list
         cat_id_counter = 100  # Start at 100 to avoid conflicts with hardcoded IDs
-        for group_name, category_list in CATEGORY_GROUPS.items():
+        for group_name, category_list in DEFAULT_CATEGORY_GROUPS.items():
             group_id = group_id_map.get(group_name, f"grp_{group_name.lower().replace(' ', '_')}")
             group_type = (
                 "income"
