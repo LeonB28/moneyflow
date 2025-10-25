@@ -140,7 +140,7 @@ class ViewPresenter:
         """
         # Use defaults if not provided
         if column_config is None:
-            column_config = {"merchant_width_pct": 25, "account_width_pct": 30}
+            column_config = {"merchant_width_pct": 35, "account_width_pct": 30}
         if display_labels is None:
             display_labels = {"merchant": "Merchant", "account": "Account", "accounts": "Accounts"}
 
@@ -155,7 +155,7 @@ class ViewPresenter:
 
         # Get column width based on field type
         if group_by_field == "merchant":
-            name_width = column_config.get("merchant_width_pct", 25)
+            name_width = column_config.get("merchant_width_pct", 35)  # Wider for 150 char terminals
         elif group_by_field == "account":
             name_width = column_config.get("account_width_pct", 30)
         else:
@@ -185,8 +185,14 @@ class ViewPresenter:
             },
             {"label": f"Count {count_arrow}".strip(), "key": "count", "width": 10},
             {"label": f"Total {amount_arrow}".strip(), "key": "total", "width": 15},
-            {"label": "", "key": "flags", "width": 2},  # Flags column for pending edits
         ]
+
+        # Add top category column for merchant view
+        if group_by_field == "merchant":
+            columns.append({"label": "Top Category", "key": "top_category_display", "width": 30})
+
+        # Flags column (always last)
+        columns.append({"label": "", "key": "flags", "width": 2})
 
         return columns
 
@@ -197,21 +203,23 @@ class ViewPresenter:
         group_by_field: str = None,
         pending_edit_ids: set[str] = None,
         selected_group_keys: set[str] = None,
-    ) -> list[tuple[str, str, str, str]]:
+    ) -> list[tuple]:
         """
         Format aggregation DataFrame rows for display.
 
         Args:
-            df: Aggregated DataFrame with columns: [name_field, count, total]
+            df: Aggregated DataFrame with columns: [name_field, count, total, ...]
                 First column can be merchant/category/group/account
+                Merchant view includes: top_category, top_category_pct
             detail_df: Optional full detail DataFrame to check for pending edits
             group_by_field: Field being grouped by (merchant/category/etc)
             pending_edit_ids: Set of transaction IDs with pending edits
             selected_group_keys: Set of selected group names (for multi-select)
 
         Returns:
-            List of tuples (name, count_str, total_str, flags_str)
-            flags_str can be: "✓" (selected), "*" (pending), "✓*" (both), or ""
+            List of tuples:
+            - Merchant view: (name, count_str, total_str, top_category_display, flags_str)
+            - Other views: (name, count_str, total_str, flags_str)
 
         Examples:
             >>> import polars as pl
@@ -235,7 +243,7 @@ class ViewPresenter:
                     pending_transactions[group_by_field].unique().to_list()
                 )
 
-        rows: list[tuple[str, str, str, str]] = []
+        rows: list[tuple] = []
 
         for row_dict in df.iter_rows(named=True):
             # Get the name from first column (merchant/category/group/account)
@@ -250,7 +258,14 @@ class ViewPresenter:
             if name in groups_with_pending_edits:
                 flags += "*"
 
-            rows.append((name, str(count), f"${total:,.2f}", flags))
+            # For merchant view, include top category
+            if group_by_field == "merchant":
+                top_category = row_dict.get("top_category", "")
+                top_category_pct = row_dict.get("top_category_pct", 0)
+                top_category_display = f"{top_category} {top_category_pct}%" if top_category else ""
+                rows.append((name, str(count), f"${total:,.2f}", top_category_display, flags))
+            else:
+                rows.append((name, str(count), f"${total:,.2f}", flags))
 
         return rows
 

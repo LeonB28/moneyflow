@@ -49,9 +49,90 @@ class TestAggregation:
         assert "merchant" in agg.columns
         assert "count" in agg.columns
         assert "total" in agg.columns
+        assert "top_category" in agg.columns
+        assert "top_category_pct" in agg.columns
 
         # Note: Sorting is now handled by app.py, not by aggregate methods
         # The aggregation just returns grouped data
+
+    async def test_aggregate_by_merchant_top_category_single(self, mock_mm):
+        """Test top category when all transactions have same category."""
+        dm = DataManager(mock_mm)
+
+        # All Whole Foods transactions are Groceries
+        df = pl.DataFrame(
+            {
+                "id": ["1", "2", "3"],
+                "merchant": ["Whole Foods", "Whole Foods", "Whole Foods"],
+                "merchant_id": ["m1", "m1", "m1"],
+                "category": ["Groceries", "Groceries", "Groceries"],
+                "amount": [-50.0, -30.0, -20.0],
+                "hideFromReports": [False, False, False],
+            }
+        )
+
+        agg = dm.aggregate_by_merchant(df)
+
+        assert len(agg) == 1
+        row = agg.row(0, named=True)
+        assert row["merchant"] == "Whole Foods"
+        assert row["count"] == 3
+        assert row["top_category"] == "Groceries"
+        assert row["top_category_pct"] == 100  # 100% are Groceries
+
+    async def test_aggregate_by_merchant_top_category_mixed(self, mock_mm):
+        """Test top category when transactions have different categories."""
+        dm = DataManager(mock_mm)
+
+        # Starbucks: 7 Coffee Shops, 3 Groceries
+        df = pl.DataFrame(
+            {
+                "id": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
+                "merchant": ["Starbucks"] * 10,
+                "merchant_id": ["m1"] * 10,
+                "category": ["Coffee Shops"] * 7 + ["Groceries"] * 3,
+                "amount": [-5.0] * 10,
+                "hideFromReports": [False] * 10,
+            }
+        )
+
+        agg = dm.aggregate_by_merchant(df)
+
+        assert len(agg) == 1
+        row = agg.row(0, named=True)
+        assert row["merchant"] == "Starbucks"
+        assert row["count"] == 10
+        assert row["top_category"] == "Coffee Shops"
+        assert row["top_category_pct"] == 70  # 7/10 = 70%
+
+    async def test_aggregate_by_merchant_top_category_multiple_merchants(self, mock_mm):
+        """Test top category with multiple merchants."""
+        dm = DataManager(mock_mm)
+
+        df = pl.DataFrame(
+            {
+                "id": ["1", "2", "3", "4", "5"],
+                "merchant": ["Whole Foods", "Whole Foods", "Amazon", "Amazon", "Amazon"],
+                "merchant_id": ["m1", "m1", "m2", "m2", "m2"],
+                "category": ["Groceries", "Groceries", "Shopping", "Electronics", "Electronics"],
+                "amount": [-50.0, -30.0, -25.0, -100.0, -75.0],
+                "hideFromReports": [False, False, False, False, False],
+            }
+        )
+
+        agg = dm.aggregate_by_merchant(df)
+
+        assert len(agg) == 2
+
+        # Check Whole Foods
+        wf = agg.filter(pl.col("merchant") == "Whole Foods").row(0, named=True)
+        assert wf["top_category"] == "Groceries"
+        assert wf["top_category_pct"] == 100
+
+        # Check Amazon (2 Electronics, 1 Shopping = 67% Electronics)
+        amz = agg.filter(pl.col("merchant") == "Amazon").row(0, named=True)
+        assert amz["top_category"] == "Electronics"
+        assert amz["top_category_pct"] == 67  # 2/3 rounded
 
     async def test_aggregate_by_category(self, loaded_data_manager):
         """Test category aggregation."""

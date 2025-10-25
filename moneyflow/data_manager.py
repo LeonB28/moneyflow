@@ -520,15 +520,53 @@ class DataManager:
         - count: Number of transactions
         - total: Sum of transaction amounts
         - merchant_id: ID of the merchant (for API operations)
+        - top_category: Most common category for this merchant
+        - top_category_pct: Percentage of transactions in top category
 
         Args:
             df: Transaction DataFrame to aggregate
 
         Returns:
-            Aggregated DataFrame with columns: [merchant, count, total, merchant_id]
+            Aggregated DataFrame with columns:
+            [merchant, count, total, merchant_id, top_category, top_category_pct]
             Empty DataFrame if input is empty
         """
-        return self._aggregate_by_field(df, "merchant", include_id=True, include_group=False)
+        if df.is_empty():
+            return pl.DataFrame()
+
+        # Group by merchant and compute aggregations including top category
+        result = df.group_by("merchant").agg(
+            [
+                pl.count("id").alias("count"),
+                # Exclude hidden transactions from totals
+                pl.col("amount").filter(~pl.col("hideFromReports")).sum().alias("total"),
+                pl.first("merchant_id").alias("merchant_id"),
+                # Get most common category and its count
+                pl.col("category")
+                .value_counts(sort=True)
+                .first()
+                .struct.field("category")
+                .alias("top_category"),
+                pl.col("category")
+                .value_counts(sort=True)
+                .first()
+                .struct.field("count")
+                .alias("top_category_count"),
+            ]
+        )
+
+        # Calculate percentage (top_category_count / count * 100)
+        result = result.with_columns(
+            ((pl.col("top_category_count") / pl.col("count")) * 100)
+            .round(0)
+            .cast(pl.Int32)
+            .alias("top_category_pct")
+        )
+
+        # Drop the intermediate count column
+        result = result.drop("top_category_count")
+
+        return result
 
     def aggregate_by_category(self, df: pl.DataFrame) -> pl.DataFrame:
         """
