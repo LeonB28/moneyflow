@@ -643,6 +643,8 @@ class AppState:
         Priority order:
         1. If search is active and no navigation since search: Clear search
         2. If sub-grouping is active: Clear sub-grouping first (stay drilled down)
+           - Restores sort state from navigation history (without popping)
+           - This undoes sort changes made by cycle_sub_grouping()
         3. If drilled down (no sub-grouping): Go back to parent view
         4. If at top-level: Do nothing
 
@@ -665,6 +667,13 @@ class AppState:
         # If in sub-grouped view, clear sub-grouping first (stay drilled down)
         if self.is_drilled_down() and self.sub_grouping_mode:
             self.sub_grouping_mode = None
+            # Restore sort state from navigation history (peek, don't pop)
+            # This handles the case where cycle_sub_grouping() changed the sort
+            # to AMOUNT because the previous sort field was incompatible
+            if self.navigation_history:
+                nav_state = self.navigation_history[-1]  # Peek at last state
+                self.sort_by = nav_state.sort_by
+                self.sort_direction = nav_state.sort_direction
             return True, 0, 0.0
 
         # If we have navigation history, restore from it

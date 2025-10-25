@@ -1322,6 +1322,60 @@ class TestSubGrouping:
         assert cursor == 5
         assert scroll_y == 125.0
 
+    def test_go_back_clears_sub_grouping_and_restores_sort(self):
+        """When clearing sub-grouping, should restore sort state from navigation history."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+        state.sub_grouping_mode = ViewMode.CATEGORY
+        state.sort_by = SortMode.AMOUNT  # Changed to AMOUNT due to sub-grouping
+
+        # Navigation history has the original sort (before sub-grouping)
+        state.navigation_history.append(
+            NavigationState(
+                view_mode=ViewMode.MERCHANT,
+                cursor_position=10,
+                scroll_y=200.0,
+                sort_by=SortMode.MERCHANT,  # Original sort
+                sort_direction=SortDirection.ASC,
+            )
+        )
+
+        # Press Esc to clear sub-grouping
+        success, _, _ = state.go_back()
+
+        # Should clear sub-grouping AND restore original sort
+        assert success is True
+        assert state.sub_grouping_mode is None
+        assert state.selected_merchant == "Amazon"  # Still drilled down
+        assert state.sort_by == SortMode.MERCHANT  # Restored from history
+        assert state.sort_direction == SortDirection.ASC  # Restored from history
+        # Navigation history should NOT be popped (still drilled down)
+        assert len(state.navigation_history) == 1
+
+    def test_go_back_clears_sub_grouping_preserves_count_sort(self):
+        """When clearing sub-grouping with COUNT sort, preserve it (it's valid)."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_category = "Groceries"
+        state.sub_grouping_mode = ViewMode.MERCHANT
+        state.sort_by = SortMode.COUNT  # COUNT is valid everywhere
+
+        state.navigation_history.append(
+            NavigationState(
+                view_mode=ViewMode.CATEGORY,
+                sort_by=SortMode.COUNT,  # Was also COUNT
+                sort_direction=SortDirection.DESC,
+            )
+        )
+
+        # Press Esc to clear sub-grouping
+        state.go_back()
+
+        # COUNT should be preserved (it's valid in both modes)
+        assert state.sub_grouping_mode is None
+        assert state.sort_by == SortMode.COUNT
+
     def test_breadcrumb_shows_sub_grouping(self):
         """Breadcrumb should show sub-grouping mode."""
         state = AppState()
