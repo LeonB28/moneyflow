@@ -780,6 +780,14 @@ class MoneyflowApp(App):
         """
         Restore table cursor and scroll position after refresh.
 
+        CRITICAL ORDER OF OPERATIONS:
+        1. Move cursor first (this auto-scrolls to show the row)
+        2. Set scroll_y AFTER cursor move (to override auto-scroll)
+
+        This order is counterintuitive but required because Textual's
+        move_cursor() auto-scrolls to bring the row into view, which
+        would override any scroll_y we set before it.
+
         Args:
             saved_position: Dict from _save_table_position()
         """
@@ -791,19 +799,17 @@ class MoneyflowApp(App):
             cursor_row = saved_position.get("cursor_row", 0)
             scroll_y = saved_position.get("scroll_y", 0)
 
-            logger.debug(f"Before restore: cursor={table.cursor_row}, scroll_y={table.scroll_y}, row_count={table.row_count}")
-            logger.debug(f"Restoring to: cursor={cursor_row}, scroll_y={scroll_y}")
+            logger.debug(f"Restoring table position: cursor {table.cursor_row}→{cursor_row}, scroll {table.scroll_y}→{scroll_y}")
 
-            # Restore cursor first (bounded by current row count)
+            # Step 1: Move cursor (this will auto-scroll)
             if cursor_row < table.row_count:
                 table.move_cursor(row=cursor_row)
 
-            # IMPORTANT: Set scroll position AFTER moving cursor
-            # move_cursor auto-scrolls to bring the row into view, so we must
-            # override the scroll position AFTER the cursor is moved
+            # Step 2: Override auto-scroll with saved scroll position
+            # DO NOT change this order - move_cursor must happen first
             table.scroll_y = scroll_y
 
-            logger.debug(f"After restore: cursor={table.cursor_row}, scroll_y={table.scroll_y}")
+            logger.debug(f"Position restored: cursor={table.cursor_row}, scroll_y={table.scroll_y}")
         except Exception as e:
             logger.error(f"Failed to restore table position: {e}")
             pass  # Table might not be ready yet
