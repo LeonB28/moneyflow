@@ -118,6 +118,7 @@ nav:
     - Monarch Money: guide/monarch.md
     - Amazon Mode: guide/amazon-mode.md
   - Configuration:
+    - Categories: categories.md
     - Caching: config/caching.md
     - Advanced Options: config/advanced.md
   - Reference:

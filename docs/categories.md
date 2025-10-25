@@ -2,116 +2,151 @@
 
 ## Overview
 
-moneyflow uses Monarch Money's default category structure. You can customize categories via `~/.moneyflow/categories.yaml`.
+moneyflow uses Monarch Money's default category structure (~60 categories in 15 groups). Customize the category hierarchy by creating `~/.moneyflow/categories.yaml`.
+
+**Common use cases:**
+- Add custom categories that exist only in your Monarch account
+- Rename groups or categories to match your preferences
+- Reorganize categories into different groups
+- Create entirely new custom groups
+
+**File location:** `~/.moneyflow/categories.yaml` (optional - works without it)
 
 ## Quick Start
 
-**View your current category structure:**
+**View your current category hierarchy:**
 ```bash
 moneyflow categories dump              # YAML format (copy-pastable)
 moneyflow categories dump --format=readable  # Human-readable with counts
 ```
 
-**Customize categories:**
-1. Run `moneyflow categories dump > my-categories.yaml`
-2. Edit to add/remove categories as needed
-3. Copy relevant sections to `~/.moneyflow/categories.yaml`
-4. Run `moneyflow categories dump` to verify changes
+**Create your configuration:**
+```bash
+# Option 1: Start from example
+cp categories.yaml.example ~/.moneyflow/categories.yaml
+
+# Option 2: Dump current hierarchy and customize
+moneyflow categories dump > my-categories.yaml
+# Edit my-categories.yaml, then copy sections to ~/.moneyflow/categories.yaml
+```
+
+**Verify your changes:**
+```bash
+moneyflow categories dump
+```
 
 ## Configuration Format
 
-```yaml
-version: 1
+All sections are optional. Transformations are applied in the order shown below.
 
-# Rename group names (e.g., "Travel & Lifestyle" → "Travel")
+```yaml
+version: 1  # Required
+
+# 1. Rename entire groups (renames the group and all its categories)
 rename_groups:
+  "Travel & Lifestyle": Travel
   "Health & Wellness": "Health & Fitness"
 
-# Rename individual categories (match your Monarch account)
+# 2. Rename individual categories
 rename_categories:
   "Student Loans": "Student Loan Payments"
+  "Groceries": "Grocery Shopping"
 
-# Add custom categories to existing groups
+# 3. Add custom categories to existing groups
+#    Use this for categories that exist only in your Monarch account
 add_to_groups:
   Business:
     - Accounting
     - Business Software
-
   Shopping:
     - Video Games
     - Books
 
-# Create entirely new custom groups
+# 4. Create new custom groups
+#    Use this for categories that don't fit any default group
 custom_groups:
   Services:
     - Streaming
     - "Laundry & Dry Cleaning"
     - Software
 
-# Move categories between groups
+# 5. Move categories to different groups
+#    Overrides the default group assignment
 move_categories:
-  "Internet & Cable": Services  # Default: Bills & Utilities
-  Pets: "Health & Fitness"      # Default: Travel & Lifestyle
+  "Internet & Cable": Services     # Monarch default: Bills & Utilities
+  Pets: "Health & Fitness"         # Monarch default: Travel & Lifestyle
 ```
 
-## Processing Order
+## Common Scenarios
 
-Transformations are applied in this order:
-1. **rename_groups** - Renames entire groups
-2. **rename_categories** - Renames individual categories
-3. **add_to_groups** - Adds categories to groups
-4. **custom_groups** - Creates new groups
-5. **move_categories** - Moves categories between groups
+### Scenario 1: Add Custom Categories
 
-## Use Cases
+Your Monarch account has custom categories not in the defaults:
 
-### Add custom categories
-Your Monarch account may have custom categories not in the defaults:
 ```yaml
 add_to_groups:
   Business:
-    - "My Custom Category"
+    - "Contractor Payments"
+    - "Business Insurance"
+  Shopping:
+    - "Video Games"
 ```
 
-### Rename categories
-Match category names to your account:
-```yaml
-rename_categories:
-  "Groceries": "Grocery Shopping"
-```
+### Scenario 2: Reorganize to Match Your Preferences
 
-### Reorganize groups
-Prefer different grouping than Monarch's defaults:
-```yaml
-rename_groups:
-  "Travel & Lifestyle": Travel
+Create a custom group and move categories:
 
-move_categories:
-  "Entertainment & Recreation": Entertainment
-  Personal: Miscellaneous
-```
-
-### Create custom groups
-Add entirely new groups for your workflow:
 ```yaml
 custom_groups:
   "Personal Care":
     - Hair
     - Spa
-    - Massage
+
+move_categories:
+  "Laundry & Dry Cleaning": "Personal Care"
+```
+
+### Scenario 3: Rename to Match Your Account
+
+If you've renamed categories in Monarch:
+
+```yaml
+rename_categories:
+  "Groceries": "Grocery Shopping"
+  "Student Loans": "Student Loan Payments"
+```
+
+### Scenario 4: Simplify Group Names
+
+```yaml
+rename_groups:
+  "Travel & Lifestyle": Travel
+  "Gifts & Donations": Gifts
 ```
 
 ## Defaults
 
-Without `categories.yaml`, moneyflow uses Monarch Money's default categories (15 groups, ~60 categories). See `categories.yaml.example` for the complete structure.
+Without `categories.yaml`, moneyflow uses Monarch Money's default categories:
+
+- **15 groups**: Income, Gifts & Donations, Auto & Transport, Housing, Bills & Utilities, Food & Dining, Travel & Lifestyle, Shopping, Children, Education, Health & Wellness, Financial, Uncategorized, Business, Transfers
+- **~60 categories**: Groceries, Restaurants & Bars, Gas, Shopping, Medical, etc.
+
+See `categories.yaml.example` in the repo for the complete default structure.
 
 ## Troubleshooting
 
-**Categories not appearing:**
-- Check YAML syntax is valid
-- Verify version: 1 is present
-- Use `moneyflow categories dump` to see effective structure
+**Issue**: Categories not showing in the UI
 
-**Warning messages:**
-- Check log at `~/.moneyflow/moneyflow.log`
-- Invalid group names or typos will be logged
+**Solutions**:
+1. Verify YAML syntax: `moneyflow categories dump`
+2. Check version field is `1`
+3. Check logs: `~/.moneyflow/moneyflow.log` (search for "categories")
+
+**Issue**: Warning messages about invalid groups
+
+**Solutions**:
+- Typo in group name (case-sensitive)
+- Trying to add to non-existent group (create it with `custom_groups` first)
+- Group was renamed (use new name after `rename_groups`)
+
+**Tip**: Use `moneyflow categories dump --format=readable` to see your effective category structure with group counts.
