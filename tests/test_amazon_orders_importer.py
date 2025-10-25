@@ -510,8 +510,8 @@ class TestEndToEndDataFetch:
         assert "cat_uncategorized" in categories
 
         # Verify group was derived from category
-        # Monarch defaults have "Other" group containing "Uncategorized" category
-        assert all(df["group"] == "Other")  # All initially in Other group
+        # "Uncategorized" category is in "Uncategorized" group
+        assert all(df["group"] == "Uncategorized")  # All initially in Uncategorized group
 
     @pytest.mark.asyncio
     async def test_fetch_respects_date_filters(self, sample_orders_csv, temp_db):

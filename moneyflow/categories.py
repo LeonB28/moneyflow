@@ -106,8 +106,7 @@ DEFAULT_CATEGORY_GROUPS: Dict[str, List[str]] = {
         "Insurance",
         "Taxes",
     ],
-    "Other": [
-        "Other",
+    "Uncategorized": [
         "Uncategorized",
         "Check",
         "Miscellaneous",
