@@ -77,7 +77,7 @@ class TestPrepareAggregationColumns:
         assert cols[0]["width"] == 35  # Wider for 150 char terminals
         assert cols[3]["label"] == "Top Category"
         assert cols[3]["key"] == "top_category_display"
-        assert cols[3]["width"] == 30
+        assert cols[3]["width"] == 35
         assert cols[4]["key"] == "flags"
 
     def test_merchant_columns_with_custom_config(self):

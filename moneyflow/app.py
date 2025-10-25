@@ -792,6 +792,7 @@ class MoneyflowApp(App):
             saved_position: Dict from _save_table_position()
         """
         from .logging_config import get_logger
+
         logger = get_logger(__name__)
 
         try:
@@ -799,7 +800,9 @@ class MoneyflowApp(App):
             cursor_row = saved_position.get("cursor_row", 0)
             scroll_y = saved_position.get("scroll_y", 0)
 
-            logger.debug(f"Restoring table position: cursor {table.cursor_row}→{cursor_row}, scroll {table.scroll_y}→{scroll_y}")
+            logger.debug(
+                f"Restoring table position: cursor {table.cursor_row}→{cursor_row}, scroll {table.scroll_y}→{scroll_y}"
+            )
 
             # Step 1: Move cursor (this will auto-scroll)
             if cursor_row < table.row_count:
@@ -1694,6 +1697,7 @@ class MoneyflowApp(App):
         ]:
             # Drill down from top-level view - save cursor and scroll position for restoration on go_back
             from .logging_config import get_logger
+
             logger = get_logger(__name__)
 
             cursor_position = table.cursor_row
