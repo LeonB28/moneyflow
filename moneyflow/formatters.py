@@ -189,7 +189,7 @@ class ViewPresenter:
 
         # Add top category column for merchant view
         if group_by_field == "merchant":
-            columns.append({"label": "Top Category", "key": "top_category_display", "width": 30})
+            columns.append({"label": "Top Category", "key": "top_category_display", "width": 35})
 
         # Flags column (always last)
         columns.append({"label": "", "key": "flags", "width": 2})

@@ -1387,9 +1387,10 @@ class MoneyflowApp(App):
         success, cursor_position, scroll_y = self.state.go_back()
         if success:
             self.refresh_view()
-            # Restore cursor and scroll position
+            # Restore cursor and scroll position after table is updated
+            # Use call_after_refresh to ensure table is fully rendered
             saved_position = {"cursor_row": cursor_position, "scroll_y": scroll_y}
-            self._restore_table_position(saved_position)
+            self.call_after_refresh(lambda: self._restore_table_position(saved_position))
 
     async def _do_fresh_login(self, creds):
         """
