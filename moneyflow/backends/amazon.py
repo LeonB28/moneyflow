@@ -10,7 +10,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ..categories import STANDARD_CATEGORIES
+from ..categories import DEFAULT_CATEGORY_GROUPS
 from .base import FinanceBackend
 
 
@@ -291,14 +291,20 @@ class AmazonBackend(FinanceBackend):
             Dictionary containing categories in Monarch-compatible format
         """
         categories = []
-        for cat_id, cat_name, group_name in STANDARD_CATEGORIES:
-            categories.append(
-                {
-                    "id": cat_id,
-                    "name": cat_name,
-                    "group": {"name": group_name, "id": group_name},  # Group info for data_manager
-                }
-            )
+        cat_id_counter = 1
+
+        # Build categories from DEFAULT_CATEGORY_GROUPS
+        for group_name, category_names in DEFAULT_CATEGORY_GROUPS.items():
+            for cat_name in category_names:
+                cat_id = f"cat_{cat_name.lower().replace(' ', '_').replace('&', 'and')}"
+                categories.append(
+                    {
+                        "id": cat_id,
+                        "name": cat_name,
+                        "group": {"name": group_name, "id": group_name},
+                    }
+                )
+                cat_id_counter += 1
 
         return {"categories": categories}
 
@@ -342,12 +348,17 @@ class AmazonBackend(FinanceBackend):
         if category_id is not None:
             updates.append("category_id = ?")
             params.append(category_id)
-            # Also update category name from STANDARD_CATEGORIES
+            # Also update category name from DEFAULT_CATEGORY_GROUPS
             # (group is derived from category by data_manager, not stored)
+            # Build category_id → category_name lookup
             category_name = None
-            for cat_id, cat_name, _ in STANDARD_CATEGORIES:
-                if cat_id == category_id:
-                    category_name = cat_name
+            for group_name, category_names in DEFAULT_CATEGORY_GROUPS.items():
+                for cat_name in category_names:
+                    cat_id = f"cat_{cat_name.lower().replace(' ', '_').replace('&', 'and')}"
+                    if cat_id == category_id:
+                        category_name = cat_name
+                        break
+                if category_name:
                     break
             if category_name:
                 updates.append("category = ?")

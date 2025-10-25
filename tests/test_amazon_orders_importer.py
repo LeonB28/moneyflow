@@ -78,8 +78,8 @@ class TestImportBasic:
         result = await backend.get_transaction_categories()
         categories = result["categories"]
 
-        # Should have all 88 standard categories
-        assert len(categories) >= 88
+        # Should have Monarch default categories (~73 in defaults)
+        assert len(categories) >= 70
         # Uncategorized should be available
         cat_ids = [c["id"] for c in categories]
         assert "cat_uncategorized" in cat_ids
@@ -398,7 +398,7 @@ class TestTransactionUpdates:
         """Test that updating category works correctly."""
         backend = AmazonBackend(temp_db)
 
-        # Categories are pre-populated from STANDARD_CATEGORIES during init
+        # Categories are pre-populated from DEFAULT_CATEGORY_GROUPS during init
         # No need to insert - just use existing category
         conn = backend._get_connection()
 
