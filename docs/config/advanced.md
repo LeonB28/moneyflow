@@ -2,7 +2,7 @@
 
 ## Category Customization
 
-Customize the category hierarchy to match your Monarch Money account.
+Customize the category hierarchy to match your finance platform or workflow preferences.
 
 **📁 Configuration file:** `~/.moneyflow/categories.yaml`
 
@@ -13,10 +13,12 @@ moneyflow categories dump --format=readable  # View with counts
 ```
 
 **Features:**
-- Add custom categories from your Monarch account
+- Add custom categories from your finance platform
 - Rename groups or categories
 - Reorganize categories into different groups
 - Create custom groups
+
+**Built-in defaults**: The included categories were chosen to ease integration with Monarch Money but work well for most personal finance platforms.
 
 **See:** [Category Configuration Guide](../categories.md) for complete documentation.
 

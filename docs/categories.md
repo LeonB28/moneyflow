@@ -2,15 +2,15 @@
 
 ## Overview
 
-moneyflow uses Monarch Money's default category structure (~60 categories in 15 groups). Customize the category hierarchy by creating `~/.moneyflow/categories.yaml`.
+moneyflow includes a built-in category structure (~60 categories in 15 groups) chosen to ease integration with Monarch Money. The category hierarchy is fully customizable via `~/.moneyflow/categories.yaml`.
 
 **Common use cases:**
-- Add custom categories that exist only in your Monarch account
-- Rename groups or categories to match your preferences
+- Add custom categories from your finance platform
+- Rename groups or categories to match your workflow
 - Reorganize categories into different groups
 - Create entirely new custom groups
 
-**File location:** `~/.moneyflow/categories.yaml` (optional - works without it)
+**File location:** `~/.moneyflow/categories.yaml` (optional - defaults work out of the box)
 
 ## Quick Start
 
@@ -53,7 +53,7 @@ rename_categories:
   "Groceries": "Grocery Shopping"
 
 # 3. Add custom categories to existing groups
-#    Use this for categories that exist only in your Monarch account
+#    Use this for categories from your finance platform
 add_to_groups:
   Business:
     - Accounting
@@ -73,15 +73,15 @@ custom_groups:
 # 5. Move categories to different groups
 #    Overrides the default group assignment
 move_categories:
-  "Internet & Cable": Services     # Monarch default: Bills & Utilities
-  Pets: "Health & Fitness"         # Monarch default: Travel & Lifestyle
+  "Internet & Cable": Services     # Built-in default: Bills & Utilities
+  Pets: "Health & Fitness"         # Built-in default: Travel & Lifestyle
 ```
 
 ## Common Scenarios
 
 ### Scenario 1: Add Custom Categories
 
-Your Monarch account has custom categories not in the defaults:
+Your finance platform has categories not in the built-in defaults:
 
 ```yaml
 add_to_groups:
@@ -106,9 +106,9 @@ move_categories:
   "Laundry & Dry Cleaning": "Personal Care"
 ```
 
-### Scenario 3: Rename to Match Your Account
+### Scenario 3: Rename to Match Your Platform
 
-If you've renamed categories in Monarch:
+Match category names to your finance platform:
 
 ```yaml
 rename_categories:
@@ -124,14 +124,16 @@ rename_groups:
   "Gifts & Donations": Gifts
 ```
 
-## Defaults
+## Built-in Defaults
 
-Without `categories.yaml`, moneyflow uses Monarch Money's default categories:
+Without `categories.yaml`, moneyflow uses built-in categories chosen to ease integration with Monarch Money:
 
 - **15 groups**: Income, Gifts & Donations, Auto & Transport, Housing, Bills & Utilities, Food & Dining, Travel & Lifestyle, Shopping, Children, Education, Health & Wellness, Financial, Uncategorized, Business, Transfers
 - **~60 categories**: Groceries, Restaurants & Bars, Gas, Shopping, Medical, etc.
 
-See `categories.yaml.example` in the repo for the complete default structure.
+**These defaults work well for most personal finance platforms.** Customize as needed for your workflow.
+
+See `categories.yaml.example` in the repo for the complete structure.
 
 ## Troubleshooting
 

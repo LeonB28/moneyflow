@@ -1,8 +1,11 @@
 # moneyflow category configuration
 # Place at: ~/.moneyflow/categories.yaml
 #
-# Extends Monarch Money's default categories with custom categories and reorganization.
-# All sections are optional. Without this file, Monarch defaults are used.
+# Extends the built-in category defaults with custom categories and reorganization.
+# All sections are optional. Without this file, built-in defaults are used.
+#
+# Built-in defaults are chosen to ease integration with Monarch Money but work
+# well for most personal finance platforms.
 #
 # To view current category hierarchy: moneyflow categories dump
 
@@ -14,13 +17,13 @@ rename_groups:
   "Health & Wellness": "Health & Fitness"
   "Gifts & Donations": "Gifts & Charity"
 
-# Rename individual categories to match your Monarch account
+# Rename individual categories to match your finance platform
 rename_categories:
   "Student Loans": "Student Loan Payments"
   "Groceries": "Grocery Shopping"
 
 # Add custom categories to existing default groups
-# These categories only exist in your personal Monarch account
+# Use this for categories from your finance platform not in the defaults
 add_to_groups:
   Business:
     - Accounting
