@@ -465,7 +465,6 @@ class AppState:
 
         Note: This method contains business logic (Polars operations) that
         ideally should be extracted to a FilterService for better testability.
-        See SECOND_PASS_ANALYSIS.md for refactoring plan.
         """
         if self.transactions_df is None:
             return None

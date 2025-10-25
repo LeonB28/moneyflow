@@ -879,7 +879,7 @@ class AppController:
             else:
                 return "g=Group | m=✏️ Merchant | c=✏️ Category | h=Hide | x=Delete | Space=Select | Ctrl-A=SelectAll"
 
-    # Edit Orchestration Methods (Phase 1 Refactoring)
+    # Edit Orchestration Methods
 
     def determine_edit_context(self, field_name: str, cursor_row: int = 0) -> EditContext:
         """

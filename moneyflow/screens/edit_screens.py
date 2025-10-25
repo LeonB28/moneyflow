@@ -329,7 +329,6 @@ class SelectCategoryScreen(ModalScreen):
 
     Note: Lines 279-313 contain search/filter business logic that could be
     extracted to a CategorySearchService for better testability.
-    See SECOND_PASS_ANALYSIS.md for details.
     """
 
     CSS = """

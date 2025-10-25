@@ -1082,7 +1082,6 @@ class MoneyflowApp(App):
         """
         Edit merchant name for current selection.
 
-        NEW IMPLEMENTATION (Phase 1 Refactoring):
         Uses controller.edit_merchant_current_selection() which handles all edit modes.
         """
         if self.data_manager is None:
@@ -1092,17 +1091,14 @@ class MoneyflowApp(App):
 
     async def _edit_merchant(self) -> None:
         """
-        NEW: Simplified merchant edit using controller orchestration.
+        Edit merchant name using controller orchestration.
 
-        This replaces ~200 lines of complex branching logic with a simple flow:
+        Flow:
         1. Get merchant suggestions (for autocomplete)
         2. Get edit context from controller (what to edit)
         3. Show modal with current value
         4. Call controller to execute edit
         5. Display result
-
-        If this works well, will replace old _bulk_edit_merchant_from_aggregate(),
-        _bulk_edit_merchant_from_selected_groups(), and _edit_merchant_detail().
         """
         # Get cursor position
         table = self.query_one("#data-table", DataTable)
@@ -1151,7 +1147,7 @@ class MoneyflowApp(App):
         """
         Change category for current selection.
 
-        NEW IMPLEMENTATION: Uses controller.edit_category_current_selection().
+        Uses controller.edit_category_current_selection().
         """
         if self.data_manager is None:
             return
@@ -1209,7 +1205,7 @@ class MoneyflowApp(App):
         """
         Toggle hide from reports flag for current transaction(s) or selected groups.
 
-        NEW IMPLEMENTATION: Uses controller.toggle_hide_current_selection().
+        Uses controller.toggle_hide_current_selection().
         """
         if self.data_manager is None or self.state.current_data is None:
             return
