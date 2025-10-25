@@ -783,20 +783,29 @@ class MoneyflowApp(App):
         Args:
             saved_position: Dict from _save_table_position()
         """
+        from .logging_config import get_logger
+        logger = get_logger(__name__)
+
         try:
             table = self.query_one("#data-table", DataTable)
             cursor_row = saved_position.get("cursor_row", 0)
             scroll_y = saved_position.get("scroll_y", 0)
 
-            # IMPORTANT: Set scroll position BEFORE moving cursor
-            # If we move cursor first, move_cursor auto-scrolls to bring the row into view,
-            # which interferes with the scroll_y we're trying to restore
-            table.scroll_y = scroll_y
+            logger.debug(f"Before restore: cursor={table.cursor_row}, scroll_y={table.scroll_y}, row_count={table.row_count}")
+            logger.debug(f"Restoring to: cursor={cursor_row}, scroll_y={scroll_y}")
 
-            # Restore cursor (bounded by current row count)
+            # Restore cursor first (bounded by current row count)
             if cursor_row < table.row_count:
                 table.move_cursor(row=cursor_row)
-        except Exception:
+
+            # IMPORTANT: Set scroll position AFTER moving cursor
+            # move_cursor auto-scrolls to bring the row into view, so we must
+            # override the scroll position AFTER the cursor is moved
+            table.scroll_y = scroll_y
+
+            logger.debug(f"After restore: cursor={table.cursor_row}, scroll_y={table.scroll_y}")
+        except Exception as e:
+            logger.error(f"Failed to restore table position: {e}")
             pass  # Table might not be ready yet
 
     def refresh_view(self, force_rebuild: bool = True) -> None:
@@ -1387,10 +1396,10 @@ class MoneyflowApp(App):
         success, cursor_position, scroll_y = self.state.go_back()
         if success:
             self.refresh_view()
-            # Restore cursor and scroll position after table is updated
-            # Use call_after_refresh to ensure table is fully rendered
+            # Restore cursor and scroll position after DOM updates
+            # Use set_timer to defer until table is fully rendered
             saved_position = {"cursor_row": cursor_position, "scroll_y": scroll_y}
-            self.call_after_refresh(lambda: self._restore_table_position(saved_position))
+            self.set_timer(0.01, lambda: self._restore_table_position(saved_position))
 
     async def _do_fresh_login(self, creds):
         """
@@ -1678,8 +1687,12 @@ class MoneyflowApp(App):
             ViewMode.ACCOUNT,
         ]:
             # Drill down from top-level view - save cursor and scroll position for restoration on go_back
+            from .logging_config import get_logger
+            logger = get_logger(__name__)
+
             cursor_position = table.cursor_row
             scroll_y = table.scroll_y
+            logger.debug(f"Drilling down: saving cursor={cursor_position}, scroll_y={scroll_y}")
             self.state.drill_down(item_name, cursor_position, scroll_y)
             self.refresh_view()
 
