@@ -226,7 +226,13 @@ def categories():
     default=None,
     help="Config directory (default: ~/.moneyflow)",
 )
-def categories_dump(config_dir):
+@click.option(
+    "--format",
+    type=click.Choice(["yaml", "readable"]),
+    default="yaml",
+    help="Output format: yaml (copy-pastable) or readable (with counts)",
+)
+def categories_dump(config_dir, format):
     """Display current category hierarchy (defaults + custom from categories.yaml).
 
     Shows the effective category structure including:
@@ -234,26 +240,50 @@ def categories_dump(config_dir):
     - Custom categories from ~/.moneyflow/categories.yaml
     - Category renames and moves
 
-    Use this to verify your categories.yaml configuration.
+    Default output is YAML format (copy-pastable into categories.yaml).
+    Use --format=readable for human-readable format with counts.
     """
     from moneyflow.categories import get_effective_category_groups
 
     try:
         category_groups = get_effective_category_groups(config_dir)
 
-        click.echo("Current Category Hierarchy")
-        click.echo("=" * 60)
+        if format == "yaml":
+            # Output as valid YAML (copy-pastable)
+            click.echo("# Current category hierarchy")
+            click.echo("# Copy sections below into your categories.yaml\n")
 
-        # Count total categories
-        total_cats = sum(len(cats) for cats in category_groups.values())
-        click.echo(f"Total: {len(category_groups)} groups, {total_cats} categories\n")
+            # Output in YAML format
+            for group_name in sorted(category_groups.keys()):
+                categories_list = category_groups[group_name]
+                # Use quotes if group name has special chars
+                if " " in group_name or "&" in group_name:
+                    click.echo(f'  "{group_name}":')
+                else:
+                    click.echo(f"  {group_name}:")
+                for cat in sorted(categories_list):
+                    # Use quotes if category has special chars
+                    if " " in cat or "&" in cat:
+                        click.echo(f'    - "{cat}"')
+                    else:
+                        click.echo(f"    - {cat}")
+                click.echo()  # Blank line between groups
 
-        # Display each group
-        for group_name in sorted(category_groups.keys()):
-            categories_list = category_groups[group_name]
-            click.echo(f"\n{group_name} ({len(categories_list)} categories):")
-            for cat in sorted(categories_list):
-                click.echo(f"  - {cat}")
+        else:
+            # Readable format with counts
+            click.echo("Current Category Hierarchy")
+            click.echo("=" * 60)
+
+            # Count total categories
+            total_cats = sum(len(cats) for cats in category_groups.values())
+            click.echo(f"Total: {len(category_groups)} groups, {total_cats} categories\n")
+
+            # Display each group
+            for group_name in sorted(category_groups.keys()):
+                categories_list = category_groups[group_name]
+                click.echo(f"\n{group_name} ({len(categories_list)} categories):")
+                for cat in sorted(categories_list):
+                    click.echo(f"  - {cat}")
 
         # Show config file location
         if config_dir:
@@ -261,11 +291,11 @@ def categories_dump(config_dir):
         else:
             config_path = Path.home() / ".moneyflow" / "categories.yaml"
 
-        click.echo(f"\n{'=' * 60}")
+        click.echo(f"\n# {'=' * 58}")
         if config_path.exists():
-            click.echo(f"✓ Custom config: {config_path}")
+            click.echo(f"# Custom config: {config_path}")
         else:
-            click.echo(f"Using Monarch defaults (no custom config at {config_path})")
+            click.echo(f"# Using Monarch defaults (no custom config at {config_path})")
 
     except Exception as e:
         click.echo(f"Error: {e}", err=True)

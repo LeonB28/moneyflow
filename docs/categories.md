@@ -8,13 +8,15 @@ moneyflow uses Monarch Money's default category structure. You can customize cat
 
 **View your current category structure:**
 ```bash
-moneyflow categories dump
+moneyflow categories dump              # YAML format (copy-pastable)
+moneyflow categories dump --format=readable  # Human-readable with counts
 ```
 
 **Customize categories:**
-1. Copy `categories.yaml.example` to `~/.moneyflow/categories.yaml`
-2. Edit to add custom categories or reorganize groups
-3. Run `moneyflow categories dump` to verify
+1. Run `moneyflow categories dump > my-categories.yaml`
+2. Edit to add/remove categories as needed
+3. Copy relevant sections to `~/.moneyflow/categories.yaml`
+4. Run `moneyflow categories dump` to verify changes
 
 ## Configuration Format
 
