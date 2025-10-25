@@ -341,6 +341,9 @@ class AppState:
         Skips the field we're already drilled into (e.g., if drilled into Category > Groceries,
         don't offer Category as sub-grouping since we're already filtered by that).
 
+        When entering sub-grouping mode (transitioning from None to a mode), saves
+        current state to navigation history so go_back() can restore it.
+
         When cycling between sub-groupings, validates that the current sort field is
         compatible with the new sub-grouping mode:
         - COUNT and AMOUNT are always valid
@@ -378,6 +381,25 @@ class AppState:
         # Cycle to next
         next_idx = (current_idx + 1) % len(available_modes)
         new_mode = available_modes[next_idx]
+
+        # Save current state to navigation history when entering sub-grouping mode
+        # This allows go_back() to restore the sort state before sub-grouping
+        if self.sub_grouping_mode is None and new_mode is not None:
+            # Entering sub-grouping for the first time - save current detail view state
+            self.navigation_history.append(
+                NavigationState(
+                    view_mode=self.view_mode,
+                    cursor_position=0,  # Don't save cursor when sub-grouping
+                    scroll_y=0.0,
+                    sort_by=self.sort_by,
+                    sort_direction=self.sort_direction,
+                    selected_merchant=self.selected_merchant,
+                    selected_category=self.selected_category,
+                    selected_group=self.selected_group,
+                    selected_account=self.selected_account,
+                    sub_grouping_mode=self.sub_grouping_mode,
+                )
+            )
 
         # Reset sort to valid field if current sort is not compatible with new mode
         # COUNT and AMOUNT are always valid for all modes
@@ -643,7 +665,7 @@ class AppState:
         Priority order:
         1. If search is active and no navigation since search: Clear search
         2. If sub-grouping is active: Clear sub-grouping first (stay drilled down)
-           - Restores sort state from navigation history (without popping)
+           - Restores sort state from navigation history (pops if entering sub-grouping saved state)
            - This undoes sort changes made by cycle_sub_grouping()
         3. If drilled down (no sub-grouping): Go back to parent view
         4. If at top-level: Do nothing
@@ -667,11 +689,15 @@ class AppState:
         # If in sub-grouped view, clear sub-grouping first (stay drilled down)
         if self.is_drilled_down() and self.sub_grouping_mode:
             self.sub_grouping_mode = None
-            # Restore sort state from navigation history (peek, don't pop)
-            # This handles the case where cycle_sub_grouping() changed the sort
-            # to AMOUNT because the previous sort field was incompatible
-            if self.navigation_history:
-                nav_state = self.navigation_history[-1]  # Peek at last state
+            # Restore sort state from navigation history
+            # If the top entry is DETAIL view with sub_grouping_mode=None, it was saved
+            # when entering sub-grouping mode, so we should pop it and restore from it
+            if (
+                self.navigation_history
+                and self.navigation_history[-1].view_mode == ViewMode.DETAIL
+                and self.navigation_history[-1].sub_grouping_mode is None
+            ):
+                nav_state = self.navigation_history.pop()
                 self.sort_by = nav_state.sort_by
                 self.sort_direction = nav_state.sort_direction
             return True, 0, 0.0

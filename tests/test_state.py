@@ -1330,27 +1330,40 @@ class TestSubGrouping:
         state.sub_grouping_mode = ViewMode.CATEGORY
         state.sort_by = SortMode.AMOUNT  # Changed to AMOUNT due to sub-grouping
 
-        # Navigation history has the original sort (before sub-grouping)
+        # Simulate proper navigation flow:
+        # 1. Drill down saved merchant view state
         state.navigation_history.append(
             NavigationState(
                 view_mode=ViewMode.MERCHANT,
                 cursor_position=10,
                 scroll_y=200.0,
-                sort_by=SortMode.MERCHANT,  # Original sort
+                sort_by=SortMode.AMOUNT,
+                sort_direction=SortDirection.DESC,
+            )
+        )
+        # 2. Entering sub-grouping saved detail view state (with ACCOUNT sort)
+        state.navigation_history.append(
+            NavigationState(
+                view_mode=ViewMode.DETAIL,
+                cursor_position=0,
+                scroll_y=0.0,
+                sort_by=SortMode.ACCOUNT,  # Sort before sub-grouping
                 sort_direction=SortDirection.ASC,
+                selected_merchant="Amazon",
+                sub_grouping_mode=None,  # Was not sub-grouped
             )
         )
 
         # Press Esc to clear sub-grouping
         success, _, _ = state.go_back()
 
-        # Should clear sub-grouping AND restore original sort
+        # Should clear sub-grouping AND restore sort from detail view state
         assert success is True
         assert state.sub_grouping_mode is None
         assert state.selected_merchant == "Amazon"  # Still drilled down
-        assert state.sort_by == SortMode.MERCHANT  # Restored from history
+        assert state.sort_by == SortMode.ACCOUNT  # Restored from entering-sub-grouping state
         assert state.sort_direction == SortDirection.ASC  # Restored from history
-        # Navigation history should NOT be popped (still drilled down)
+        # Navigation history should have popped the sub-grouping entry, leaving drill-down entry
         assert len(state.navigation_history) == 1
 
     def test_go_back_clears_sub_grouping_preserves_count_sort(self):
@@ -1375,6 +1388,65 @@ class TestSubGrouping:
         # COUNT should be preserved (it's valid in both modes)
         assert state.sub_grouping_mode is None
         assert state.sort_by == SortMode.COUNT
+
+    def test_cycle_sub_grouping_saves_state_when_entering_subgrouping(self):
+        """When entering sub-grouping mode, should save current state to navigation history."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+        state.sub_grouping_mode = None  # Not yet sub-grouped
+        state.sort_by = SortMode.ACCOUNT  # Current sort
+        state.sort_direction = SortDirection.ASC
+
+        # Navigation history has one entry from drill-down
+        state.navigation_history.append(
+            NavigationState(
+                view_mode=ViewMode.MERCHANT,
+                sort_by=SortMode.AMOUNT,
+                sort_direction=SortDirection.DESC,
+            )
+        )
+
+        # Press g to enter sub-grouping
+        state.cycle_sub_grouping()
+
+        # Should save detail view state before changing sort
+        assert len(state.navigation_history) == 2
+        saved_state = state.navigation_history[-1]
+        assert saved_state.view_mode == ViewMode.DETAIL
+        assert saved_state.sort_by == SortMode.ACCOUNT  # Saved before changing
+        assert saved_state.sort_direction == SortDirection.ASC
+        assert saved_state.selected_merchant == "Amazon"
+        assert saved_state.sub_grouping_mode is None
+
+    def test_go_back_from_subgrouping_pops_navigation_history(self):
+        """When clearing sub-grouping, should pop from navigation history."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"
+        state.sub_grouping_mode = ViewMode.CATEGORY
+        state.sort_by = SortMode.AMOUNT  # Changed to AMOUNT by sub-grouping
+
+        # Two entries: drill-down + entering sub-grouping
+        state.navigation_history.append(
+            NavigationState(view_mode=ViewMode.MERCHANT, sort_by=SortMode.AMOUNT)
+        )
+        state.navigation_history.append(
+            NavigationState(
+                view_mode=ViewMode.DETAIL,
+                sort_by=SortMode.ACCOUNT,  # Before sub-grouping
+                sort_direction=SortDirection.ASC,
+                selected_merchant="Amazon",
+            )
+        )
+
+        # Press Esc to clear sub-grouping
+        state.go_back()
+
+        # Should restore ACCOUNT sort and pop from history
+        assert state.sort_by == SortMode.ACCOUNT
+        assert state.sort_direction == SortDirection.ASC
+        assert len(state.navigation_history) == 1  # Popped the sub-grouping entry
 
     def test_breadcrumb_shows_sub_grouping(self):
         """Breadcrumb should show sub-grouping mode."""
