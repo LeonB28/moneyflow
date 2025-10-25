@@ -1190,6 +1190,92 @@ class TestSubGrouping:
         assert state.sub_grouping_mode == ViewMode.MERCHANT
         assert state.sort_by == SortMode.AMOUNT
 
+    def test_cycle_sub_grouping_resets_invalid_aggregate_field_sort(self):
+        """When cycling between sub-groupings, invalid aggregate field sorts should reset to AMOUNT."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_category = "Groceries"  # Drilled into category
+        state.sub_grouping_mode = ViewMode.MERCHANT  # Sub-grouped by merchant
+        state.sort_by = SortMode.MERCHANT  # Sorting by merchant (valid for current sub-grouping)
+
+        # Cycle to next sub-grouping (will be GROUP since CATEGORY is excluded)
+        state.cycle_sub_grouping()
+
+        # Should be sub-grouped by group now, and MERCHANT sort should reset to AMOUNT
+        assert state.sub_grouping_mode == ViewMode.GROUP
+        assert state.sort_by == SortMode.AMOUNT  # MERCHANT is not valid for group sub-grouping
+
+    def test_cycle_sub_grouping_resets_merchant_sort_when_switching_to_category(self):
+        """MERCHANT sort should reset to AMOUNT when cycling to category sub-grouping."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_account = "Chase Checking"
+        state.sub_grouping_mode = ViewMode.MERCHANT
+        state.sort_by = SortMode.MERCHANT
+
+        state.cycle_sub_grouping()  # Merchant → Category
+
+        assert state.sub_grouping_mode == ViewMode.CATEGORY
+        assert state.sort_by == SortMode.AMOUNT
+
+    def test_cycle_sub_grouping_resets_category_sort_when_switching_to_merchant(self):
+        """CATEGORY sort should reset to AMOUNT when cycling to merchant sub-grouping."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_group = "Food & Dining"
+        state.sub_grouping_mode = ViewMode.CATEGORY
+        state.sort_by = SortMode.CATEGORY
+
+        state.cycle_sub_grouping()  # Category → Account
+
+        assert state.sub_grouping_mode == ViewMode.ACCOUNT
+        assert state.sort_by == SortMode.AMOUNT
+
+    def test_cycle_sub_grouping_preserves_matching_aggregate_field_sort(self):
+        """When cycling to sub-grouping by X, and already sorting by X, preserve the sort."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_category = "Groceries"
+        state.sub_grouping_mode = ViewMode.ACCOUNT
+        state.sort_by = SortMode.ACCOUNT  # Sorting by account
+
+        # Cycle through: Account → None(detail) → Merchant
+        state.cycle_sub_grouping()  # Account → None (detail)
+        assert state.sub_grouping_mode is None
+        # When we go to detail, account sort should be preserved (it's valid for detail)
+        assert state.sort_by == SortMode.ACCOUNT
+
+        state.cycle_sub_grouping()  # None → Merchant
+        # ACCOUNT sort is not valid for merchant sub-grouping, should reset
+        assert state.sub_grouping_mode == ViewMode.MERCHANT
+        assert state.sort_by == SortMode.AMOUNT
+
+    def test_cycle_sub_grouping_preserves_count_when_cycling_between_modes(self):
+        """COUNT sort should be preserved when cycling between any sub-grouping modes."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_merchant = "Amazon"  # MERCHANT is excluded from available modes
+        state.sub_grouping_mode = ViewMode.CATEGORY
+        state.sort_by = SortMode.COUNT
+
+        state.cycle_sub_grouping()  # Category → Group (not Account, since available: Category, Group, Account, None)
+
+        assert state.sub_grouping_mode == ViewMode.GROUP
+        assert state.sort_by == SortMode.COUNT  # Preserved
+
+    def test_cycle_sub_grouping_preserves_amount_when_cycling_between_modes(self):
+        """AMOUNT sort should be preserved when cycling between any sub-grouping modes."""
+        state = AppState()
+        state.view_mode = ViewMode.DETAIL
+        state.selected_category = "Groceries"  # CATEGORY is excluded from available modes
+        state.sub_grouping_mode = ViewMode.MERCHANT
+        state.sort_by = SortMode.AMOUNT
+
+        state.cycle_sub_grouping()  # Merchant → Group (available: Merchant, Group, Account, None)
+
+        assert state.sub_grouping_mode == ViewMode.GROUP
+        assert state.sort_by == SortMode.AMOUNT  # Preserved
+
     def test_go_back_clears_sub_grouping_first(self):
         """Escape should clear sub-grouping before going back."""
         state = AppState()

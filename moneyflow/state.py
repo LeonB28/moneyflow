@@ -341,6 +341,14 @@ class AppState:
         Skips the field we're already drilled into (e.g., if drilled into Category > Groceries,
         don't offer Category as sub-grouping since we're already filtered by that).
 
+        When cycling between sub-groupings, validates that the current sort field is
+        compatible with the new sub-grouping mode:
+        - COUNT and AMOUNT are always valid
+        - DATE is only valid in detail view (None)
+        - Aggregate field sorts (MERCHANT/CATEGORY/GROUP/ACCOUNT) are only valid
+          when they match the new sub-grouping mode
+        - If invalid, falls back to AMOUNT sort
+
         Returns:
             Name of the new sub-grouping mode for notification
         """
@@ -371,13 +379,43 @@ class AppState:
         next_idx = (current_idx + 1) % len(available_modes)
         new_mode = available_modes[next_idx]
 
-        # Reset sort to valid field for aggregate views if switching from detail to aggregated
-        # Detail views can have DATE sort, but aggregated views cannot
-        if self.sub_grouping_mode is None and new_mode is not None:
-            # Switching from detail view to aggregated sub-grouping
-            if self.sort_by == SortMode.DATE:
-                # DATE is not valid for aggregated views, default to AMOUNT
+        # Reset sort to valid field if current sort is not compatible with new mode
+        # COUNT and AMOUNT are always valid for all modes
+        # DATE is only valid for detail view (new_mode is None)
+        # Aggregate fields (MERCHANT, CATEGORY, GROUP, ACCOUNT) are only valid
+        # when they match the new sub-grouping mode
+
+        # Map of sub-grouping mode to valid aggregate field sort
+        mode_to_sort = {
+            ViewMode.MERCHANT: SortMode.MERCHANT,
+            ViewMode.CATEGORY: SortMode.CATEGORY,
+            ViewMode.GROUP: SortMode.GROUP,
+            ViewMode.ACCOUNT: SortMode.ACCOUNT,
+        }
+
+        # Check if current sort is valid for the new mode
+        if new_mode is None:
+            # Switching to detail view - all sorts are valid (including DATE)
+            pass
+        else:
+            # Switching to an aggregate sub-grouping
+            # Check if current sort is valid
+            if self.sort_by in [SortMode.COUNT, SortMode.AMOUNT]:
+                # Always valid
+                pass
+            elif self.sort_by == SortMode.DATE:
+                # DATE is not valid for aggregate views
                 self.sort_by = SortMode.AMOUNT
+            elif self.sort_by in [
+                SortMode.MERCHANT,
+                SortMode.CATEGORY,
+                SortMode.GROUP,
+                SortMode.ACCOUNT,
+            ]:
+                # Aggregate field sort - only valid if it matches the new mode
+                if self.sort_by != mode_to_sort.get(new_mode):
+                    # Current sort doesn't match new mode's field, fall back to AMOUNT
+                    self.sort_by = SortMode.AMOUNT
 
         self.sub_grouping_mode = new_mode
 
