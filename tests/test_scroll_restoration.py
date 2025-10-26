@@ -8,7 +8,7 @@ These are regression tests for bugs where Textual's move_cursor() auto-scroll
 would override our scroll_y restoration.
 """
 
-from moneyflow.state import AppState, NavigationState, ViewMode, SortMode, SortDirection
+from moneyflow.state import AppState, ViewMode
 
 
 class TestScrollPositionSaving:
