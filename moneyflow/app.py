@@ -1061,8 +1061,8 @@ class MoneyflowApp(App):
         # Use controller to handle the selection logic
         count, item_type = self.controller.toggle_selection_at_row(table.cursor_row)
 
-        # Refresh view to show checkmark
-        self.refresh_view()
+        # Refresh view to show checkmark (smooth update - don't rebuild columns)
+        self.refresh_view(force_rebuild=False)
 
         # Restore cursor and scroll position
         self._restore_table_position(saved_position)
@@ -1082,8 +1082,8 @@ class MoneyflowApp(App):
         # Use controller to handle the select all logic
         count, all_selected, item_type = self.controller.toggle_select_all_visible()
 
-        # Refresh view to show/hide checkmarks
-        self.refresh_view()
+        # Refresh view to show/hide checkmarks (smooth update - don't rebuild columns)
+        self.refresh_view(force_rebuild=False)
 
         # Restore cursor position
         if saved_cursor_row < table.row_count:
