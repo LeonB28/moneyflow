@@ -1,5 +1,6 @@
 """Duplicates detection and review screen."""
 
+from datetime import datetime
 from typing import Optional, Set
 
 import polars as pl
@@ -9,8 +10,13 @@ from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import DataTable, Label, Static
 
+from ..duplicate_detector import DuplicateDetector
+from ..logging_config import get_logger
+from ..state import TransactionEdit
 from .edit_screens import DeleteConfirmationScreen
 from .transaction_detail_screen import TransactionDetailScreen
+
+logger = get_logger(__name__)
 
 
 class DuplicatesScreen(Screen):
@@ -68,18 +74,16 @@ class DuplicatesScreen(Screen):
     }
     """
 
-    def __init__(self, duplicates_df: pl.DataFrame, groups: list, full_df: pl.DataFrame):
+    def __init__(self, duplicates_df: pl.DataFrame, groups: list, full_df: pl.DataFrame, main_app):
         super().__init__()
         self.duplicates_df = duplicates_df
         self.duplicate_groups = groups
         self.full_df = full_df
+        self.main_app = main_app  # Reference to MoneyflowApp for backend operations
         # Map table row index to transaction ID for lookups
         self.row_to_txn_id: dict[int, str] = {}
         # Track selected transaction IDs
         self.selected_ids: Set[str] = set()
-        # Track which transactions have pending changes
-        self.pending_deletes: Set[str] = set()
-        self.pending_hides: Set[str] = set()
 
     def compose(self) -> ComposeResult:
         with Container(id="duplicates-container"):
@@ -141,25 +145,20 @@ class DuplicatesScreen(Screen):
         self.update_status_line()
 
     def update_status_line(self) -> None:
-        """Update the status line with current selection/pending changes."""
+        """Update the status line with current selection."""
         status_parts = []
 
         if len(self.selected_ids) > 0:
             status_parts.append(f"✓ {len(self.selected_ids)} selected")
 
-        if len(self.pending_deletes) > 0:
-            status_parts.append(f"🗑 {len(self.pending_deletes)} to delete")
-
-        if len(self.pending_hides) > 0:
-            status_parts.append(f"👁 {len(self.pending_hides)} to hide/unhide")
-
         status_line = self.query_one("#status-line", Static)
         if status_parts:
-            status_line.update(" | ".join(status_parts) + " | Space=Select | i=Details | x=Delete | h=Hide | Esc=Close")
-        else:
             status_line.update(
-                "Space=Select | i=Details | x=Delete | h=Hide | Esc=Close"
+                " | ".join(status_parts)
+                + " | Space=Select | i=Details | x=Delete | h=Hide | Esc=Close"
             )
+        else:
+            status_line.update("Space=Select | i=Details | x=Delete | h=Hide | Esc=Close")
 
     def get_current_transaction_id(self) -> Optional[str]:
         """Get the transaction ID of the currently selected row."""
@@ -194,10 +193,8 @@ class DuplicatesScreen(Screen):
                 flags = ""
                 if txn_id in self.selected_ids:
                     flags += "✓"
-                if txn.get("hideFromReports", False) or txn_id in self.pending_hides:
+                if txn.get("hideFromReports", False):
                     flags += "H"
-                if txn_id in self.pending_deletes:
-                    flags += "D"
 
                 # Update the row
                 table.update_cell_at((row_idx, 0), flags)
@@ -205,6 +202,57 @@ class DuplicatesScreen(Screen):
         # Restore cursor
         if saved_cursor >= 0 and saved_cursor < table.row_count:
             table.move_cursor(row=saved_cursor)
+
+    def rebuild_duplicates_table(self) -> None:
+        """Completely rebuild the duplicates table (after deletions)."""
+        table = self.query_one("#duplicates-table", DataTable)
+        saved_cursor = table.cursor_row
+
+        # Clear and rebuild table
+        table.clear()
+        self.row_to_txn_id.clear()
+
+        # Update header count
+        header = self.query_one("#duplicates-title", Label)
+        header.update(
+            f"🔍 Found {len(self.duplicates_df)} potential duplicates "
+            f"in {len(self.duplicate_groups)} groups"
+        )
+
+        # Re-add rows grouped by duplicate sets
+        row_idx = 0
+        for group_num, group_ids in enumerate(self.duplicate_groups, 1):
+            for txn_id in group_ids:
+                # Find transaction in full dataframe
+                txn_rows = self.full_df.filter(pl.col("id") == txn_id)
+                if len(txn_rows) > 0:
+                    txn = txn_rows.row(0, named=True)
+
+                    # Build flags string
+                    flags = ""
+                    if txn_id in self.selected_ids:
+                        flags += "✓"
+                    if txn.get("hideFromReports", False):
+                        flags += "H"
+
+                    table.add_row(
+                        flags,
+                        f"#{group_num}",
+                        str(txn["date"]),
+                        txn["merchant"],
+                        f"${txn['amount']:,.2f}",
+                        txn["account"],
+                    )
+
+                    # Store mapping
+                    self.row_to_txn_id[row_idx] = txn_id
+                    row_idx += 1
+
+        # Restore cursor position (bounded by new row count)
+        if saved_cursor >= 0 and saved_cursor < table.row_count:
+            table.move_cursor(row=saved_cursor)
+        elif table.row_count > 0:
+            table.move_cursor(row=0)
 
     def action_toggle_select(self) -> None:
         """Toggle selection of current transaction."""
@@ -250,20 +298,61 @@ class DuplicatesScreen(Screen):
         )
 
         if confirmed:
-            # Mark for deletion (would be committed by main app)
-            for txn_id in to_delete:
-                self.pending_deletes.add(txn_id)
+            # Delete transactions via backend
+            success_count = 0
+            failure_count = 0
 
+            for txn_id in to_delete:
+                try:
+                    await self.main_app._delete_with_retry(txn_id)
+                    success_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to delete transaction {txn_id}: {e}")
+                    failure_count += 1
+
+            # Update main app's DataFrame to remove deleted transactions
+            if success_count > 0:
+                deleted_ids = to_delete[:success_count]
+                if self.main_app.data_manager.df is not None:
+                    self.main_app.data_manager.df = self.main_app.data_manager.df.filter(
+                        ~pl.col("id").is_in(deleted_ids)
+                    )
+                    self.main_app.state.transactions_df = self.main_app.data_manager.df
+
+                # Update our local data
+                self.full_df = self.full_df.filter(~pl.col("id").is_in(deleted_ids))
+                self.duplicates_df = self.duplicates_df.filter(~pl.col("id").is_in(deleted_ids))
+
+                # Rebuild duplicate groups
+                if not self.duplicates_df.is_empty():
+                    self.duplicate_groups = DuplicateDetector.get_duplicate_groups(
+                        self.full_df, self.duplicates_df
+                    )
+
+            # Clear selection and completely rebuild table
             self.selected_ids.clear()
-            self.refresh_table()
+            self.rebuild_duplicates_table()
             self.update_status_line()
 
-            self.notify(
-                f"Marked {len(to_delete)} transaction(s) for deletion. "
-                "Note: Deletes are not yet committed to API.",
-                severity="warning",
-                timeout=5,
-            )
+            # Show result notification
+            if failure_count == 0:
+                self.notify(
+                    f"✅ Deleted {success_count} transaction(s)",
+                    severity="information",
+                    timeout=2,
+                )
+            else:
+                self.notify(
+                    f"Deleted {success_count}, failed {failure_count}",
+                    severity="warning",
+                    timeout=3,
+                )
+
+            # Check if all duplicates are now resolved
+            if self.duplicates_df.is_empty():
+                self.notify("🎉 All duplicates resolved!", severity="information", timeout=3)
+                # Wait a moment then close
+                self.set_timer(1.5, lambda: self.dismiss(None))
 
     def action_toggle_hide(self) -> None:
         """Toggle hide from reports for current transaction(s)."""
@@ -276,32 +365,35 @@ class DuplicatesScreen(Screen):
                 return
             to_toggle = [txn_id]
 
-        # Toggle hide status
+        # Queue hide toggle edits to main app
+        timestamp = datetime.now()
         for txn_id in to_toggle:
-            if txn_id in self.pending_hides:
-                self.pending_hides.remove(txn_id)
-            else:
-                self.pending_hides.add(txn_id)
+            txn_rows = self.full_df.filter(pl.col("id") == txn_id)
+            if not txn_rows.is_empty():
+                txn = txn_rows.row(0, named=True)
+                current_hide = txn.get("hideFromReports", False)
+
+                edit = TransactionEdit(
+                    transaction_id=txn_id,
+                    field="hide_from_reports",
+                    old_value=current_hide,
+                    new_value=not current_hide,
+                    timestamp=timestamp,
+                )
+                self.main_app.data_manager.pending_edits.append(edit)
 
         self.selected_ids.clear()
         self.refresh_table()
         self.update_status_line()
 
         self.notify(
-            f"Toggled hide status for {len(to_toggle)} transaction(s). "
-            "Note: Changes are not yet committed to API.",
-            severity="warning",
+            f"Queued {len(to_toggle)} hide/unhide changes. Close and press w to commit.",
             timeout=3,
         )
 
     def action_close(self) -> None:
         """Close the duplicates screen."""
-        # Return the pending changes to the main app
-        result = {
-            "pending_deletes": list(self.pending_deletes),
-            "pending_hides": list(self.pending_hides),
-        }
-        self.dismiss(result)
+        self.dismiss(None)
 
     async def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection (Enter key) - show details."""

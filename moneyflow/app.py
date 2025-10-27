@@ -871,6 +871,11 @@ class MoneyflowApp(App):
         """Find and display duplicate transactions."""
         if self.data_manager is None or self.data_manager.df is None:
             return
+        # Run in worker to support async operations
+        self.run_worker(self._find_duplicates_async(), exclusive=False)
+
+    async def _find_duplicates_async(self) -> None:
+        """Find duplicates and show duplicates screen."""
         # Find duplicates in current filtered view
         filtered_df = self.state.get_filtered_df()
         if filtered_df is None or filtered_df.is_empty():
@@ -884,8 +889,9 @@ class MoneyflowApp(App):
             self.notify("✅ No duplicates found!", severity="information", timeout=3)
         else:
             groups = DuplicateDetector.get_duplicate_groups(filtered_df, duplicates)
-            # Show duplicates screen
-            self.push_screen(DuplicatesScreen(duplicates, groups, filtered_df))
+            # Show duplicates screen (user can delete multiple times before closing)
+            # Pass reference to main app so screen can call delete methods
+            self.push_screen(DuplicatesScreen(duplicates, groups, filtered_df, self))
 
     def action_undo_pending_edits(self) -> None:
         """Undo the most recent pending edit or bulk edit batch."""
