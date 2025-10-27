@@ -319,11 +319,15 @@ class DuplicatesScreen(Screen):
                     )
                     self.main_app.state.transactions_df = self.main_app.data_manager.df
 
-                # Update our local data
+                # Update our local full_df
                 self.full_df = self.full_df.filter(~pl.col("id").is_in(deleted_ids))
-                self.duplicates_df = self.duplicates_df.filter(~pl.col("id").is_in(deleted_ids))
 
-                # Rebuild duplicate groups
+                # Rebuild duplicates_df by filtering out rows where either id_1 or id_2 was deleted
+                self.duplicates_df = self.duplicates_df.filter(
+                    ~(pl.col("id_1").is_in(deleted_ids) | pl.col("id_2").is_in(deleted_ids))
+                )
+
+                # Rebuild duplicate groups using remaining duplicates
                 if not self.duplicates_df.is_empty():
                     self.duplicate_groups = DuplicateDetector.get_duplicate_groups(
                         self.full_df, self.duplicates_df
