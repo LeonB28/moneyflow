@@ -20,7 +20,7 @@ class DuplicatesScreen(Screen):
         Binding("space", "toggle_select", "Select", show=True, key_display="Space"),
         Binding("i", "show_details", "Details", show=True, key_display="i"),
         Binding("h", "toggle_hide", "Hide/Unhide", show=True, key_display="h"),
-        Binding("x", "delete_transaction", "Delete", show=True, key_display="x"),
+        Binding("x", "delete_selected", "Delete", show=True, key_display="x"),
         Binding("escape", "close", "Close", show=True, key_display="Esc"),
     ]
 
@@ -228,8 +228,13 @@ class DuplicatesScreen(Screen):
 
         self.app.push_screen(TransactionDetailScreen(txn_data))
 
-    async def action_delete_transaction(self) -> None:
+    def action_delete_selected(self) -> None:
         """Delete the current transaction(s) with confirmation."""
+        # Run in worker to support wait_for_dismiss
+        self.run_worker(self._delete_transaction_async(), exclusive=False)
+
+    async def _delete_transaction_async(self) -> None:
+        """Async worker for delete confirmation and execution."""
         # Get transactions to delete
         if len(self.selected_ids) > 0:
             to_delete = list(self.selected_ids)
