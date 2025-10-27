@@ -17,10 +17,10 @@ class DuplicatesScreen(Screen):
     """Screen to review and handle duplicate transactions."""
 
     BINDINGS = [
+        Binding("space", "toggle_select", "Select", show=True, key_display="Space"),
         Binding("i", "show_details", "Details", show=True, key_display="i"),
         Binding("h", "toggle_hide", "Hide/Unhide", show=True, key_display="h"),
         Binding("x", "delete_transaction", "Delete", show=True, key_display="x"),
-        Binding("space", "toggle_select", "Select", show=True, key_display="Space"),
         Binding("escape", "close", "Close", show=True, key_display="Esc"),
     ]
 
@@ -90,7 +90,7 @@ class DuplicatesScreen(Screen):
                     id="duplicates-title",
                 )
                 yield Static(
-                    "Space=Select | Enter=Details | d=Delete | h=Hide | Esc=Close",
+                    "Review potential duplicate transactions. Select transactions to delete or hide in bulk.",
                     id="duplicates-help",
                 )
 
@@ -155,10 +155,10 @@ class DuplicatesScreen(Screen):
 
         status_line = self.query_one("#status-line", Static)
         if status_parts:
-            status_line.update(" | ".join(status_parts))
+            status_line.update(" | ".join(status_parts) + " | Space=Select | i=Details | x=Delete | h=Hide | Esc=Close")
         else:
             status_line.update(
-                "↑/↓=Navigate | Space=Select | Enter=Details | d=Delete | h=Hide | Esc=Close"
+                "Space=Select | i=Details | x=Delete | h=Hide | Esc=Close"
             )
 
     def get_current_transaction_id(self) -> Optional[str]:
@@ -240,7 +240,7 @@ class DuplicatesScreen(Screen):
             to_delete = [txn_id]
 
         # Show confirmation
-        confirmed = await self.push_screen(
+        confirmed = await self.app.push_screen(
             DeleteConfirmationScreen(transaction_count=len(to_delete)), wait_for_dismiss=True
         )
 
