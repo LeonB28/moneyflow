@@ -1,8 +1,8 @@
 """
 Command-line interface for moneyflow.
 
-Provides Click-based CLI for launching moneyflow in different modes
-(Monarch, Amazon, Demo) and managing data imports.
+Provides Click-based CLI for launching moneyflow with different backends
+(Monarch Money, Amazon, Demo) and managing data imports.
 """
 
 from pathlib import Path
@@ -39,14 +39,14 @@ import click
 def cli(ctx, year, since, mtd, cache, refresh, demo):
     """moneyflow - Terminal UI for personal finance management.
 
-    Run with no arguments to launch Monarch Money mode (default).
-    Use subcommands for other modes (e.g., 'moneyflow amazon').
+    Run with no arguments to launch the default backend (Monarch Money).
+    Use subcommands for other backends (e.g., 'moneyflow amazon').
     """
-    # If a subcommand is provided, don't launch monarch mode
+    # If a subcommand is provided, don't launch default backend
     if ctx.invoked_subcommand is not None:
         return
 
-    # Launch Monarch Money mode (default)
+    # Launch default backend (Monarch Money)
     from moneyflow.app import launch_monarch_mode
 
     # Convert cache flag to path (None if not enabled, default path if enabled)

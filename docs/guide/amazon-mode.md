@@ -9,7 +9,7 @@ Amazon mode provides:
 - Import from official Amazon "Your Orders" data export
 - Automatic deduplication and category assignment
 - SQLite storage (local, no cloud dependencies)
-- Same TUI experience as Monarch mode
+- Same powerful TUI with keyboard-driven navigation
 - Track quantity, pricing, and order status
 
 ## Getting Started
@@ -42,7 +42,7 @@ moneyflow amazon import ~/Downloads/"Your Orders"
 The import will:
 - Scan for all Retail.OrderHistory CSV files
 - Parse and validate order data
-- Assign categories automatically using Monarch category mappings
+- Assign categories automatically using built-in category mappings
 - Detect and skip duplicates
 - Skip cancelled orders
 - Store everything in SQLite
@@ -68,7 +68,7 @@ This shows:
 moneyflow amazon
 ```
 
-Uses the same keyboard-driven interface as Monarch mode.
+Uses the same keyboard-driven interface and features.
 
 ## CSV Format
 
@@ -92,7 +92,7 @@ Files named: `Retail.OrderHistory.*.csv`
 
 ### Category Assignment
 
-Categories are automatically assigned using moneyflow's centralized category mappings (same as Monarch mode). You can edit categories in the UI after import.
+Categories are automatically assigned using moneyflow's built-in category mappings. You can edit categories in the UI after import.
 
 ## Features
 
@@ -141,17 +141,17 @@ moneyflow amazon --db-path ~/custom.db status
 
 ## UI Navigation
 
-Amazon mode uses the same keyboard shortcuts as Monarch mode. See [Keyboard Shortcuts](keyboard-shortcuts.md) for the complete reference.
+Amazon mode uses the same keyboard shortcuts as the main application. See [Keyboard Shortcuts](keyboard-shortcuts.md) for the complete reference.
 
 **View name mappings:**
 
 In Amazon mode, views reflect Amazon purchase data:
 - **Item** (instead of Merchant) - Product names
 - **Category** - Product categories
-- **Group** - Category groups (same as Monarch mode)
+- **Group** - Category groups
 - **Order ID** (instead of Account) - Group by Amazon order
 
-All other navigation, editing, and search shortcuts work the same as in Monarch mode.
+All navigation, editing, and search shortcuts work identically.
 
 ## Troubleshooting
 

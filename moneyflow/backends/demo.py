@@ -1,8 +1,8 @@
 """
 Demo backend for --demo mode.
 
-Simulates MonarchMoney API using synthetic data, allowing safe exploration
-of the TUI without a Monarch account or exposing personal finances.
+Simulates a finance backend using synthetic data, allowing safe exploration
+of the TUI without connecting to a real account or exposing personal finances.
 """
 
 from typing import Any, Dict, List, Optional
@@ -13,9 +13,9 @@ from .base import FinanceBackend
 
 class DemoBackend(FinanceBackend):
     """
-    Demo backend that simulates MonarchMoney API with synthetic data.
+    Demo backend that simulates a finance API with synthetic data.
 
-    Similar to test MockMonarchMoney but designed for demo/showcase purposes.
+    Designed for demo/showcase purposes and testing.
     Implements the FinanceBackend interface.
     """
 

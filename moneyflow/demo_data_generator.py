@@ -41,7 +41,7 @@ class DemoDataGenerator:
         return transactions, categories, category_groups
 
     def _create_category_groups(self) -> List[Dict]:
-        """Create category groups matching Monarch's structure."""
+        """Create category groups using built-in structure."""
         return [
             {"id": "grp_food", "name": "Food & Dining", "type": "expense"},
             {"id": "grp_transport", "name": "Transportation", "type": "expense"},
@@ -58,9 +58,8 @@ class DemoDataGenerator:
         """
         Create comprehensive category list including all categories from DEFAULT_CATEGORY_GROUPS.
 
-        This provides the full set of categories available when using Monarch Money,
-        making the demo experience realistic. Users can edit_category transactions
-        to any category they would have in the real app.
+        This provides a realistic set of categories for the demo experience,
+        allowing users to explore category editing features.
 
         We start with hardcoded IDs for categories used in transaction generation
         (to keep tests passing), then add all additional categories from DEFAULT_CATEGORY_GROUPS.

@@ -195,7 +195,7 @@ class MoneyflowApp(App):
             self.backend = DemoBackend(year=start_year or 2025)
             self.title = "moneyflow [DEMO MODE]"
         else:
-            # Monarch mode - backend will be set in initialize_data()
+            # Backend will be set in initialize_data() based on credentials
             self.title = "moneyflow"
 
         self.data_manager: Optional[DataManager] = None
@@ -1805,7 +1805,7 @@ def launch_monarch_mode(
     demo: bool = False,
 ) -> None:
     """
-    Launch moneyflow in Monarch Money mode.
+    Launch moneyflow with default backend (Monarch Money).
 
     Args:
         year: Only load transactions from this year onwards
@@ -1819,7 +1819,7 @@ def launch_monarch_mode(
 
     # Initialize logging
     logger = setup_logging(console_output=False)
-    logger.info("Starting moneyflow in Monarch mode")
+    logger.info("Starting moneyflow with Monarch Money backend")
 
     # Determine start year or date range
     start_year = None

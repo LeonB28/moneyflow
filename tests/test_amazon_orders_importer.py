@@ -78,7 +78,7 @@ class TestImportBasic:
         result = await backend.get_transaction_categories()
         categories = result["categories"]
 
-        # Should have Monarch default categories (~73 in defaults)
+        # Should have built-in default categories (~73 in defaults)
         assert len(categories) >= 70
         # Uncategorized should be available
         cat_ids = [c["id"] for c in categories]

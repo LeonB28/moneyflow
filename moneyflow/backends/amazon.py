@@ -21,7 +21,7 @@ class AmazonBackend(FinanceBackend):
     This backend stores Amazon purchase data in a local SQLite database
     and provides a read-only view compatible with moneyflow's interface.
 
-    Unlike Monarch, this backend doesn't connect to any API - data is
+    Unlike cloud-based backends, this doesn't connect to any API - data is
     imported from CSV files exported from Amazon.com.
     """
 
@@ -197,7 +197,7 @@ class AmazonBackend(FinanceBackend):
             hidden_from_reports: Filter by hideFromReports status (True/False/None for all)
 
         Returns:
-            Dictionary containing transaction data in Monarch-compatible format
+            Dictionary containing transaction data in standard format
         """
         conn = self._get_connection()
         conn.row_factory = sqlite3.Row
@@ -240,7 +240,7 @@ class AmazonBackend(FinanceBackend):
         total_count = conn.execute(count_query, count_params).fetchone()[0]
         conn.close()
 
-        # Convert to Monarch-compatible format
+        # Convert to standard transaction format
         # Note: group will be added by data_manager.apply_groups() using Polars
         transactions = []
         for row in rows:
@@ -288,7 +288,7 @@ class AmazonBackend(FinanceBackend):
         and allow easy updates via config file.
 
         Returns:
-            Dictionary containing categories in Monarch-compatible format
+            Dictionary containing categories in standard format
         """
         categories = []
         cat_id_counter = 1

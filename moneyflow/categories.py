@@ -1,14 +1,14 @@
 """
 Centralized category definitions for moneyflow.
 
-This module provides Monarch Money's default category structure and supports
-custom categories via ~/.moneyflow/categories.yaml configuration.
+This module provides built-in category structure (chosen to ease integration
+with Monarch Money) and supports custom categories via ~/.moneyflow/config.yaml.
 
 The category system supports:
-- Default Monarch Money categories and groups
+- Built-in default categories and groups
 - Custom categories added to existing groups
 - Custom category groups
-- Renaming categories to match your Monarch account
+- Renaming categories to match your finance platform
 - Moving categories between groups
 """
 
@@ -20,9 +20,10 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-# Monarch Money default category groups
-# These are the standard categories that come with every Monarch Money account
-# Source: Monarch Money defaults (as of 2025-01)
+# Built-in default category groups
+# These defaults are chosen to ease integration with Monarch Money and work well
+# for most personal finance platforms.
+# Source: Based on Monarch Money's category structure (as of 2025-01)
 #
 # Each group includes a top-level category with the same name for items that don't
 # fit exactly into subcategories (e.g., "Business" category in Business group)
