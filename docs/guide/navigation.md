@@ -35,20 +35,31 @@ Press `g` to cycle through aggregate views. Aggregate views group your transacti
 
 | View | What It Shows | Use For |
 |------|---------------|---------|
-| **Merchant** | Spending by store/service | See patterns by merchant (e.g., total spent at Amazon) |
+| **Merchant** | Spending by store/service + top category | See patterns by merchant (e.g., total spent at Amazon) |
 | **Category** | Spending by category | Identify which categories consume your budget |
 | **Group** | Spending by category group | Monthly budget reviews, broad spending patterns |
 | **Account** | Spending by payment method | Reconciliation, per-account spending analysis |
 
-Each view displays: Name, Count (# of transactions), Total (amount spent)
+**Columns displayed:**
+- **Name, Count, Total** (all aggregate views)
+- **Top Category** (Merchant view only) - Shows the most common category for each merchant with percentage (e.g., "Groceries 90%"). This helps identify categorization patterns and spot miscategorized transactions.
+
+!!! tip "Top Category Column"
+    The Top Category column in Merchant view shows at a glance whether a merchant is properly categorized:
+
+    - **100%** = All transactions use the same category (consistent)
+    - **85%** = Mostly one category (likely correct)
+    - **60%** = Mixed categorization (may need cleanup)
+
+    Example: "Whole Foods → Groceries 95%" confirms most purchases are correctly categorized.
 
 **Amazon Mode:** View names reflect purchase data instead of financial transactions.
 
-| Monarch Mode | Amazon Mode | Shows |
-|--------------|-------------|-------|
+| Default Backend | Amazon Mode | Shows |
+|-----------------|-------------|-------|
 | Merchant | Item | Product names |
 | Category | Category | Product categories |
-| Group | Group | Category groups (same as Monarch) |
+| Group | Group | Category groups |
 | Account | Order ID | Amazon orders |
 
 ### Detail View
