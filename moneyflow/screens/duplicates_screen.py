@@ -298,14 +298,28 @@ class DuplicatesScreen(Screen):
         )
 
         if confirmed:
+            # Show progress notification for batch operations
+            if len(to_delete) > 5:
+                self.notify(
+                    f"Deleting {len(to_delete)} transactions from backend...",
+                    timeout=len(to_delete) * 2,  # Keep visible during operation
+                )
+
             # Delete transactions via backend
             success_count = 0
             failure_count = 0
 
-            for txn_id in to_delete:
+            for i, txn_id in enumerate(to_delete, 1):
                 try:
                     await self.main_app._delete_with_retry(txn_id)
                     success_count += 1
+
+                    # Show progress every 10 transactions for large batches
+                    if len(to_delete) > 20 and i % 10 == 0:
+                        self.notify(
+                            f"Deleting... {i}/{len(to_delete)} complete",
+                            timeout=5,
+                        )
                 except Exception as e:
                     logger.error(f"Failed to delete transaction {txn_id}: {e}")
                     failure_count += 1
