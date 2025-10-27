@@ -233,14 +233,14 @@ def categories():
     help="Output format: yaml (copy-pastable) or readable (with counts)",
 )
 def categories_dump(config_dir, format):
-    """Display current category hierarchy (defaults + custom from categories.yaml).
+    """Display current category hierarchy (defaults + custom from config.yaml).
 
     Shows the effective category structure including:
-    - Monarch Money defaults
-    - Custom categories from ~/.moneyflow/categories.yaml
+    - Built-in defaults
+    - Custom categories from ~/.moneyflow/config.yaml
     - Category renames and moves
 
-    Default output is YAML format (copy-pastable into categories.yaml).
+    Default output is YAML format (copy-pastable into config.yaml under 'categories:').
     Use --format=readable for human-readable format with counts.
     """
     from moneyflow.categories import get_effective_category_groups
@@ -251,7 +251,7 @@ def categories_dump(config_dir, format):
         if format == "yaml":
             # Output as valid YAML (copy-pastable)
             click.echo("# Current category hierarchy")
-            click.echo("# Copy sections below into your categories.yaml\n")
+            click.echo("# Copy sections below into your config.yaml under 'categories:'\n")
 
             # Output in YAML format
             for group_name in sorted(category_groups.keys()):
@@ -287,15 +287,19 @@ def categories_dump(config_dir, format):
 
         # Show config file location
         if config_dir:
-            config_path = Path(config_dir) / "categories.yaml"
+            config_path = Path(config_dir) / "config.yaml"
+            legacy_path = Path(config_dir) / "categories.yaml"
         else:
-            config_path = Path.home() / ".moneyflow" / "categories.yaml"
+            config_path = Path.home() / ".moneyflow" / "config.yaml"
+            legacy_path = Path.home() / ".moneyflow" / "categories.yaml"
 
         click.echo(f"\n# {'=' * 58}")
         if config_path.exists():
             click.echo(f"# Custom config: {config_path}")
+        elif legacy_path.exists():
+            click.echo(f"# Custom config: {legacy_path} (legacy format)")
         else:
-            click.echo(f"# Using Monarch defaults (no custom config at {config_path})")
+            click.echo(f"# Using built-in defaults (no custom config at {config_path})")
 
     except Exception as e:
         click.echo(f"Error: {e}", err=True)

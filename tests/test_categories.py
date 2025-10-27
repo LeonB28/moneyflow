@@ -48,12 +48,29 @@ class TestLoadCustomCategories:
     """Test loading custom category configuration from YAML."""
 
     def test_returns_none_when_file_missing(self, tmp_path):
-        """Should return None if categories.yaml doesn't exist."""
+        """Should return None if config.yaml doesn't exist."""
         config = load_custom_categories(str(tmp_path))
         assert config is None
 
-    def test_loads_valid_yaml(self, tmp_path):
-        """Should load valid categories.yaml."""
+    def test_loads_valid_config_yaml(self, tmp_path):
+        """Should load valid config.yaml with categories section."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(
+            """
+version: 1
+categories:
+  add_to_groups:
+    Business:
+      - Custom Category 1
+"""
+        )
+
+        config = load_custom_categories(str(tmp_path))
+        assert config is not None
+        assert "add_to_groups" in config
+
+    def test_loads_legacy_categories_yaml(self, tmp_path):
+        """Should load legacy categories.yaml format (backward compatibility)."""
         config_file = tmp_path / "categories.yaml"
         config_file.write_text(
             """
@@ -66,12 +83,40 @@ add_to_groups:
 
         config = load_custom_categories(str(tmp_path))
         assert config is not None
-        assert config["version"] == 1
         assert "add_to_groups" in config
+
+    def test_prefers_config_yaml_over_legacy(self, tmp_path):
+        """Should prefer config.yaml when both exist."""
+        # Create both files
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(
+            """
+version: 1
+categories:
+  add_to_groups:
+    Business:
+      - From config.yaml
+"""
+        )
+
+        legacy_file = tmp_path / "categories.yaml"
+        legacy_file.write_text(
+            """
+version: 1
+add_to_groups:
+  Business:
+    - From categories.yaml
+"""
+        )
+
+        config = load_custom_categories(str(tmp_path))
+        assert config is not None
+        # Should load from config.yaml
+        assert config["add_to_groups"]["Business"] == ["From config.yaml"]
 
     def test_rejects_wrong_version(self, tmp_path):
         """Should reject unsupported version."""
-        config_file = tmp_path / "categories.yaml"
+        config_file = tmp_path / "config.yaml"
         config_file.write_text("version: 999\n")
 
         config = load_custom_categories(str(tmp_path))
@@ -79,7 +124,7 @@ add_to_groups:
 
     def test_handles_invalid_yaml(self, tmp_path):
         """Should handle invalid YAML gracefully."""
-        config_file = tmp_path / "categories.yaml"
+        config_file = tmp_path / "config.yaml"
         config_file.write_text("{ invalid yaml content [")
 
         config = load_custom_categories(str(tmp_path))
@@ -87,11 +132,25 @@ add_to_groups:
 
     def test_handles_empty_file(self, tmp_path):
         """Should handle empty file gracefully."""
-        config_file = tmp_path / "categories.yaml"
+        config_file = tmp_path / "config.yaml"
         config_file.write_text("")
 
         config = load_custom_categories(str(tmp_path))
         assert config is None
+
+    def test_handles_config_yaml_without_categories_section(self, tmp_path):
+        """Should handle config.yaml without categories section."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(
+            """
+version: 1
+settings:
+  default_view: merchant
+"""
+        )
+
+        config = load_custom_categories(str(tmp_path))
+        assert config is None  # No categories section
 
 
 class TestMergeCategoryGroups:
@@ -223,7 +282,7 @@ class TestGetEffectiveCategoryGroups:
     """Test main entry point for getting effective category groups."""
 
     def test_returns_defaults_without_custom_config(self, tmp_path):
-        """Should return defaults when no categories.yaml exists."""
+        """Should return defaults when no config.yaml exists."""
         groups = get_effective_category_groups(str(tmp_path))
 
         # Should have default groups
@@ -232,15 +291,16 @@ class TestGetEffectiveCategoryGroups:
 
     def test_merges_with_custom_config(self, tmp_path):
         """Should merge custom config when it exists."""
-        config_file = tmp_path / "categories.yaml"
+        config_file = tmp_path / "config.yaml"
         config_file.write_text(
             """
 version: 1
-rename_groups:
-  "Travel & Lifestyle": Travel
-add_to_groups:
-  Business:
-    - Accounting
+categories:
+  rename_groups:
+    "Travel & Lifestyle": Travel
+  add_to_groups:
+    Business:
+      - Accounting
 """
         )
 

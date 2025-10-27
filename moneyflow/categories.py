@@ -134,7 +134,10 @@ DEFAULT_CATEGORY_GROUPS: Dict[str, List[str]] = {
 
 def load_custom_categories(config_dir: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """
-    Load custom category configuration from ~/.moneyflow/categories.yaml.
+    Load custom category configuration from ~/.moneyflow/config.yaml.
+
+    Supports both new config.yaml format (with categories: section) and
+    legacy categories.yaml format (for backward compatibility).
 
     Args:
         config_dir: Optional custom config directory (default: ~/.moneyflow)
@@ -142,53 +145,92 @@ def load_custom_categories(config_dir: Optional[str] = None) -> Optional[Dict[st
     Returns:
         Dict with custom category config or None if file doesn't exist
 
-    YAML Format:
+    YAML Format (config.yaml):
         version: 1
-        rename_groups:
-          "Old Group Name": "New Group Name"
-        rename_categories:
-          "Old Category Name": "New Category Name"
-        add_to_groups:
-          GroupName:
-            - Category 1
-            - Category 2
-        custom_groups:
-          CustomGroup:
-            - Category A
-        move_categories:
-          "Category Name": "New Group"
+        categories:
+          rename_groups:
+            "Old Group Name": "New Group Name"
+          rename_categories:
+            "Old Category Name": "New Category Name"
+          add_to_groups:
+            GroupName:
+              - Category 1
+          custom_groups:
+            CustomGroup:
+              - Category A
+          move_categories:
+            "Category Name": "New Group"
     """
     if config_dir is None:
         config_dir = str(Path.home() / ".moneyflow")
 
-    config_path = Path(config_dir) / "categories.yaml"
+    config_path = Path(config_dir) / "config.yaml"
+    legacy_path = Path(config_dir) / "categories.yaml"
 
-    if not config_path.exists():
-        logger.debug(f"No custom categories file at {config_path}")
-        return None
+    # Try new config.yaml format first
+    if config_path.exists():
+        try:
+            with open(config_path, "r") as f:
+                config = yaml.safe_load(f)
 
-    try:
-        with open(config_path, "r") as f:
-            config = yaml.safe_load(f)
+            if not config:
+                logger.warning(f"Empty config file at {config_path}")
+                return None
 
-        if not config:
-            logger.warning(f"Empty categories config at {config_path}")
+            # Validate version
+            version = config.get("version")
+            if version != 1:
+                logger.warning(f"Unsupported config.yaml version: {version} (expected 1)")
+                return None
+
+            # Extract categories section
+            categories_config = config.get("categories")
+            if categories_config:
+                logger.info(f"Loaded custom categories from {config_path}")
+                return categories_config
+            else:
+                logger.debug(f"No categories section in {config_path}")
+                return None
+
+        except yaml.YAMLError as e:
+            logger.error(f"Failed to parse {config_path}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to load config: {e}")
             return None
 
-        # Validate version
-        version = config.get("version")
-        if version != 1:
-            logger.warning(f"Unsupported categories.yaml version: {version} (expected 1)")
+    # Fall back to legacy categories.yaml
+    elif legacy_path.exists():
+        logger.warning(
+            "Using legacy categories.yaml. Please rename to config.yaml and nest under 'categories:' section"
+        )
+        try:
+            with open(legacy_path, "r") as f:
+                config = yaml.safe_load(f)
+
+            if not config:
+                logger.warning(f"Empty categories config at {legacy_path}")
+                return None
+
+            # Validate version
+            version = config.get("version")
+            if version != 1:
+                logger.warning(f"Unsupported categories.yaml version: {version} (expected 1)")
+                return None
+
+            logger.info(f"Loaded custom categories from {legacy_path} (legacy format)")
+            # Return config directly (legacy format has categories at top level)
+            return config
+
+        except yaml.YAMLError as e:
+            logger.error(f"Failed to parse {legacy_path}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to load legacy categories: {e}")
             return None
 
-        logger.info(f"Loaded custom categories from {config_path}")
-        return config
-
-    except yaml.YAMLError as e:
-        logger.error(f"Failed to parse {config_path}: {e}")
-        return None
-    except Exception as e:
-        logger.error(f"Failed to load custom categories: {e}")
+    else:
+        logger.debug(f"No config file at {config_path} or {legacy_path}")
         return None
 
 
@@ -306,8 +348,8 @@ def get_effective_category_groups(config_dir: Optional[str] = None) -> Dict[str,
     Get effective category groups (defaults merged with custom config).
 
     This is the main entry point for getting category groups.
-    It loads custom categories from ~/.moneyflow/categories.yaml and merges
-    them with Monarch defaults.
+    It loads custom categories from ~/.moneyflow/config.yaml (or legacy
+    categories.yaml) and merges them with built-in defaults.
 
     Args:
         config_dir: Optional custom config directory (default: ~/.moneyflow)

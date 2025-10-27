@@ -4,7 +4,7 @@
 
 Customize the category hierarchy to match your finance platform or workflow preferences.
 
-**📁 Configuration file:** `~/.moneyflow/categories.yaml`
+**📁 Configuration file:** `~/.moneyflow/config.yaml`
 
 **Quick commands:**
 ```bash
@@ -41,8 +41,8 @@ All moneyflow configuration is stored in `~/.moneyflow/`:
 
 ```
 ~/.moneyflow/
-├── categories.yaml    # Category customization (optional)
-├── credentials.enc    # Encrypted Monarch credentials
+├── config.yaml        # Application configuration (categories, settings, etc.) - optional
+├── credentials.enc    # Encrypted credentials
 ├── salt               # Encryption salt
 ├── merchants.json     # Merchant name cache
 ├── cache/             # Transaction cache (if --cache enabled)
@@ -50,3 +50,5 @@ All moneyflow configuration is stored in `~/.moneyflow/`:
 ```
 
 **Security note:** credentials.enc is encrypted with AES-128. Safe to backup but keep private.
+
+**Backward compatibility:** Legacy `categories.yaml` files are still supported.
