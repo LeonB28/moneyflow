@@ -333,6 +333,20 @@ class DuplicatesScreen(Screen):
                     )
                     self.main_app.state.transactions_df = self.main_app.data_manager.df
 
+                    # Update cache to reflect deletions
+                    if self.main_app.cache_manager:
+                        try:
+                            self.main_app.cache_manager.save_cache(
+                                transactions_df=self.main_app.data_manager.df,
+                                categories=self.main_app.data_manager.categories,
+                                category_groups=self.main_app.data_manager.category_groups,
+                                year=self.main_app.cache_year_filter,
+                                since=self.main_app.cache_since_filter,
+                            )
+                        except Exception as e:
+                            # Cache update failed - not critical, just log
+                            logger.warning(f"Cache update after delete failed: {e}")
+
                 # Update our local full_df
                 self.full_df = self.full_df.filter(~pl.col("id").is_in(deleted_ids))
 

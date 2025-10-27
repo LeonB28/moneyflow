@@ -1357,6 +1357,9 @@ class MoneyflowApp(App):
             # Save position for refresh
             saved_position = self._save_table_position()
 
+            from .logging_config import get_logger
+            logger = get_logger(__name__)
+
             success_count = 0
             failure_count = 0
 
@@ -1367,7 +1370,6 @@ class MoneyflowApp(App):
                         await self._delete_with_retry(txn_id)
                         success_count += 1
                     except Exception as e:
-                        logger = get_logger(__name__)
                         logger.error(f"Failed to delete transaction {txn_id}: {e}")
                         failure_count += 1
 
@@ -1379,6 +1381,20 @@ class MoneyflowApp(App):
                         ~pl.col("id").is_in(deleted_ids)
                     )
                     self.state.transactions_df = self.data_manager.df
+
+                    # Update cache to reflect deletions
+                    if self.cache_manager:
+                        try:
+                            self.cache_manager.save_cache(
+                                transactions_df=self.data_manager.df,
+                                categories=self.data_manager.categories,
+                                category_groups=self.data_manager.category_groups,
+                                year=self.cache_year_filter,
+                                since=self.cache_since_filter,
+                            )
+                        except Exception as e:
+                            # Cache update failed - not critical, just log
+                            logger.warning(f"Cache update after delete failed: {e}")
 
                 # Clear selection
                 self.state.clear_selection()
