@@ -84,6 +84,11 @@
       // Skip if already processed
       if (img.classList.contains('lightbox-enabled')) return;
 
+      // Skip badges/shields (shields.io, badge URLs)
+      if (img.src.includes('shields.io') || img.src.includes('badge')) {
+        return;
+      }
+
       // Add class and click handler
       img.classList.add('lightbox-enabled');
       img.title = img.alt + ' (click to enlarge)';
