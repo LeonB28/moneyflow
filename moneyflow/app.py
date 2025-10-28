@@ -1358,6 +1358,7 @@ class MoneyflowApp(App):
             saved_position = self._save_table_position()
 
             from .logging_config import get_logger
+
             logger = get_logger(__name__)
 
             success_count = 0
