@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 - Cache now updates after deletions (prevents deleted transactions from reappearing)
 - Multi-select operations 3x faster on large views (8,000+ transactions)
-- Log files no longer expose transaction data (40MB → 1MB)
+- Log files no longer expose transaction data
 - Duplicates screen delete workflow (NoActiveWorker error, consistent keybindings)
 
 ---
