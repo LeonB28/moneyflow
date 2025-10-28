@@ -107,6 +107,7 @@ nav:
   - Home:
     - Overview: index.md
     - Quick Start: getting-started/quickstart.md
+    - Changelog: reference/changelog.md
   - Getting Started:
     - Installation: getting-started/installation.md
     - Quick Start: getting-started/quickstart.md
