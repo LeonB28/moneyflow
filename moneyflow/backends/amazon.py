@@ -387,7 +387,7 @@ class AmazonBackend(FinanceBackend):
                 "totalCount": total_count,
             }
         }
-
+    
     async def get_transaction_categories(self) -> Dict[str, Any]:
         """
         Fetch all categories for Amazon backend with smart inheritance.

@@ -30,6 +30,7 @@ class BackendSelectionScreen(ModalScreen):
         Binding("up", "cursor_up", "Up", show=False),
         Binding("down", "cursor_down", "Down", show=False),
         Binding("enter", "select_current", "Select", show=False),
+        Binding("b", "select_boi", "BOI", show=False),
         Binding("m", "select_monarch", "Monarch", show=False),
         Binding("y", "select_ynab", "YNAB", show=False),
     ]
@@ -89,7 +90,7 @@ class BackendSelectionScreen(ModalScreen):
     def __init__(self):
         """Initialize backend selector with tracking for keyboard navigation."""
         super().__init__()
-        self.backends = ["monarch", "ynab"]  # Available backends in order
+        self.backends = ["boi", "monarch", "ynab"]  # Available backends in order
         self.current_index = 0  # Currently highlighted backend
 
     def compose(self) -> ComposeResult:
@@ -98,8 +99,14 @@ class BackendSelectionScreen(ModalScreen):
 
             yield Static(
                 "Choose which personal finance platform you want to connect to.\n"
-                "Keys: ↑/↓=Navigate | Enter=Select | m=Monarch | y=YNAB | Esc=Cancel",
+                "Keys: ↑/↓=Navigate | Enter=Select | b=BOI | m=Monarch | y=YNAB | Esc=Cancel",
                 classes="backend-help",
+            )
+            yield Button(
+                "🇮🇪 Bank of Ireland",
+                variant="default",
+                id="ireland-button",
+                classes="backend-option",
             )
 
             yield Button(
@@ -130,6 +137,9 @@ class BackendSelectionScreen(ModalScreen):
         if event.button.id == "ynab-button":
             self.dismiss("ynab")
 
+        if event.button.id == "ireland-button":
+            self.dismiss("boi")
+
     def action_exit_backend_selector(self) -> None:
         """Exit backend selector (Esc key)."""
         self.dismiss(None)
@@ -156,6 +166,10 @@ class BackendSelectionScreen(ModalScreen):
     def action_select_ynab(self) -> None:
         """Select YNAB (y key)."""
         self.dismiss("ynab")
+
+    def action_select_boi(self) -> None:
+        """Select Bank of Ireland (b key)."""
+        self.dismiss("boi")
 
     def _focus_current_backend(self) -> None:
         """Focus the button for currently selected backend."""
@@ -251,7 +265,19 @@ class CredentialSetupScreen(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Container(id="setup-container"):
-            if self.backend_type == "ynab":
+            if self.backend_type == "boi":
+                yield Label("🇮🇪 Bank of Ireland Setup", id="setup-title")
+
+                yield Static(
+                    "Bank of Ireland mode uses local data imported via CSV.\n"
+                    "No credentials needed - just import your transaction history.",
+                    classes="setup-help",
+                )
+
+                with Container(id="button-container"):
+                    yield Button("Continue", variant="primary", id="save-button")
+                    yield Button("Exit", variant="default", id="exit-button")
+            elif self.backend_type == "ynab":
                 yield Label("🔐 YNAB Credential Setup", id="setup-title")
 
                 yield Label("YNAB Personal Access Token:", classes="setup-label")
@@ -265,6 +291,41 @@ class CredentialSetupScreen(ModalScreen):
                     id="password-input",
                     classes="setup-input",
                 )
+
+                # Encryption toggle section
+                with Container(id="encryption-section"):
+                    yield Checkbox(
+                        "Password protect stored credentials",
+                        value=False,
+                        id="encryption-checkbox",
+                    )
+                    yield Static(
+                        "Adds an encryption layer. Uncheck for auto-login convenience.\n"
+                        "Either way, credentials have restricted file permissions.",
+                        classes="setup-help",
+                    )
+
+                    # Encryption password fields (hidden by default)
+                    with Container(id="encryption-fields", classes="encryption-fields"):
+                        yield Label("Encryption Password:", classes="setup-label")
+                        yield Input(
+                            placeholder="encryption password",
+                            password=True,
+                            id="encrypt-pass-input",
+                            classes="setup-input",
+                        )
+
+                        yield Label("Confirm Encryption Password:", classes="setup-label")
+                        yield Input(
+                            placeholder="confirm password",
+                            password=True,
+                            id="confirm-pass-input",
+                            classes="setup-input",
+                        )
+
+                with Container(id="button-container"):
+                    yield Button("Save Credentials", variant="primary", id="save-button")
+                    yield Button("Exit", variant="default", id="exit-button")
             else:
                 yield Label("🔐 Monarch Money Credential Setup", id="setup-title")
 
@@ -291,40 +352,40 @@ class CredentialSetupScreen(ModalScreen):
                     classes="setup-input",
                 )
 
-            # Encryption toggle section
-            with Container(id="encryption-section"):
-                yield Checkbox(
-                    "Password protect stored credentials",
-                    value=False,
-                    id="encryption-checkbox",
-                )
-                yield Static(
-                    "Adds an encryption layer. Uncheck for auto-login convenience.\n"
-                    "Either way, credentials have restricted file permissions.",
-                    classes="setup-help",
-                )
-
-                # Encryption password fields (hidden by default)
-                with Container(id="encryption-fields", classes="encryption-fields"):
-                    yield Label("Encryption Password:", classes="setup-label")
-                    yield Input(
-                        placeholder="encryption password",
-                        password=True,
-                        id="encrypt-pass-input",
-                        classes="setup-input",
+                # Encryption toggle section
+                with Container(id="encryption-section"):
+                    yield Checkbox(
+                        "Password protect stored credentials",
+                        value=False,
+                        id="encryption-checkbox",
+                    )
+                    yield Static(
+                        "Adds an encryption layer. Uncheck for auto-login convenience.\n"
+                        "Either way, credentials have restricted file permissions.",
+                        classes="setup-help",
                     )
 
-                    yield Label("Confirm Encryption Password:", classes="setup-label")
-                    yield Input(
-                        placeholder="confirm password",
-                        password=True,
-                        id="confirm-pass-input",
-                        classes="setup-input",
-                    )
+                    # Encryption password fields (hidden by default)
+                    with Container(id="encryption-fields", classes="encryption-fields"):
+                        yield Label("Encryption Password:", classes="setup-label")
+                        yield Input(
+                            placeholder="encryption password",
+                            password=True,
+                            id="encrypt-pass-input",
+                            classes="setup-input",
+                        )
 
-            with Container(id="button-container"):
-                yield Button("Save Credentials", variant="primary", id="save-button")
-                yield Button("Exit", variant="default", id="exit-button")
+                        yield Label("Confirm Encryption Password:", classes="setup-label")
+                        yield Input(
+                            placeholder="confirm password",
+                            password=True,
+                            id="confirm-pass-input",
+                            classes="setup-input",
+                        )
+
+                with Container(id="button-container"):
+                    yield Button("Save Credentials", variant="primary", id="save-button")
+                    yield Button("Exit", variant="default", id="exit-button")
 
             yield Label("", id="error-label")
 
@@ -354,6 +415,18 @@ class CredentialSetupScreen(ModalScreen):
     async def save_credentials(self) -> None:
         """Validate and save credentials."""
         error_label = self.query_one("#error-label", Label)
+
+        # BOI doesn't need credentials - just dismiss
+        if self.backend_type == "boi":
+            self.dismiss(
+                {
+                    "email": "",
+                    "password": "",
+                    "mfa_secret": "",
+                    "backend_type": self.backend_type,
+                }
+            )
+            return
 
         # Check if encryption is enabled
         use_encryption = self.query_one("#encryption-checkbox", Checkbox).value

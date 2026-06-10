@@ -20,6 +20,7 @@ from typing import Dict, Type
 
 from .amazon import AmazonBackend
 from .base import FinanceBackend
+from .boi import BankOfIreland
 from .demo import DemoBackend
 from .monarch import MonarchBackend
 from .ynab import YNABBackend
@@ -30,6 +31,7 @@ _BACKEND_REGISTRY: Dict[str, Type[FinanceBackend]] = {
     "demo": DemoBackend,
     "amazon": AmazonBackend,
     "ynab": YNABBackend,
+    "boi": BankOfIreland,
 }
 
 

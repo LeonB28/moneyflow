@@ -201,6 +201,41 @@ def amazon(ctx, db_path, config_dir):
         # Launch the UI
         launch_amazon_mode(db_path=str(backend.db_path), config_dir=cfg_dir, profile_dir=prof_dir)
 
+@cli.group(invoke_without_command=True)
+@click.pass_context
+def boi(ctx):
+    """
+        Bank Of Ireland transaction analysis
+    """
+    from moneyflow.backends.boi import BankOfIreland
+    ctx.ensure_object(dict)
+    ctx.obj["backend"] = BankOfIreland()
+    # If no subcommand, launch the UI
+    if ctx.invoked_subcommand is None:
+        from moneyflow.tui.app import launch_boi_mode
+        launch_boi_mode()
+
+
+@boi.command(name="import")
+@click.pass_context
+@click.argument("history_csv_path", type=click.Path(exists=True))
+@click.option("--force", is_flag=True, help="Force reimport of duplicates (overwrites existing)")
+def boi_import(ctx, history_csv_path, force):
+    from moneyflow.importers.boi_transaction_history_csv import BoiHistoryImporter
+    try:
+        click.echo(f"Importing Bank of Ireland history from {history_csv_path}...")
+        backend = ctx.obj["backend"]
+        importer = BoiHistoryImporter(history_csv_path, backend)
+        importer.import_boi_history()
+        click.echo("\n✓ Import complete!")
+    except FileNotFoundError as e:
+        click.echo(f"Error: {e}", err=True)
+        click.echo("\nMake sure you've have valid first.", err=True)
+        raise click.Abort()
+    except Exception as e:
+        click.echo(f"Import failed: {e}", err=True)
+        raise click.Abort()
+
 
 @amazon.command(name="import")
 @click.pass_context

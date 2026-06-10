@@ -82,11 +82,23 @@ YNAB_CONFIG = BackendConfig(
     requires_auth=True,  # YNAB requires access token
 )
 
+BOI_CONFIG = BackendConfig(
+    backend_type="boi",
+    merchant_field_name="Merchant",
+    grouping_modes=("merchant", "category"),
+    show_quantity=False,
+    show_price_per_item=False,
+    has_accounts=False,  # BOI uses local DuckDB, no accounts
+    has_groups=False,
+    requires_auth=False,  # BOI uses local CSV import, no authentication
+)
+
 BACKEND_CONFIGS = {
     "monarch": MONARCH_CONFIG,
     "amazon": AMAZON_CONFIG,
     "demo": DEMO_CONFIG,
     "ynab": YNAB_CONFIG,
+    "boi": BOI_CONFIG,
 }
 
 

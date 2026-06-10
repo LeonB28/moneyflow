@@ -1786,6 +1786,36 @@ def main():
         print("=" * 80 + "\n", file=sys.stderr)
         sys.exit(1)
 
+def launch_boi_mode():
+    """Launch the app in BOI mode (Bank of Ireland) with local database."""
+    from moneyflow.backends.boi import BankOfIreland
+    from pathlib import Path
+    try:
+        # Use default config directory
+        config_dir = str(Path.home() / ".moneyflow")
+        db_path = str(Path(config_dir) / "boi.db")
+        logger = setup_logging(console_output=False, config_dir=config_dir)
+        logger.info("BOI")
+        # Initialize BOI backend
+        backend = BankOfIreland(db_path=db_path)
+
+        # Launch app with pre-configured backend
+        app = MoneyflowApp(
+            demo_mode=False,
+            cache_path=None,  # BOI uses local DB, no separate cache needed
+        )
+        app.backend = backend
+        app.title = "moneyflow [BOI MODE]"
+        app.run()
+    except Exception:
+        print("\n" + "=" * 80, file=sys.stderr)
+        print("FATAL ERROR - moneyflow TUI crashed!", file=sys.stderr)
+        print("=" * 80, file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        print("\n" + "=" * 80, file=sys.stderr)
+        print("Please report this error with the traceback above.", file=sys.stderr)
+        print("=" * 80 + "\n", file=sys.stderr)
+        sys.exit(1)
 
 def launch_monarch_mode(
     year: Optional[int] = None,
