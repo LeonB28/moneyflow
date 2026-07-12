@@ -201,18 +201,21 @@ def amazon(ctx, db_path, config_dir):
         # Launch the UI
         launch_amazon_mode(db_path=str(backend.db_path), config_dir=cfg_dir, profile_dir=prof_dir)
 
+
 @cli.group(invoke_without_command=True)
 @click.pass_context
 def boi(ctx):
     """
-        Bank Of Ireland transaction analysis
+    Bank Of Ireland transaction analysis
     """
     from moneyflow.backends.boi import BankOfIreland
+
     ctx.ensure_object(dict)
     ctx.obj["backend"] = BankOfIreland()
     # If no subcommand, launch the UI
     if ctx.invoked_subcommand is None:
         from moneyflow.tui.app import launch_boi_mode
+
         launch_boi_mode()
 
 
@@ -222,6 +225,7 @@ def boi(ctx):
 @click.option("--force", is_flag=True, help="Force reimport of duplicates (overwrites existing)")
 def boi_import(ctx, history_csv_path, force):
     from moneyflow.importers.boi_transaction_history_csv import BoiHistoryImporter
+
     try:
         click.echo(f"Importing Bank of Ireland history from {history_csv_path}...")
         backend = ctx.obj["backend"]

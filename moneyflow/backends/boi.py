@@ -8,19 +8,20 @@ import duckdb
 from ..data.account_manager import AccountManager
 import duckdb
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 class BankOfIreland(FinanceBackend):
     """
-        Bank of Ireland purchase history backend.
+    Bank of Ireland purchase history backend.
 
-        This backend stores Bank of Ireland purchase data in a local Duckdb database
-        and provides a read-only view compatible with moneyflow's interface.
+    This backend stores Bank of Ireland purchase data in a local Duckdb database
+    and provides a read-only view compatible with moneyflow's interface.
 
-        Unlike cloud-based backends, this doesn't connect to any API - data is
-        imported from transactions history as a CSV file using 365 online.
-        """
-
+    Unlike cloud-based backends, this doesn't connect to any API - data is
+    imported from transactions history as a CSV file using 365 online.
+    """
 
     def __init__(
         self,
@@ -50,6 +51,7 @@ class BankOfIreland(FinanceBackend):
         self.profile_dir = profile_dir
         self._db_initialized = False
         self.categories_map = {}
+        self.categories_group = []
 
     def get_connection(self) -> duckdb.DuckDBPyConnection:
         """Get a DuckDB connection."""
@@ -67,9 +69,7 @@ class BankOfIreland(FinanceBackend):
 
         # Connect to DuckDB (creates the file if it doesn't exist)
         with duckdb.connect(str(self.db_path)) as conn:
-
             # Create a sequence for the import ID if it doesn't exist
-            conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_import_id")
             conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_transaction_id")
 
             # Create transactions table
@@ -77,11 +77,18 @@ class BankOfIreland(FinanceBackend):
                 CREATE TABLE IF NOT EXISTS transactions (
                     id VARCHAR PRIMARY KEY,
                     date DATE NOT NULL,
-                    details VARCHAR NOT NULL,
-                    category TEXT NOT NULL DEFAULT 'Uncategorized',
-                    category_id TEXT NOT NULL DEFAULT 'cat_uncategorized',
+                    merchant VARCHAR NOT NULL,
                     debit DOUBLE,
                     credit DOUBLE
+                )
+            """)
+
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS merchant (
+                    merchant VARCHAR PRIMARY KEY,
+                    display_name VARCHAR,
+                    category_id VARCHAR,
+                    category VARCHAR
                 )
             """)
 
@@ -95,38 +102,25 @@ class BankOfIreland(FinanceBackend):
                 )
             """)
 
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS categories (
-                category_id VARCHAR PRIMARY KEY,
-                category_name VARCHAR,
-                group_name VARCHAR
-            );
-                CREATE TABLE IF NOT EXISTS merchant_mappings (
-                merchant_pattern VARCHAR PRIMARY KEY,
-                category_id VARCHAR,
-                display_name VARCHAR
-            );
-            """)
-
         self._db_initialized = True
 
     async def login(
-            self,
-            email: Optional[str] = None,
-            password: Optional[str] = None,
-            use_saved_session: bool = True,
-            save_session: bool = True,
-            mfa_secret_key: Optional[str] = None,
+        self,
+        email: Optional[str] = None,
+        password: Optional[str] = None,
+        use_saved_session: bool = True,
+        save_session: bool = True,
+        mfa_secret_key: Optional[str] = None,
     ) -> None:
         return
 
     async def get_transactions(
-            self,
-            limit: int = 100,
-            offset: int = 0,
-            start_date: Optional[str] = None,
-            end_date: Optional[str] = None,
-            **kwargs,
+        self,
+        limit: int = 100,
+        offset: int = 0,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        **kwargs,
     ) -> Dict[str, Any]:
 
         if kwargs["hidden_from_reports"]:
@@ -134,8 +128,16 @@ class BankOfIreland(FinanceBackend):
 
         with self.get_connection() as conn:
             query = f"""
-                SELECT *
-                from transactions
+                SELECT 
+                    t.id as id,
+                    t.date as date,
+                    t.credit as credit,
+                    t.debit as debit,
+                    coalesce(m.display_name, t.merchant) as merchant,
+                    coalesce(m.category, 'Uncategorized') as category,
+                    coalesce(m.category_id, 'cat_uncategorized') as category_id,
+                FROM transactions t
+                LEFT JOIN merchant m on t.merchant = m.merchant 
                 WHERE 1 = 1
             """
             if start_date:
@@ -151,10 +153,9 @@ class BankOfIreland(FinanceBackend):
             results = [
                 {
                     "id": row["id"],
-                    "date": row["date"].strftime("%Y-%m-%d"),
+                    "date": row["date"],
                     "amount": row["credit"] if row["credit"] else -1 * row["debit"],
-                    "merchant": {"id": row["details"], "name": row["details"]},
-                    # "account": {"id": 1, "name": "meme"},
+                    "merchant": {"id": row["merchant"], "name": row["merchant"]},
                     "category": {"id": row["category_id"], "name": row["category"]},
                     "hideFromReports": False,
                     "pending": False,
@@ -178,21 +179,16 @@ class BankOfIreland(FinanceBackend):
         categories = []
         cat_id_counter = 1
 
-        # Load category groups (profile-aware with Amazon inheritance)
-        # if self.profile_dir:
-        #     category_groups = get_amazon_inherited_categories(
-        #         profile_dir=self.profile_dir, config_dir=self.config_dir
-        #     )
-        # else:
-        #     # Legacy mode - use global config
-        #     category_groups = get_effective_category_groups(self.config_dir)
-
         category_groups = self._get_categories()
         # Build categories from loaded category groups
         for group_name, category_names in category_groups.items():
             for cat_name in category_names:
                 cat_id = f"cat_{cat_name.lower().replace(' ', '_').replace('&', 'and')}"
+                group_id = f"group_{group_name.lower().replace(' ', '_').replace('&', 'and')}"
                 self.categories_map.update({cat_id: cat_name})
+                self.categories_group.append(
+                    {"id": group_id, "name": group_name, "type": "expense"}
+                )
                 categories.append(
                     {
                         "id": cat_id,
@@ -204,68 +200,71 @@ class BankOfIreland(FinanceBackend):
         return {"categories": categories}
 
     async def get_transaction_category_groups(self) -> Dict[str, Any]:
-        return {}
+        return {"categoryGroups": self.categories_group}
 
     async def update_transaction(
-            self,
-            transaction_id: str,
-            merchant_name: Optional[str] = None,
-            category_id: Optional[str] = None,
-            hide_from_reports: Optional[bool] = None,
-            **kwargs,
+        self,
+        transaction_id: str,
+        merchant_name: Optional[str] = None,
+        category_id: Optional[str] = None,
+        hide_from_reports: Optional[bool] = None,
+        **kwargs,
     ) -> Dict[str, Any]:
-        query = f"""
-            UPDATE transactions
-        """
-
         if not category_id and not merchant_name:
-            return {'updateTransaction': {'transaction': {'id': transaction_id}}}
-
-        query += " SET "
-
-        if merchant_name:
-            query += f"details = '{merchant_name}',"
+            return {"updateTransaction": {"transaction": {"id": transaction_id}}}
 
         if category_id:
             name = self.categories_map.get(category_id)
-            if not name:
-                logger.info(f"no category {category_id}")
-            else:
-                query += f" category_id = '{category_id}',"
-                query += f"  category = '{name}'"
+        else:
+            name = "Uncategorized"
+            category_id = "cat_uncategorized"
+        if not merchant_name:
+            values = f"""(SELECT merchant from transactions where id = '{transaction_id}'), null, '{name}', '{category_id}'"""
+        else:
+            values = f"""(SELECT merchant from transactions where id = '{transaction_id}'), '{merchant_name}', '{name}', '{category_id}'"""
+        query = f"""
+            INSERT into merchant (merchant, display_name, category, category_id)
+            VALUES ({values})
+            ON CONFLICT (merchant) DO UPDATE
+            SET
+        """
+        if merchant_name:
+            query += f"display_name = '{merchant_name}',"
 
-        query += f" WHERE id = '{transaction_id}'"
+        query += f" category_id = '{category_id}',"
+        query += f" category = '{name}'"
+
+        # query += f" WHERE merchant in (select merchant from transactions where id = '{transaction_id}')"
 
         with self.get_connection() as conn:
             conn.execute(query)
-            return {'updateTransaction': {'transaction': {'id': transaction_id}}}
-
+            return {"updateTransaction": {"transaction": {"id": transaction_id}}}
 
     async def delete_transaction(self, transaction_id: str) -> bool:
         pass
 
-
     def _get_categories(self):
         from moneyflow.data.categories import load_categories_from_profile
+
         if self.profile_dir:
             categories = load_categories_from_profile(self.profile_dir)
             if categories:
                 return categories
         return {}
 
-
-
     def get_backend_type(self) -> str:
         return "boi"
 
     async def get_all_merchants(self) -> List[str]:
         query = """
-            SELECT distinct details
-            from transactions
+            SELECT distinct coalesce(m.display_name, t.merchant) as merchant
+            from transactions t join merchant m on t.merchant = m.merchant
+            
         """
         with self.get_connection() as conn:
             res = conn.execute(query).pl().to_dicts()
-            return [row["details"] for row in res]
+            return [row["merchant"] for row in res]
 
-
-
+    @property
+    def supports_category_sync(self):
+        return False

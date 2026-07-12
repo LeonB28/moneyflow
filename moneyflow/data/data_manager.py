@@ -298,7 +298,6 @@ class DataManager:
 
         categories_task = self.mm.get_transaction_categories()
         groups_task = self.mm.get_transaction_category_groups()
-
         categories_data, groups_data = await asyncio.gather(categories_task, groups_task)
 
         # Parse categories

@@ -1,6 +1,7 @@
 import pytest
 from moneyflow.backends.boi import BankOfIreland
 
+
 class TestBoiBackend:
     @pytest.fixture
     def backend(self):
@@ -8,11 +9,7 @@ class TestBoiBackend:
 
     @pytest.mark.asyncio
     async def test_get_transactions(self, backend):
-        result = await backend.get_transactions(
-            limit=100,
-            offset=0,
-            hidden_from_reports=False
-        )
+        result = await backend.get_transactions(limit=100, offset=0, hidden_from_reports=False)
         print(result)
 
     async def test_get_categor(self, backend):

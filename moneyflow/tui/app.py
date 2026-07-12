@@ -1786,10 +1786,12 @@ def main():
         print("=" * 80 + "\n", file=sys.stderr)
         sys.exit(1)
 
+
 def launch_boi_mode():
     """Launch the app in BOI mode (Bank of Ireland) with local database."""
     from moneyflow.backends.boi import BankOfIreland
     from pathlib import Path
+
     try:
         # Use default config directory
         config_dir = str(Path.home() / ".moneyflow")
@@ -1816,6 +1818,7 @@ def launch_boi_mode():
         print("Please report this error with the traceback above.", file=sys.stderr)
         print("=" * 80 + "\n", file=sys.stderr)
         sys.exit(1)
+
 
 def launch_monarch_mode(
     year: Optional[int] = None,
