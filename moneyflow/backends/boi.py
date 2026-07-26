@@ -1,13 +1,11 @@
-from typing import Any, Dict, List, Optional
-import polars as pl
-from .base import FinanceBackend
-import datetime
+import logging
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 import duckdb
 
 from ..data.account_manager import AccountManager
-import duckdb
-import logging
+from .base import FinanceBackend
 
 logger = logging.getLogger(__name__)
 
@@ -77,9 +75,12 @@ class BankOfIreland(FinanceBackend):
                 CREATE TABLE IF NOT EXISTS transactions (
                     id VARCHAR PRIMARY KEY,
                     date DATE NOT NULL,
-                    merchant VARCHAR NOT NULL,
+                    merchant VARCHAR,
                     debit DOUBLE,
-                    credit DOUBLE
+                    credit DOUBLE,
+                    details VARCHAR NOT NULL,
+                    file_name VARCHAR,
+                    inserted_at DATETIME
                 )
             """)
 
@@ -127,8 +128,8 @@ class BankOfIreland(FinanceBackend):
             return {"allTransactions": {"results": [], "totalCount": 0}}
 
         with self.get_connection() as conn:
-            query = f"""
-                SELECT 
+            query = """
+                SELECT
                     t.id as id,
                     t.date as date,
                     t.credit as credit,
@@ -137,7 +138,7 @@ class BankOfIreland(FinanceBackend):
                     coalesce(m.category, 'Uncategorized') as category,
                     coalesce(m.category_id, 'cat_uncategorized') as category_id,
                 FROM transactions t
-                LEFT JOIN merchant m on t.merchant = m.merchant 
+                LEFT JOIN merchant m on t.merchant = m.merchant
                 WHERE 1 = 1
             """
             if start_date:
@@ -177,18 +178,20 @@ class BankOfIreland(FinanceBackend):
             Dictionary containing categories in standard format
         """
         categories = []
-        cat_id_counter = 1
 
         category_groups = self._get_categories()
-        # Build categories from loaded category groups
+        seen_groups: set[str] = set()
         for group_name, category_names in category_groups.items():
+            group_type = "income" if group_name == "Income" else "expense"
+            group_id = f"group_{group_name.lower().replace(' ', '_').replace('&', 'and')}"
+            if group_name not in seen_groups:
+                seen_groups.add(group_name)
+                self.categories_group.append(
+                    {"id": group_id, "name": group_name, "type": group_type}
+                )
             for cat_name in category_names:
                 cat_id = f"cat_{cat_name.lower().replace(' ', '_').replace('&', 'and')}"
-                group_id = f"group_{group_name.lower().replace(' ', '_').replace('&', 'and')}"
                 self.categories_map.update({cat_id: cat_name})
-                self.categories_group.append(
-                    {"id": group_id, "name": group_name, "type": "expense"}
-                )
                 categories.append(
                     {
                         "id": cat_id,
@@ -196,7 +199,6 @@ class BankOfIreland(FinanceBackend):
                         "group": {"name": group_name, "id": group_name},
                     }
                 )
-                cat_id_counter += 1
         return {"categories": categories}
 
     async def get_transaction_category_groups(self) -> Dict[str, Any]:
@@ -234,8 +236,6 @@ class BankOfIreland(FinanceBackend):
         query += f" category_id = '{category_id}',"
         query += f" category = '{name}'"
 
-        # query += f" WHERE merchant in (select merchant from transactions where id = '{transaction_id}')"
-
         with self.get_connection() as conn:
             conn.execute(query)
             return {"updateTransaction": {"transaction": {"id": transaction_id}}}
@@ -244,22 +244,26 @@ class BankOfIreland(FinanceBackend):
         pass
 
     def _get_categories(self):
-        from moneyflow.data.categories import load_categories_from_profile
+        from moneyflow.data.categories import (
+            DEFAULT_CATEGORY_GROUPS,
+            load_categories_from_profile,
+        )
 
         if self.profile_dir:
             categories = load_categories_from_profile(self.profile_dir)
             if categories:
                 return categories
-        return {}
+        return DEFAULT_CATEGORY_GROUPS
 
     def get_backend_type(self) -> str:
         return "boi"
 
     async def get_all_merchants(self) -> List[str]:
         query = """
-            SELECT distinct coalesce(m.display_name, t.merchant) as merchant
-            from transactions t join merchant m on t.merchant = m.merchant
-            
+            SELECT
+                distinct coalesce(m.display_name, t.merchant) as merchant
+            FROM transactions t
+            JOIN merchant m on t.merchant = m.merchant
         """
         with self.get_connection() as conn:
             res = conn.execute(query).pl().to_dicts()

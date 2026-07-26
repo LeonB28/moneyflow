@@ -238,6 +238,41 @@ def boi_import(ctx, history_csv_path, force):
         raise click.Abort()
     except Exception as e:
         click.echo(f"Import failed: {e}", err=True)
+        raise (click.Abort())
+
+
+@boi.command()
+@click.option("--days", default=30, type=int, help="Number of days to look back")
+@click.option("--output", default=None, type=click.Path(), help="Output HTML file path")
+@click.option("--open/--no-open", default=False, help="Open report in browser")
+@click.pass_context
+def report(ctx, days, output, open):
+    """Generate an HTML dashboard report."""
+    from moneyflow.reports.dashboard import generate_report
+
+    out = generate_report(days=days, output=output, open_browser=open)
+    click.echo(f"Report saved to: {out}")
+
+
+@boi.command(name="update")
+@click.pass_context
+@click.argument("history_csv_path", type=click.Path(exists=True))
+@click.option("--force", is_flag=True, help="Force reimport of duplicates (overwrites existing)")
+def boi_update(ctx, history_csv_path, force):
+    from moneyflow.importers.boi_transaction_history_csv import BoiHistoryImporter
+
+    try:
+        click.echo(f"Updating Merchant for Bank of Ireland history from {history_csv_path}...")
+        backend = ctx.obj["backend"]
+        importer = BoiHistoryImporter(history_csv_path, backend)
+        importer.update_merchant()
+        click.echo("\n✓ Update complete!")
+    except FileNotFoundError as e:
+        click.echo(f"Error: {e}", err=True)
+        click.echo("\nMake sure you've have valid first.", err=True)
+        raise click.Abort()
+    except Exception as e:
+        click.echo(f"Update failed: {e}", err=True)
         raise click.Abort()
 
 

@@ -58,7 +58,7 @@ Environment Variables:
     parser.add_argument(
         "--transport",
         "-t",
-        choices=["stdio", "streamable-http"],
+        choices=["stdio", "streamable-http", "sse"],
         default="stdio",
         help="Transport type (default: stdio)",
     )

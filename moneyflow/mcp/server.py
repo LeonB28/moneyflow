@@ -29,7 +29,7 @@ import logging
 import os
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Literal
 
 import polars as pl
 
@@ -271,10 +271,13 @@ def create_mcp_server(
         df = _state["transactions_df"]
 
         # Apply filters
+
         if start_date:
-            df = df.filter(pl.col("date") >= start_date)
+            start_date_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            df = df.filter(pl.col("date") >= start_date_dt)
         if end_date:
-            df = df.filter(pl.col("date") <= end_date)
+            end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            df = df.filter(pl.col("date") <= end_date_dt)
         if category:
             df = df.filter(pl.col("category") == category)
         if merchant:
@@ -317,7 +320,9 @@ def create_mcp_server(
             start_date = (date.today() - timedelta(days=30)).isoformat()
 
         # Filter by date
-        df = df.filter((pl.col("date") >= start_date) & (pl.col("date") <= end_date))
+        start_date_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        df = df.filter((pl.col("date") >= start_date_dt) & (pl.col("date") <= end_date_dt))
 
         # Filter to expenses only (negative amounts)
         expenses = df.filter(pl.col("amount") < 0)
@@ -360,15 +365,18 @@ def create_mcp_server(
         await _ensure_initialized()
 
         categories = _state["categories"]
-        category_groups = _state["category_groups"]
+        category_groups = [
+            v["name"]
+            for v in _state["category_groups"].values()
+        ]
 
         # Organize categories by group
         by_group: Dict[str, List[str]] = {}
         for cat_id, cat_name in categories.items():
-            group_name = category_groups.get(cat_id, "Other")
+            group_name = cat_name["group"] if cat_name["group"] else 'Other'
             if group_name not in by_group:
                 by_group[group_name] = []
-            by_group[group_name].append(cat_name)
+            by_group[group_name].append(cat_name["name"])
 
         # Sort categories within groups
         for group in by_group:
@@ -604,11 +612,11 @@ def create_mcp_server(
             matching_categories = [
                 (cat_id, cat_name)
                 for cat_id, cat_name in categories.items()
-                if cat_name.lower() == category_name.lower()
+                if cat_name["name"].lower() == category_name.lower()
             ]
 
             if not matching_categories:
-                available = sorted(set(categories.values()))
+                available = sorted(set([c["name"] for c in categories.values()]))
                 return json.dumps(
                     {
                         "status": "error",
@@ -636,7 +644,7 @@ def create_mcp_server(
             resolved_category_id = matching_categories[0][0]
 
         # Get the resolved category name
-        resolved_category_name = categories[resolved_category_id]
+        resolved_category_name = categories[resolved_category_id]["name"]
 
         # Find the transaction
         tx_rows = df.filter(pl.col("id") == transaction_id)
@@ -746,7 +754,7 @@ def create_mcp_server(
         # Find the category ID
         category_id = None
         for cat_id, cat_name in categories.items():
-            if cat_name.lower() == category_name.lower():
+            if cat_name["name"].lower() == category_name.lower():
                 category_id = cat_id
                 break
 
@@ -1029,7 +1037,7 @@ def create_mcp_server(
 def run_mcp_server(
     account_id: Optional[str] = None,
     config_dir: Optional[str] = None,
-    transport: str = "stdio",
+    transport: Literal["stdio", "sse", "streamable-http"] = "stdio",
     read_only: bool = False,
 ):
     """

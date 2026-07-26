@@ -39,6 +39,7 @@ dependencies = [
     "mcp[cli]>=1.25.0",
     "duckdb>=1.5.3",
     "pyarrow>=24.0.0",
+    "plotly>=5.18.0",
 ]
 
 [project.urls]
