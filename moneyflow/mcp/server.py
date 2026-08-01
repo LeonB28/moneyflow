@@ -365,15 +365,12 @@ def create_mcp_server(
         await _ensure_initialized()
 
         categories = _state["categories"]
-        category_groups = [
-            v["name"]
-            for v in _state["category_groups"].values()
-        ]
+        category_groups = [v["name"] for v in _state["category_groups"].values()]
 
         # Organize categories by group
         by_group: Dict[str, List[str]] = {}
         for cat_id, cat_name in categories.items():
-            group_name = cat_name["group"] if cat_name["group"] else 'Other'
+            group_name = cat_name["group"] if cat_name["group"] else "Other"
             if group_name not in by_group:
                 by_group[group_name] = []
             by_group[group_name].append(cat_name["name"])
