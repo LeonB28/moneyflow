@@ -20,7 +20,7 @@ class BoiHistoryImporter:
                 debit=pl.col("debit").cast(pl.Float32),
                 credit=pl.col("credit").cast(pl.Float32),
                 file_name=pl.lit(self.history_path.split("/")[-1]),
-                inserted_at=datetime.datetime.now()
+                inserted_at=datetime.datetime.now(),
             ).collect(engine="streaming")
 
             conn.execute("""
@@ -92,14 +92,14 @@ class BoiHistoryImporter:
             date=pl.col("Date"),
             details=pl.col("Details"),
             debit=pl.col("Debit"),
-            credit=pl.col("Credit")
+            credit=pl.col("Credit"),
         )
 
     def __with_merchant_computed(self, ldf: pl.LazyFrame) -> pl.LazyFrame:
         return ldf.with_columns(
-            merchant=
-            self._parse_details_dates(pl.col("details"))
-            .pipe(self._parse_by_name)
+            merchant=self._parse_details_dates(pl.col("details")).pipe(self._parse_by_name)
+        ).with_columns(
+            merchant=self._parse_by_name_and_amount()
         )
 
     @staticmethod
@@ -125,9 +125,34 @@ class BoiHistoryImporter:
             .then(pl.lit("Laya"))
             .when(exp.str.starts_with("ENROLMY"))
             .then(pl.lit("Sherpa"))
-            .when(
-                exp.str.starts_with("V01675867") &
-                exp.str.ends_with("QB SP")
-            ).then(pl.lit("Child Benefits"))
+            .when(exp.str.starts_with("V01675867") & exp.str.ends_with("QB SP"))
+            .then(pl.lit("Child Benefits"))
+            .when(exp.str.contains("164922"), exp.str.ends_with("SP"))
+            .then(pl.lit("MasterCardSalary"))
+            .when(exp.str.starts_with("RevCom"), exp.str.ends_with("SP"))
+            .then(pl.lit("Revenue"))
+            .when(exp.str.contains("Revolut"))
+            .then(pl.lit("Revolut"))
+            .when(exp.str.contains("www.groupon."))
+            .then(pl.lit("Groupon"))
+            .when(exp.str.to_uppercase().str.contains("CERTA"))
+            .then(pl.lit("CERTA"))
+            .when(exp.str.to_uppercase().str.contains("SQ *DELI 613"))
+            .then(pl.lit("DELI"))
             .otherwise(exp)
         )
+
+    @staticmethod
+    def _parse_by_name_and_amount() -> pl.Expr:
+        return (
+            pl.when(
+                pl.col("merchant").eq(pl.lit("Virgin Media")),
+                    pl.col("debit") == 50
+            ).then(pl.lit("Virgin Media - TV"))
+            .when(
+                pl.col("merchant").eq(pl.lit("Virgin Media")),
+                  pl.col("debit") == 30)
+            .then(pl.lit("Virgin Media - Mobile"))
+            .otherwise(pl.col("merchant"))
+        )
+
