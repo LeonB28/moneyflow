@@ -241,18 +241,6 @@ def boi_import(ctx, history_csv_path, force):
         raise (click.Abort())
 
 
-@boi.command()
-@click.option("--days", default=30, type=int, help="Number of days to look back")
-@click.option("--output", default=None, type=click.Path(), help="Output HTML file path")
-@click.option("--open/--no-open", default=False, help="Open report in browser")
-@click.pass_context
-def report(ctx, days, output, open):
-    """Generate an HTML dashboard report."""
-    from moneyflow.reports.dashboard import generate_report
-
-    out = generate_report(days=days, output=output, open_browser=open)
-    click.echo(f"Report saved to: {out}")
-
 
 @boi.command(name="update")
 @click.pass_context
