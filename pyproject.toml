@@ -39,7 +39,8 @@ dependencies = [
     "mcp[cli]>=1.25.0",
     "duckdb>=1.5.3",
     "pyarrow>=24.0.0",
-    "plotly>=5.18.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
 ]
 
 [project.urls]
@@ -51,6 +52,7 @@ Issues = "https://github.com/wesm/moneyflow/issues"
 moneyflow = "moneyflow.cli:cli"
 moneyflow-setup = "moneyflow.data.credentials:setup_credentials_interactive"
 moneyflow-mcp = "moneyflow.mcp.__main__:main"
+moneyflow-rest = "moneyflow.rest.__main__:main"
 
 [build-system]
 requires = ["hatchling"]
