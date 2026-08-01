@@ -1,0 +1,15 @@
+{
+  "name": "moneyflow-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "module": "server.ts",
+  "scripts": {
+    "dev": "bun --hot server.ts",
+    "start": "bun server.ts",
+    "postinstall": "mkdir -p public/vendor && cp node_modules/echarts/dist/echarts.min.js public/vendor/echarts.min.js"
+  },
+  "dependencies": {
+    "echarts": "^5.5.1"
+  }
+}

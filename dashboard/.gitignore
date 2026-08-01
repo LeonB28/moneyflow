@@ -1,0 +1,3 @@
+node_modules/
+public/vendor/echarts.min.js
+*.log
