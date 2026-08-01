@@ -37,7 +37,22 @@ pipx install moneyflow
 ```
 
 ---
-
+## Commands
+1. run tui
+```bash
+ uv run moneyflow boi
+```
+2. Dashboard + Rest
+```bash
+ uv run moneyflow-rest 
+```
+```bash
+ cd ~/repos/moneyflow/dashboard && bun run dev
+```
+3. Import transaction (ETL)
+```bash
+ uv run moneyflow boi import /Users/leon.bam/boi/transactions/FILENAME 
+```
 ## Quick Start
 
 ```bash
