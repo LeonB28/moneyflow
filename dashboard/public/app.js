@@ -391,7 +391,7 @@ function buildPieData(txs) {
   }));
   rows.sort((a, b) => b.value - a.value);
 
-  const MAX_SLICES = 12;
+  const MAX_SLICES = 20;
   if (rows.length > MAX_SLICES) {
     const top = rows.slice(0, MAX_SLICES - 1);
     const rest = rows.slice(MAX_SLICES - 1);
@@ -765,7 +765,7 @@ function buildCategoryCompareData() {
     .map(([name, rec]) => ({ name, ...rec }))
     .filter((r) => r.cur > 0 || r.prev > 0)
     .sort((a, b) => b.cur - a.cur)
-    .slice(0, 15);
+    .slice(0, 20);
 
   return {
     names: rows.map((r) => r.name),
