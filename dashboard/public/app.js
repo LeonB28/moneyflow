@@ -36,6 +36,9 @@ const state = {
   incomePieSlices: [],
   outcomePieSlices: [],
   activeTab: "overview",
+  txFilters: { debitMin: null, debitMax: null, creditMin: null, creditMax: null, merchant: "" },
+  txSort: { field: "date", dir: "desc" },
+  txFlags: { verified: new Set(), duplicated: new Set() },
 };
 
 /* ---------------------------------- api ------------------------------------ */
@@ -697,7 +700,226 @@ function renderIncomeTable() {
   body.appendChild(frag);
 }
 
-/* --------------------------- categories comparison -------------------------- */
+/* ------------------------------ transactions tab --------------------------- */
+
+const TX_FLAGS_KEY = "moneyflow.txFlags";
+
+function loadTxFlags() {
+  try {
+    const raw = localStorage.getItem(TX_FLAGS_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    state.txFlags.verified = new Set(parsed.verified || []);
+    state.txFlags.duplicated = new Set(parsed.duplicated || []);
+  } catch {
+    /* ignore corrupt flags */
+  }
+}
+
+function saveTxFlags() {
+  try {
+    localStorage.setItem(
+      TX_FLAGS_KEY,
+      JSON.stringify({
+        verified: [...state.txFlags.verified],
+        duplicated: [...state.txFlags.duplicated],
+      }),
+    );
+  } catch {
+    /* ignore quota errors */
+  }
+}
+
+// STUB: wire these to real backend calls later. Kept as no-op promises so the
+// UI can be exercised without an endpoint. When adding the API call, use e.g.
+//   await api(`/transactions/${id}/${flag}`, { method: "POST", body: JSON.stringify({ value }) })
+async function updateTransactionFlag(id, flag, value) {
+  // TODO: add real API call here
+  await Promise.resolve();
+}
+
+function setTxFlag(id, flag, value) {
+  const set = state.txFlags[flag];
+  if (value) set.add(id);
+  else set.delete(id);
+  saveTxFlags();
+  renderTransactionsTable();
+  updateTransactionFlag(id, flag, value);
+}
+
+// Fuzzy subsequence match: returns a score (lower = better) or null if no match.
+// Handles typos: "olmpian" matches "Olympian Gym", "tes" matches "TESCO STORE".
+function merchantScore(t, query) {
+  const m = (t.merchant || "").toLowerCase();
+  const q = query.toLowerCase();
+  if (!q) return null;
+
+  let qi = 0;
+  let last = -1;
+  let gaps = 0;
+  for (let mi = 0; mi < m.length && qi < q.length; mi++) {
+    if (m[mi] === q[qi]) {
+      if (last !== -1 && mi - last > 1) gaps++;
+      last = mi;
+      qi++;
+    }
+  }
+  if (qi < q.length) return null; // not a subsequence
+
+  // Lower score = better: exact < prefix < early occurrence < scattered
+  if (m === q) return 0;
+  if (m.startsWith(q)) return 1;
+  return 2 + last + gaps * 10;
+}
+
+function filterTransactionsTable() {
+  const { debitMin, debitMax, creditMin, creditMax, merchant } = state.txFilters;
+
+  let rows = filterTransactions();
+
+  if (debitMin != null || debitMax != null) {
+    rows = rows.filter((t) => {
+      if (t.amount >= 0) return false;
+      const amt = -t.amount;
+      if (debitMin != null && amt < debitMin) return false;
+      if (debitMax != null && amt > debitMax) return false;
+      return true;
+    });
+  }
+
+  if (creditMin != null || creditMax != null) {
+    rows = rows.filter((t) => {
+      if (t.amount <= 0) return false;
+      const amt = t.amount;
+      if (creditMin != null && amt < creditMin) return false;
+      if (creditMax != null && amt > creditMax) return false;
+      return true;
+    });
+  }
+
+  if (merchant.trim()) {
+    const q = merchant.trim();
+    rows = rows
+      .map((t) => ({ t, score: merchantScore(t, q) }))
+      .filter((r) => r.score != null)
+      .sort((a, b) => a.score - b.score)
+      .map((r) => r.t);
+  }
+
+  return rows;
+}
+
+function renderTransactionsTable() {
+  const body = $("tx-table-body");
+  if (!body) return;
+
+  let rows = filterTransactionsTable();
+
+  const { field, dir } = state.txSort;
+  const mult = dir === "desc" ? -1 : 1;
+  rows.sort((a, b) => {
+    if (field === "amount") return (a.amount - b.amount) * mult;
+    return a.date.localeCompare(b.date) * mult;
+  });
+
+  const net = rows.reduce((s, t) => s + t.amount, 0);
+  $("tx-table-sub").textContent =
+    `${rows.length} transaction${rows.length === 1 ? "" : "s"} · net ${signedMoney(net)}` +
+    (merchantFilterActive() ? " · merchant filtered" : "");
+
+  body.innerHTML = "";
+  const frag = document.createDocumentFragment();
+
+  for (const t of rows) {
+    const tr = el("tr");
+    if (state.txFlags.duplicated.has(t.id)) tr.classList.add("row-duplicated");
+    if (state.txFlags.verified.has(t.id)) tr.classList.add("row-verified");
+
+    tr.appendChild(el("td", "mono", t.date));
+    tr.appendChild(el("td", "merchant-cell", t.merchant || "—"));
+    tr.appendChild(el("td", "muted-cell", t.category || "—"));
+    tr.appendChild(el("td", `num amount-cell ${t.amount < 0 ? "expense-text" : "income-text"}`, signedMoney(t.amount)));
+
+    const actions = el("td", "tx-actions");
+    const isVerified = state.txFlags.verified.has(t.id);
+    const isDup = state.txFlags.duplicated.has(t.id);
+    const vBtn = el("button", `row-action${isVerified ? " on-verified" : ""}`, isVerified ? "✓ Verified" : "Verified");
+    vBtn.dataset.id = t.id;
+    vBtn.addEventListener("click", () => setTxFlag(t.id, "verified", !isVerified));
+    const dBtn = el("button", `row-action${isDup ? " on-duplicated" : ""}`, isDup ? "✕ Duplicate" : "Duplicate");
+    dBtn.dataset.id = t.id;
+    dBtn.addEventListener("click", () => setTxFlag(t.id, "duplicated", !isDup));
+    actions.appendChild(vBtn);
+    actions.appendChild(dBtn);
+    tr.appendChild(actions);
+
+    frag.appendChild(tr);
+  }
+
+  if (!rows.length) {
+    const tr = el("tr");
+    const td = el("td", "tx-empty", "No transactions match the current filters.");
+    td.colSpan = 5;
+    tr.appendChild(td);
+    body.appendChild(tr);
+  } else {
+    body.appendChild(frag);
+  }
+
+  renderTxSortIndicators();
+}
+
+function merchantFilterActive() {
+  return Boolean(state.txFilters.merchant.trim());
+}
+
+function renderTxSortIndicators() {
+  document.querySelectorAll("#tx-table thead th.sortable").forEach((th) => {
+    const field = th.dataset.sort;
+    const span = th.querySelector(".sort-indicator");
+    if (!span) return;
+    const active = state.txSort.field === field;
+    th.classList.toggle("sorted", active);
+    span.textContent = active ? (state.txSort.dir === "desc" ? "↓" : "↑") : "";
+  });
+}
+
+function setupTransactionsControls() {
+  const parseNum = (v) => (v === "" || v == null ? null : Number(v));
+
+  $("tx-debit-min").addEventListener("input", (e) => {
+    state.txFilters.debitMin = parseNum(e.target.value);
+    renderTransactionsTable();
+  });
+  $("tx-debit-max").addEventListener("input", (e) => {
+    state.txFilters.debitMax = parseNum(e.target.value);
+    renderTransactionsTable();
+  });
+  $("tx-credit-min").addEventListener("input", (e) => {
+    state.txFilters.creditMin = parseNum(e.target.value);
+    renderTransactionsTable();
+  });
+  $("tx-credit-max").addEventListener("input", (e) => {
+    state.txFilters.creditMax = parseNum(e.target.value);
+    renderTransactionsTable();
+  });
+  $("tx-merchant").addEventListener("input", (e) => {
+    state.txFilters.merchant = e.target.value;
+    renderTransactionsTable();
+  });
+
+  document.querySelectorAll("#tx-table thead th.sortable").forEach((th) => {
+    th.addEventListener("click", () => {
+      const field = th.dataset.sort;
+      if (state.txSort.field === field) {
+        state.txSort.dir = state.txSort.dir === "desc" ? "asc" : "desc";
+      } else {
+        state.txSort = { field, dir: field === "amount" ? "desc" : "desc" };
+      }
+      renderTransactionsTable();
+    });
+  });
+}
 
 const CATEGORY_ICON_RULES = [
   [/grocery|supermarket|market|convenience|food hall|corner store/, "🛒"],
@@ -737,6 +959,8 @@ function hexToRgba(hex, alpha) {
   const b = parseInt(h.slice(4, 6), 16);
   return `rgba(${r},${g},${b},${alpha})`;
 }
+
+/* --------------------------- categories comparison -------------------------- */
 
 function buildCategoryCompareData() {
   const len = daysInRange();
@@ -890,7 +1114,7 @@ function renderCategoriesChart() {
 /* --------------------------------- tabs ------------------------------------ */
 
 function usesDateRange() {
-  return state.activeTab === "categories" || state.activeTab === "uncategorized";
+  return state.activeTab === "categories" || state.activeTab === "uncategorized" || state.activeTab === "transactions";
 }
 
 function toggleDateControls() {
@@ -994,6 +1218,8 @@ function update() {
     updateKpis(txs);
     renderBarChart(txs);
     renderPieChart(txs);
+  } else if (state.activeTab === "transactions") {
+    renderTransactionsTable();
   } else if (state.activeTab === "categories") {
     renderCategoriesChart();
   } else if (state.activeTab === "income") {
@@ -1055,6 +1281,8 @@ async function init() {
     setupDateControls();
     setupModal();
     setupTabs();
+    loadTxFlags();
+    setupTransactionsControls();
     syncDateInputs();
     toggleDateControls();
     $("refresh-btn").addEventListener("click", refreshData);

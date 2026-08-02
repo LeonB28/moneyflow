@@ -70,6 +70,7 @@
   <main class="content">
     <nav class="tabs" role="tablist" aria-label="Dashboard sections">
       <button class="tab active" role="tab" data-tab="overview" aria-selected="true">Overview</button>
+      <button class="tab" role="tab" data-tab="transactions" aria-selected="false">Transactions</button>
       <button class="tab" role="tab" data-tab="categories" aria-selected="false">Categories</button>
       <button class="tab" role="tab" data-tab="income" aria-selected="false">Income</button>
       <button class="tab" role="tab" data-tab="uncategorized" aria-selected="false">Uncategorized</button>
@@ -169,6 +170,56 @@
       </div>
     </section>
     </section><!-- /#tab-overview -->
+
+    <!-- Transactions tab -->
+    <section class="tab-panel" id="tab-transactions" role="tabpanel">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>All Transactions</h2>
+            <p class="card-sub" id="tx-table-sub">—</p>
+          </div>
+        </div>
+
+        <div class="tx-filters" id="tx-filters">
+          <div class="filter-group">
+            <label class="filter-label">Debit (min→max)</label>
+            <div class="filter-inputs">
+              <input type="number" id="tx-debit-min" class="filter-input" placeholder="Min" step="0.01" min="0" />
+              <span class="range-arrow">→</span>
+              <input type="number" id="tx-debit-max" class="filter-input" placeholder="Max" step="0.01" min="0" />
+            </div>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Credit (min→max)</label>
+            <div class="filter-inputs">
+              <input type="number" id="tx-credit-min" class="filter-input" placeholder="Min" step="0.01" min="0" />
+              <span class="range-arrow">→</span>
+              <input type="number" id="tx-credit-max" class="filter-input" placeholder="Max" step="0.01" min="0" />
+            </div>
+          </div>
+          <div class="filter-group grow">
+            <label class="filter-label">Merchant</label>
+            <input type="text" id="tx-merchant" class="filter-input" placeholder="Search merchant… (fuzzy)" />
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="tx-table">
+            <thead>
+              <tr>
+                <th class="sortable" data-sort="date">Date <span class="sort-indicator" data-sort="date"></span></th>
+                <th>Merchant</th>
+                <th>Category</th>
+                <th class="num sortable" data-sort="amount">Amount <span class="sort-indicator" data-sort="amount"></span></th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tx-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
     <!-- Uncategorized tab -->
     <section class="tab-panel" id="tab-uncategorized" role="tabpanel">
