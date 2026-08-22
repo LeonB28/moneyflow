@@ -40,7 +40,7 @@ class BoiHistoryImporter:
                 on (
                     transactions.date = updates.date
                     AND transactions.details = updates.details 
-                    AND transactions.details IS NOT DISTINCT FROM updates.details
+                    AND transactions.debit IS NOT DISTINCT FROM updates.debit
                     AND transactions.credit IS NOT DISTINCT FROM updates.credit
                 )
                 WHEN MATCHED AND transactions.file_name != updates.file_name THEN
@@ -77,6 +77,32 @@ class BoiHistoryImporter:
                 WHEN MATCHED THEN UPDATE
                     SET merchant = updates.merchant
             """).commit()
+
+    def dedup_transactions(self, dedup_file: str):
+        dedup_ldf = pl.scan_csv(
+            dedup_file,
+            schema={
+                "id": pl.String,
+                "date": pl.Date,
+                "amount": pl.Float32,
+                "merchant": pl.String,
+            },
+        ).select("id").collect(engine="streaming")
+
+        with self.backend.get_connection() as conn:
+            conn.execute("""
+                MERGE INTO transactions
+                USING ( 
+                    SELECT 
+                        id
+                    FROM
+                        dedup_ldf
+                    ) as dedup
+                ON (transactions.id = dedup.id)
+                WHEN MATCHED THEN UPDATE
+                    SET duplicated = true
+            """).commit()
+
 
     def _read_history_csv(self) -> pl.LazyFrame:
         return pl.scan_csv(

@@ -242,6 +242,23 @@ def boi_import(ctx, history_csv_path, force):
 
 
 
+@boi.command(name="dedup")
+@click.pass_context
+@click.argument("dedup_file", type=click.Path(exists=True))
+def boi_dedup(ctx, dedup_file):
+    from moneyflow.importers.boi_transaction_history_csv import BoiHistoryImporter
+
+    try:
+        click.echo(f"Marking duplicates from {dedup_file}...")
+        backend = ctx.obj["backend"]
+        importer = BoiHistoryImporter(dedup_file, backend)
+        importer.dedup_transactions(dedup_file)
+        click.echo("\n✓ Dedup complete!")
+    except Exception as e:
+        click.echo(f"Dedup failed: {e}", err=True)
+        raise click.Abort()
+
+
 @boi.command(name="update")
 @click.pass_context
 @click.argument("history_csv_path", type=click.Path(exists=True))

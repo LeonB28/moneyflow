@@ -137,9 +137,11 @@ class BankOfIreland(FinanceBackend):
                     coalesce(m.display_name, t.merchant) as merchant,
                     coalesce(m.category, 'Uncategorized') as category,
                     coalesce(m.category_id, 'cat_uncategorized') as category_id,
+                    file_name as file_name
                 FROM transactions t
                 LEFT JOIN merchant m on t.merchant = m.merchant
                 WHERE 1 = 1
+                AND duplicated = false
             """
             if start_date:
                 query += f" AND date >= '{start_date}'"
@@ -161,6 +163,7 @@ class BankOfIreland(FinanceBackend):
                     "hideFromReports": False,
                     "pending": False,
                     "isRecurring": False,
+                    "fileName": row["file_name"]
                 }
                 for i, row in enumerate(res)
             ]
