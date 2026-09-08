@@ -29,7 +29,7 @@ import logging
 import os
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Literal
+from typing import Any, Dict, List, Literal, Optional
 
 import polars as pl
 
@@ -839,6 +839,41 @@ def create_mcp_server(
             },
             indent=2,
         )
+
+    @mcp.tool()
+    async def update_transaction_duplicated(
+        transaction_id: str,
+        duplicated: bool,
+    ) -> str:
+        """
+        Update the duplicated flag for a transaction (BOI backend only).
+
+        Marks a Bank of Ireland transaction as duplicated (hidden from reports)
+        or restores it.
+
+        Args:
+            transaction_id: The unique ID of the transaction to update.
+            duplicated: True to mark as duplicated, False to restore.
+
+        Returns:
+            JSON object with update status.
+        """
+        await _ensure_initialized()
+
+        dm = _state["data_manager"]
+        try:
+            result = await dm.mm.set_duplicated(transaction_id, duplicated)  # type: ignore[attr-defined]
+            return json.dumps(
+                {
+                    "status": "success",
+                    "transaction_id": transaction_id,
+                    "duplicated": duplicated,
+                    "result": result,
+                },
+                indent=2,
+            )
+        except Exception as e:
+            return json.dumps({"status": "error", "message": str(e)}, indent=2)
 
     @mcp.tool()
     async def get_amazon_order_details(

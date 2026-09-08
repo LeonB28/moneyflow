@@ -67,8 +67,9 @@ class BankOfIreland(FinanceBackend):
 
         # Connect to DuckDB (creates the file if it doesn't exist)
         with duckdb.connect(str(self.db_path)) as conn:
-            # Create a sequence for the import ID if it doesn't exist
+            # Create sequences if they don't exist
             conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_transaction_id")
+            conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_import_id")
 
             # Create transactions table
             conn.execute("""
@@ -80,9 +81,19 @@ class BankOfIreland(FinanceBackend):
                     credit DOUBLE,
                     details VARCHAR NOT NULL,
                     file_name VARCHAR,
-                    inserted_at DATETIME
+                    inserted_at DATETIME,
+                    duplicated BOOLEAN DEFAULT false
                 )
             """)
+
+            # Migration: add duplicated column if table existed before this field
+            try:
+                conn.execute(
+                    "ALTER TABLE transactions ADD COLUMN IF NOT EXISTS duplicated BOOLEAN DEFAULT false"
+                )
+            except Exception:
+                # DuckDB < 1.1 may not support IF NOT EXISTS; ignore if column already exists
+                pass
 
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS merchant (
@@ -124,7 +135,7 @@ class BankOfIreland(FinanceBackend):
         **kwargs,
     ) -> Dict[str, Any]:
 
-        if kwargs["hidden_from_reports"]:
+        if kwargs.get("hidden_from_reports"):
             return {"allTransactions": {"results": [], "totalCount": 0}}
 
         with self.get_connection() as conn:
@@ -163,7 +174,7 @@ class BankOfIreland(FinanceBackend):
                     "hideFromReports": False,
                     "pending": False,
                     "isRecurring": False,
-                    "fileName": row["file_name"]
+                    "fileName": row["file_name"],
                 }
                 for i, row in enumerate(res)
             ]
@@ -215,6 +226,15 @@ class BankOfIreland(FinanceBackend):
         hide_from_reports: Optional[bool] = None,
         **kwargs,
     ) -> Dict[str, Any]:
+        # BOI-specific: allow updating duplicated flag via generic update_transaction
+        if "duplicated" in kwargs and kwargs["duplicated"] is not None:
+            dup_val = kwargs.pop("duplicated")
+            # If other fields also provided, apply duplicated first, then continue
+            dup_result = await self.set_duplicated(transaction_id, bool(dup_val))
+            # If only duplicated was requested, return early
+            if not category_id and not merchant_name:
+                return {"updateTransaction": dup_result}
+
         if not category_id and not merchant_name:
             return {"updateTransaction": {"transaction": {"id": transaction_id}}}
 
@@ -243,8 +263,65 @@ class BankOfIreland(FinanceBackend):
             conn.execute(query)
             return {"updateTransaction": {"transaction": {"id": transaction_id}}}
 
+    async def set_duplicated(self, transaction_id: str, duplicated: bool) -> Dict[str, Any]:
+        """Update the duplicated flag for a single transaction.
+
+        Only relevant for the BOI backend where duplicates are tracked
+        via the ``duplicated`` column on the transactions table.
+
+        Args:
+            transaction_id: The transaction ID to update.
+            duplicated: Desired duplicated state.
+
+        Returns:
+            Dict with transaction id and new duplicated state.
+
+        Raises:
+            ValueError: If the transaction does not exist.
+        """
+        self._ensure_db_initialized()
+        with self.get_connection() as conn:
+            existing = conn.execute(
+                "SELECT id, duplicated FROM transactions WHERE id = ?", [transaction_id]
+            ).fetchone()
+            if existing is None:
+                raise ValueError(f"Transaction '{transaction_id}' not found")
+            # DuckDB boolean may come back as bool or int
+            current_duplicated = bool(existing[1]) if existing[1] is not None else False
+            if current_duplicated == duplicated:
+                return {
+                    "transaction": {
+                        "id": transaction_id,
+                        "duplicated": duplicated,
+                        "already_in_desired_state": True,
+                    }
+                }
+            conn.execute(
+                "UPDATE transactions SET duplicated = ? WHERE id = ?",
+                [duplicated, transaction_id],
+            )
+            conn.commit()
+            return {
+                "transaction": {
+                    "id": transaction_id,
+                    "duplicated": duplicated,
+                    "previous_duplicated": current_duplicated,
+                }
+            }
+
+    async def get_transaction_duplicated_status(self, transaction_id: str) -> Optional[bool]:
+        """Return the current duplicated status for a transaction, or None if not found."""
+        self._ensure_db_initialized()
+        with self.get_connection() as conn:
+            row = conn.execute(
+                "SELECT duplicated FROM transactions WHERE id = ?", [transaction_id]
+            ).fetchone()
+            if row is None:
+                return None
+            return bool(row[0]) if row[0] is not None else False
+
     async def delete_transaction(self, transaction_id: str) -> bool:
-        pass
+        return False
 
     def _get_categories(self):
         from moneyflow.data.categories import (

@@ -869,6 +869,100 @@ def create_rest_app(
         except Exception as e:
             return {"status": "error", "message": f"Failed to update: {str(e)}"}
 
+    @app.post("/transactions/{transaction_id}/merchant")
+    async def update_transaction_merchant(
+        transaction_id: str,
+        merchant_name: str,
+        dry_run: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Update the merchant of a single transaction.
+
+        Changes the merchant name for a transaction. The change is
+        immediately committed to the backend API unless dry_run is True.
+
+        Args:
+            transaction_id: The unique ID of the transaction to update
+            merchant_name: The new merchant name to assign
+            dry_run: If True, validate and show what would change without committing
+
+        Returns:
+            JSON object with update status
+        """
+        await _ensure_initialized()
+
+        # Validate merchant_name
+        if not merchant_name or not merchant_name.strip():
+            return {
+                "status": "error",
+                "message": "merchant_name must be a non-empty string",
+            }
+
+        merchant_name = merchant_name.strip()
+
+        if len(merchant_name) > 500:
+            return {
+                "status": "error",
+                "message": "merchant_name must be 500 characters or fewer",
+            }
+
+        # Check read-only mode
+        if _state["read_only"] and not dry_run:
+            return {
+                "status": "error",
+                "message": "Server is in read-only mode. Use dry_run=True to preview changes.",
+            }
+
+        dm = _state["data_manager"]
+        df = _state["transactions_df"]
+
+        # Find the transaction
+        tx_rows = df.filter(pl.col("id") == transaction_id)
+        if len(tx_rows) == 0:
+            return {"status": "error", "message": f"Transaction '{transaction_id}' not found"}
+
+        old_merchant = tx_rows["merchant"][0]
+        tx = tx_rows.row(0, named=True)
+
+        # Dry run - just show what would happen
+        if dry_run:
+            return {
+                "status": "dry_run",
+                "message": "No changes made (dry run)",
+                "would_update": {
+                    "transaction_id": transaction_id,
+                    "merchant": tx.get("merchant"),
+                    "amount": _format_amount(tx.get("amount", 0)),
+                    "date": str(tx.get("date")),
+                    "old_merchant": old_merchant,
+                    "new_merchant": merchant_name,
+                },
+            }
+
+        # Update via backend API
+        try:
+            await dm.mm.update_transaction(
+                transaction_id=transaction_id,
+                merchant_name=merchant_name,
+            )
+
+            # Update local DataFrame
+            _state["transactions_df"] = df.with_columns(
+                pl.when(pl.col("id") == transaction_id)
+                .then(pl.lit(merchant_name))
+                .otherwise(pl.col("merchant"))
+                .alias("merchant")
+            )
+
+            return {
+                "status": "success",
+                "transaction_id": transaction_id,
+                "old_merchant": old_merchant,
+                "new_merchant": merchant_name,
+            }
+        except Exception as e:
+            return {"status": "error", "message": f"Failed to update: {str(e)}"}
+
     # ========== MAINTENANCE ENDPOINTS ==========
 
     @app.post("/refresh")

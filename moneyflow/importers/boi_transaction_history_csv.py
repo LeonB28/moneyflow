@@ -1,6 +1,5 @@
 import datetime
 
-import duckdb
 import polars as pl
 from moneyflow.backends.boi import BankOfIreland
 
@@ -12,10 +11,11 @@ class BoiHistoryImporter:
 
     def import_boi_history(self):
         transactions_ldf = self._read_history_csv()
+        with_merchant_ldf = self.__with_merchant_computed(transactions_ldf)
         with self.backend.get_connection() as conn:
-            transformed_df = transactions_ldf.select(
+            transformed_df = with_merchant_ldf.select(
                 date=pl.col("date").cast(pl.Date),
-                merchant=pl.lit(None, pl.String),
+                merchant=pl.col("merchant"),
                 details=pl.col("details"),
                 debit=pl.col("debit").cast(pl.Float32),
                 credit=pl.col("credit").cast(pl.Float32),
@@ -34,7 +34,8 @@ class BoiHistoryImporter:
                         credit,
                         details,
                         file_name,
-                        inserted_at
+                        inserted_at,
+                        false as duplicated
                     FROM transformed_df
                 ) as updates
                 on (
@@ -145,26 +146,32 @@ class BoiHistoryImporter:
     @staticmethod
     def _parse_by_name(exp: pl.Expr) -> pl.Expr:
         return (
-            pl.when(exp == "SUMUP  *BAX")
+            pl.when(
+                exp.str.to_uppercase().str.contains("SUMUP"),
+                exp.str.to_uppercase().str.contains("BAX"),
+            )
             .then(pl.lit("MasterCardFood"))
-            .when(exp.str.starts_with("LHC"))
-            .then(pl.lit("Laya"))
-            .when(exp.str.starts_with("ENROLMY"))
-            .then(pl.lit("Sherpa"))
-            .when(exp.str.starts_with("V01675867") & exp.str.ends_with("QB SP"))
-            .then(pl.lit("Child Benefits"))
-            .when(exp.str.contains("164922"), exp.str.ends_with("SP"))
-            .then(pl.lit("MasterCardSalary"))
-            .when(exp.str.starts_with("RevCom"), exp.str.ends_with("SP"))
-            .then(pl.lit("Revenue"))
-            .when(exp.str.contains("Revolut"))
-            .then(pl.lit("Revolut"))
-            .when(exp.str.contains("www.groupon."))
-            .then(pl.lit("Groupon"))
-            .when(exp.str.to_uppercase().str.contains("CERTA"))
-            .then(pl.lit("CERTA"))
-            .when(exp.str.to_uppercase().str.contains("SQ *DELI 613"))
-            .then(pl.lit("DELI"))
+            .when(exp.str.starts_with("LHC")).then(pl.lit("Laya"))
+            .when(exp.str.starts_with("ENROLMY")).then(pl.lit("Sherpa"))
+            .when(
+                exp.str.starts_with("V01675867") & exp.str.ends_with("QB SP")
+            ).then(pl.lit("Child Benefits"))
+            .when(
+                exp.str.contains("164922"),
+                exp.str.ends_with("SP")
+            ).then(pl.lit("MasterCardSalary"))
+            .when(
+                exp.str.starts_with("RevCom"),
+                exp.str.ends_with("SP")
+            ).then(pl.lit("Revenue"))
+            .when(exp.str.contains("Revolut")).then(pl.lit("Revolut"))
+            .when(exp.str.contains("www.groupon.")).then(pl.lit("Groupon"))
+            .when(
+                exp.str.to_uppercase().str.contains("CERTA")
+            ).then(pl.lit("CERTA"))
+            .when(
+                exp.str.to_uppercase().str.contains("SQ *DELI 613")
+            ).then(pl.lit("DELI"))
             .otherwise(exp)
         )
 
