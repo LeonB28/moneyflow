@@ -482,3 +482,37 @@ uv run pyright moneyflow/
 - [ ] Improve duplicate detection algorithm
 - [ ] Add split transaction support
 - [ ] Implement transaction notes editing
+
+## Kata `work.*` conventions (agent orchestration)
+
+This repo's kata board uses the `work.*` metadata contract; see kata's
+<https://katatracker.com/docs/operations/agent-orchestration/> for the full
+recipe.
+
+**When you work a kata-tracked issue:**
+
+- When you claim or start a kata issue, immediately mark it actively tracked:
+  `kata meta set <ref> work.attention ok`. This makes in-flight work visible
+  to coordinators and dashboards from the moment it is grabbed.
+- Check if the work branch and if defined and create worktree.
+  `kata meta get <ref> work.branch` and if defined, create worktree and work in it.
+- Keep your live state truthful on the issue:
+  `kata meta set <ref> work.attention stuck|needs-human|ok`, with a one-line
+  `kata meta set <ref> work.attention_msg "<why>"`. Raise `stuck` when you
+  cannot proceed, `needs-human` when you want input or review (you may keep
+  working), and clear back to `ok` when unblocked.
+- Never end a session with the signal stale: before stopping, either close
+  the issue or set the attention pair to reflect the hand-off.
+
+**When you delegate work as separate kata issues (fan-out/join):**
+
+- Create each sub-issue with `--meta work.branch=...` and an idempotency key;
+  capture refs from `--json` (`.issue.short_id`).
+- Join with `kata wait <refs> --until attention --any` (matches `needs-human`
+  or `stuck`; a close also completes the wait, and the reported reason
+  distinguishes which). Use `--timeout` so a wrapper can tell timeout from
+  satisfaction. As coordinator you read `work.*`; you never write it on
+  issues you delegated.
+
+**Always:** one writer per key; `work.*` on closed issues is meaningless, so
+never write it there and ignore it when reading.
