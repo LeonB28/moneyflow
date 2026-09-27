@@ -11,7 +11,8 @@ class BoiHistoryImporter:
 
     def import_boi_history(self):
         transactions_ldf = self._read_history_csv()
-        with_merchant_ldf = self.__with_merchant_computed(transactions_ldf)
+        validated_ldf = self.validate(transactions_ldf)
+        with_merchant_ldf = self.__with_merchant_computed(validated_ldf)
         with self.backend.get_connection() as conn:
             transformed_df = with_merchant_ldf.select(
                 date=pl.col("date").cast(pl.Date),
@@ -35,7 +36,8 @@ class BoiHistoryImporter:
                         details,
                         file_name,
                         inserted_at,
-                        false as duplicated
+                        false as duplicated,
+                        false as is_verified
                     FROM transformed_df
                 ) as updates
                 on (
@@ -188,4 +190,22 @@ class BoiHistoryImporter:
             .then(pl.lit("Virgin Media - Mobile"))
             .otherwise(pl.col("merchant"))
         )
+
+    @staticmethod
+    def validate(transactions_ldf):
+        df = transactions_ldf.select(
+            both_amt_null=pl.when(
+                pl.col("debit").is_null() &
+                pl.col("credit").is_null()
+            ).then(
+                pl.struct("details")
+            ).otherwise(pl.lit(None).cast(pl.String))
+        ).collect(engine="streaming")
+        res = df.filter(
+            pl.col("both_amt_null").is_not_null()
+        ).rows(named=True)
+        if len(res) > 0:
+            print(res)
+            raise Exception("One of the transaction is invalid")
+        return transactions_ldf
 

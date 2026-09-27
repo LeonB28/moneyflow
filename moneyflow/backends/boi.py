@@ -10,6 +10,21 @@ from .base import FinanceBackend
 logger = logging.getLogger(__name__)
 
 
+def _boi_amount(credit: Any, debit: Any) -> float:
+    """Compute signed amount from BOI credit/debit columns.
+
+    Credit is money in (positive), debit is money out (negative).
+    Either column may be NULL (e.g. balance marker rows with neither),
+    in which case the amount defaults to 0 instead of raising TypeError.
+    """
+    if credit:
+        return credit
+    if debit is not None:
+        return -1 * debit
+    # Both NULL (e.g. balance marker rows) or zero credit with no debit
+    return 0
+
+
 class BankOfIreland(FinanceBackend):
     """
     Bank of Ireland purchase history backend.
@@ -168,7 +183,7 @@ class BankOfIreland(FinanceBackend):
                 {
                     "id": row["id"],
                     "date": row["date"],
-                    "amount": row["credit"] if row["credit"] else -1 * row["debit"],
+                    "amount": _boi_amount(row.get("credit"), row.get("debit")),
                     "merchant": {"id": row["merchant"], "name": row["merchant"]},
                     "category": {"id": row["category_id"], "name": row["category"]},
                     "hideFromReports": False,
