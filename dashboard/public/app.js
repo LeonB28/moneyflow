@@ -49,6 +49,15 @@ async function api(path) {
   return res.json();
 }
 
+async function apiPost(path) {
+  const res = await fetch(`/api${path}`, { method: "POST" });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.status === "error") {
+    throw new Error(data.message || `API ${path} -> ${res.status}`);
+  }
+  return data;
+}
+
 function showNotice(message) {
   const n = $("notice");
   n.textContent = message;
@@ -747,6 +756,82 @@ function setTxFlag(id, flag, value) {
   updateTransactionFlag(id, flag, value);
 }
 
+function startMerchantEdit(t, merchantCell) {
+  // Close any other open editor first (no action).
+  renderTransactionsTable();
+  // Re-find the cell after re-render to keep DOM consistent.
+  const body = $("tx-table-body");
+  const row = [...body.querySelectorAll("tr")].find((tr) =>
+    [...tr.querySelectorAll(".tx-actions button")].some((b) => b.dataset.id === t.id),
+  );
+  const cell = row ? row.querySelector(".merchant-cell") : merchantCell;
+  if (!cell) return;
+  cell.innerHTML = "";
+  cell.classList.add("merchant-editing");
+
+  const current = t.merchant || "";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "merchant-edit-input";
+  input.value = current;
+  input.placeholder = current;
+
+  const confirmBtn = el("button", "merchant-confirm", "✓");
+  confirmBtn.title = "Save merchant";
+  confirmBtn.setAttribute("aria-label", "Save merchant");
+
+  const cancelBtn = el("button", "merchant-cancel", "✕");
+  cancelBtn.title = "Cancel";
+  cancelBtn.setAttribute("aria-label", "Cancel merchant edit");
+
+  const close = () => renderTransactionsTable();
+
+  const save = async () => {
+    const next = input.value.trim();
+    if (!next) {
+      input.focus();
+      return;
+    }
+    if (next === current) {
+      close();
+      return;
+    }
+    confirmBtn.disabled = true;
+    cancelBtn.disabled = true;
+    input.disabled = true;
+    try {
+      const data = await apiPost(
+        `/transactions/${encodeURIComponent(t.id)}/merchant?merchant_name=${encodeURIComponent(next)}`,
+      );
+      const updated = data.new_merchant || next;
+      t.merchant = updated;
+      const cached = state.transactions.find((x) => x.id === t.id);
+      if (cached) cached.merchant = updated;
+      showNotice(`Merchant updated to "${updated}".`);
+      renderTransactionsTable();
+    } catch (err) {
+      showNotice(`Merchant update failed: ${err.message}`);
+      confirmBtn.disabled = false;
+      cancelBtn.disabled = false;
+      input.disabled = false;
+      input.focus();
+    }
+  };
+
+  confirmBtn.addEventListener("click", save);
+  cancelBtn.addEventListener("click", close);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") save();
+    else if (e.key === "Escape") close();
+  });
+
+  cell.appendChild(input);
+  cell.appendChild(confirmBtn);
+  cell.appendChild(cancelBtn);
+  input.focus();
+  input.select();
+}
+
 // Fuzzy subsequence match: returns a score (lower = better) or null if no match.
 // Handles typos: "olmpian" matches "Olympian Gym", "tes" matches "TESCO STORE".
 function merchantScore(t, query) {
@@ -836,7 +921,8 @@ function renderTransactionsTable() {
     if (state.txFlags.verified.has(t.id)) tr.classList.add("row-verified");
 
     tr.appendChild(el("td", "mono", t.date));
-    tr.appendChild(el("td", "merchant-cell", t.merchant || "—"));
+    const merchantCell = el("td", "merchant-cell", t.merchant || "—");
+    tr.appendChild(merchantCell);
     tr.appendChild(el("td", "muted-cell", t.category || "—"));
     tr.appendChild(el("td", `num amount-cell ${t.amount < 0 ? "expense-text" : "income-text"}`, signedMoney(t.amount)));
 
@@ -849,8 +935,14 @@ function renderTransactionsTable() {
     const dBtn = el("button", `row-action${isDup ? " on-duplicated" : ""}`, isDup ? "✕ Duplicate" : "Duplicate");
     dBtn.dataset.id = t.id;
     dBtn.addEventListener("click", () => setTxFlag(t.id, "duplicated", !isDup));
+    const mBtn = el("button", "row-action row-edit", "✎");
+    mBtn.title = "update merchant";
+    mBtn.setAttribute("aria-label", "update merchant");
+    mBtn.dataset.id = t.id;
+    mBtn.addEventListener("click", () => startMerchantEdit(t, merchantCell));
     actions.appendChild(vBtn);
     actions.appendChild(dBtn);
+    actions.appendChild(mBtn);
     tr.appendChild(actions);
 
     frag.appendChild(tr);
